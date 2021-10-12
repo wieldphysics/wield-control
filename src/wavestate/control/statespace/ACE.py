@@ -53,10 +53,10 @@ class ACE(object):
         #this is in C2io to Cio edges
         self.xo2io = defaultdict(set)
 
-        self.st = defaultdict(declarative.Bunch)
-        self.cr = defaultdict(declarative.Bunch)
+        self.st = defaultdict(wavestate.bunch.Bunch)
+        self.cr = defaultdict(wavestate.bunch.Bunch)
         #also contains the xo's, as they are a form (2nd layer) of io
-        self.io = defaultdict(declarative.Bunch)
+        self.io = defaultdict(wavestate.bunch.Bunch)
 
         #mapping of port names to Bunches, containing the individual xo's to bind
         #flow types contain a .in = xo, and .out = xo. Conserved quantities are in
@@ -399,7 +399,7 @@ class ACE(object):
         O         = None,
     ):
         pt = tupleize.tupleize(pt)
-        pB = self.pt[pt] = declarative.Bunch()
+        pB = self.pt[pt] = wavestate.bunch.Bunch()
         if type is not None:
             pB.type = type
         if flow is not None or potential is not None:
@@ -1418,7 +1418,7 @@ class ACE(object):
         else:
             descriptor = (N_st_DG != N_st_tot)
 
-        retB = declarative.Bunch(
+        retB = wavestate.bunch.Bunch(
             ABCDE = (A, B, C, D, E),
             A = A,
             B = B,

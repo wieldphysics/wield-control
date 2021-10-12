@@ -16,7 +16,7 @@ from transient.statespace.dense.xfer_algorithms import ss2xfer
 
 from transient.quantum import qop
 
-from declarative.bunch import FrozenBunch
+from wavestate.bunch import FrozenBunch
 
 c_m_s = 299792458
 

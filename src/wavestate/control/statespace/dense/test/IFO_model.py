@@ -282,7 +282,7 @@ def build_model(
                 ('zero', ['FMetm+M-f']),
             ]
         )
-    return declarative.Bunch(locals())
+    return wavestate.bunch.Bunch(locals())
 
 states_delays_o = [
     'Sarm/ABP',

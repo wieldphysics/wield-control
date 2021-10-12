@@ -22,7 +22,7 @@ def rescale_slycot(A, B, C, D, E):
         job = 'A',
     )
     s_norm, A, B, C, scale = out
-    return declarative.Bunch(
+    return wavestate.bunch.Bunch(
         ABCDE = (A, B, C, D, E),
         s_norm = s_norm,
         scale = scale,

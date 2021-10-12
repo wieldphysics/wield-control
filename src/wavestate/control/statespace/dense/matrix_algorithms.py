@@ -431,7 +431,7 @@ def GQR(
             RidxX_limit += 1
 
     #Hessenberg_below returns at what column the matrix becomes strictly U-T
-    ret = declarative.Bunch(
+    ret = wavestate.bunch.Bunch(
         matX = matX,
         matY = matY,
         Hessenberg_below = CidxX,

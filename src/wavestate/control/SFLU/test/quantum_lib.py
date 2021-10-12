@@ -3,7 +3,7 @@
 '''
 from __future__ import division
 import numpy as np
-from declarative import Bunch as Struct
+from wavestate.bunch import Bunch as Struct
 
 
 def Minv(M):
