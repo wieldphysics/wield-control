@@ -5,13 +5,13 @@ import numpy as np
 import scipy
 import scipy.signal
 
-from transient.utilities.np import logspaced
-from transient.utilities.mpl import mplfigB
+from wavestate.utilities.np import logspaced
+from wavestate.utilities.mpl import mplfigB
 from transient.statespace import ACE
 from transient.statespace import ace_electrical
 from transient.statespace.dense.xfer_algorithms import ss2xfer
 
-from transient.pytest import (  # noqa: F401
+from wavestate.pytest import (  # noqa: F401
     ic, tpath_join, pprint, plot, fpath_join,
 )
 

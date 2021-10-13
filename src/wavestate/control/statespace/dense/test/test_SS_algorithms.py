@@ -6,8 +6,8 @@ import scipy
 import scipy.signal
 import pytest
 
-from transient.utilities.np import logspaced
-from transient.utilities.mpl import mplfigB
+from wavestate.utilities.np import logspaced
+from wavestate.utilities.mpl import mplfigB
 from transient.TFmath import statespace
 import transient.statespace.dense as SS
 from os import path

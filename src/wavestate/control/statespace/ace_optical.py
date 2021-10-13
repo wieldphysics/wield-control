@@ -14,7 +14,7 @@ from transient.statespace import ACE
 from transient.statespace.dense.zpk_algorithms import zpk_cascade
 from transient.statespace.dense.xfer_algorithms import ss2xfer
 
-from transient.quantum import qop
+from wavestate.quantum import qop
 
 from wavestate.bunch import FrozenBunch
 

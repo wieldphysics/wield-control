@@ -1,5 +1,5 @@
-from transient.utilities.ipynb_lazy import *
-from transient.utilities.ipynb.sympy import *
+from wavestate.utilities.ipynb_lazy import *
+from wavestate.utilities.ipynb.sympy import *
 from transient.TFmath import order_reduce
 import numpy as np
 import transient

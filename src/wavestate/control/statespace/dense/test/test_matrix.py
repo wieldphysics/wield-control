@@ -6,8 +6,8 @@ import copy
 import declarative
 import pytest
 
-from transient.utilities.np import logspaced
-from transient.utilities.mpl import mplfigB
+from wavestate.utilities.np import logspaced
+from wavestate.utilities.mpl import mplfigB
 from transient.statespace.dense import matrix_algorithms
 
 import numpy.testing

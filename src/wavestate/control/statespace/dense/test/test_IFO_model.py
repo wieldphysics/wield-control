@@ -7,8 +7,8 @@ import copy
 import declarative
 import transient
 
-from transient.utilities.np import logspaced
-from transient.utilities.mpl import mplfigB
+from wavestate.utilities.np import logspaced
+from wavestate.utilities.mpl import mplfigB
 from transient.statespace import dense, StateSpaceDense
 
 import IFO_model

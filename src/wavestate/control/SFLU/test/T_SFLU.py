@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sympy
 
-from transient.pytest import (  # noqa: F401
+from wavestate.pytest import (  # noqa: F401
     ic, tpath_join, pprint, plot, fpath_join,
 )
-from transient.utilities.mpl import mplfigB
+from wavestate.utilities.mpl import mplfigB
 import transient
 import re
 

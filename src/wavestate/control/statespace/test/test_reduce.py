@@ -6,7 +6,7 @@ import scipy.signal
 
 from transient.statespace import ACE
 
-from transient.pytest import (  # noqa: F401
+from wavestate.pytest import (  # noqa: F401
     ic, tpath_join, pprint, plot, fpath_join,
 )
 
