@@ -1,7 +1,7 @@
 '''Functions to calculate quantum noise
 
 '''
-from __future__ import division
+
 import numpy as np
 from wavestate.bunch import Bunch as Struct
 

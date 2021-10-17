@@ -1,6 +1,6 @@
 """
 """
-from __future__ import division, print_function, unicode_literals
+
 import scipy
 import scipy.signal
 
