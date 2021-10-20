@@ -11,7 +11,7 @@
 import numpy as np
 import pytest
 import copy
-import declarative
+from wavestate import declarative
 import transient
 
 from wavestate.utilities.np import logspaced

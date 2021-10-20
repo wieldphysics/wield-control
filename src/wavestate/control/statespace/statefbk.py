@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: BSD-3-Clause
+# SPDX-FileCopyrightText: © 2010 by California Institute of Technology.
+#
 # statefbk.py - tools for state feedback control
 #
 # Author: Richard M. Murray, Roberto Bucher
@@ -37,9 +41,8 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id$
-
-# External packages and modules
+"""
+"""
 import numpy as np
 
 from . import statesp

@@ -10,7 +10,7 @@
 
 import numpy as np
 import copy
-import declarative
+from wavestate import declarative
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB

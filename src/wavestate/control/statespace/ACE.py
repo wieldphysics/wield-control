@@ -11,7 +11,7 @@ State Space System
 
 import numpy as np
 import copy
-import declarative
+from wavestate import declarative
 from collections import defaultdict, Mapping
 import functools
 from numbers import Number

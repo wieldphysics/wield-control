@@ -10,7 +10,7 @@
 
 import numpy as np
 import scipy
-import declarative
+from wavestate import declarative
 import scipy.signal
 import scipy.linalg
 import copy

@@ -10,7 +10,7 @@
 
 import numpy as np
 import copy
-import declarative
+from wavestate import declarative
 import pytest
 
 from wavestate.utilities.np import logspaced
