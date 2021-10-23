@@ -11,25 +11,20 @@
 import numpy as np
 
 
-def percolate_inplace(
-    A, B, C, D, E,
-    which, ranges,
-    keep = True
-):
+def percolate_inplace(A, B, C, D, E, which, ranges, keep=True):
 
     if keep:
-        #make the inverse array through argsorts
+        # make the inverse array through argsorts
         argranges = np.argsort([r[0] for r in ranges])
         argranges = np.argsort(argranges)
         ranges = sorted(ranges)
+
         def percolate1(mat):
             segments = []
             for r in ranges:
                 A1, A2 = r
                 Sl1 = slice(A1, A2)
-                segments.append(
-                    np.copy(mat[Sl1, :])
-                )
+                segments.append(np.copy(mat[Sl1, :]))
             past_r = ranges[0]
             past_idx = past_r[0]
             for r in ranges[1:]:
@@ -56,9 +51,7 @@ def percolate_inplace(
             for r in ranges:
                 A1, A2 = r
                 Sl1 = slice(A1, A2)
-                segments.append(
-                    np.copy(mat[:, Sl1])
-                )
+                segments.append(np.copy(mat[:, Sl1]))
             past_r = ranges[0]
             past_idx = past_r[0]
             for r in ranges[1:]:
@@ -79,8 +72,10 @@ def percolate_inplace(
                 Sl2 = slice(past_idx, next_idx)
                 mat[:, Sl2] = seg
                 past_idx = next_idx
+
     else:
         ranges = sorted(ranges)
+
         def percolate1(mat):
             past_r = ranges[0]
             past_idx = past_r[0]
@@ -111,17 +106,17 @@ def percolate_inplace(
             Sl2 = slice(past_idx, next_idx)
             mat[:, Sl2] = mat[:, Sl1]
 
-    if which == 'inputs':
+    if which == "inputs":
         percolate2(B)
         percolate2(D)
-    elif which == 'output':
+    elif which == "output":
         percolate1(C)
         percolate1(D)
-    elif which == 'states':
+    elif which == "states":
         percolate2(C)
         percolate2(A)
         percolate2(E)
-    elif which == 'constr':
+    elif which == "constr":
         percolate1(B)
         percolate1(A)
         percolate1(E)

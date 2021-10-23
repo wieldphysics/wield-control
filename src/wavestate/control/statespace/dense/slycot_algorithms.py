@@ -26,11 +26,11 @@ def rescale_slycot(A, B, C, D, E):
         np.copy(A),
         np.copy(B),
         np.copy(C),
-        job = 'A',
+        job="A",
     )
     s_norm, A, B, C, scale = out
     return wavestate.bunch.Bunch(
-        ABCDE = (A, B, C, D, E),
-        s_norm = s_norm,
-        scale = scale,
+        ABCDE=(A, B, C, D, E),
+        s_norm=s_norm,
+        scale=scale,
     )

@@ -46,10 +46,10 @@ def SRE_check(sre):
     seq, req, edges = sre
     for node in req:
         for rnode in req[node]:
-            assert(node in seq[rnode])
+            assert node in seq[rnode]
     for node in seq:
         for snode in seq[node]:
-            assert(node in req[snode])
+            assert node in req[snode]
             edges[node, snode]
 
 
@@ -68,63 +68,68 @@ def SRE_copy(sre):
     return seq, req, edges
 
 
-def check_seq_req_balance(seq, req, edges = None):
+def check_seq_req_balance(seq, req, edges=None):
     for node, seq_set in seq.items():
         for snode in seq_set:
-            assert(node in req[snode])
+            assert node in req[snode]
             if edges and (node, snode) not in edges:
-                warnings.warn(repr((node, snode)) + 'not in edge map')
+                warnings.warn(repr((node, snode)) + "not in edge map")
                 edges[node, snode] = 0
 
     for node, req_set in req.items():
         for rnode in req_set:
-            assert(node in seq[rnode])
+            assert node in seq[rnode]
 
 
 def color_purge_inplace(
-    start_set, emap,
-    seq, req,
+    start_set,
+    emap,
+    seq,
+    req,
     edges,
 ):
-    #can't actually purge, must color all nodes
-    #from the exception set and then subtract the
-    #remainder.
-    #purging algorithms otherwise have to deal with
-    #strongly connected components, which makes them
-    #no better than coloring
+    # can't actually purge, must color all nodes
+    # from the exception set and then subtract the
+    # remainder.
+    # purging algorithms otherwise have to deal with
+    # strongly connected components, which makes them
+    # no better than coloring
     active_set = set()
     active_set_pending = set()
-    #print("PURGE START: ", start_set)
+    # print("PURGE START: ", start_set)
     for node in start_set:
         active_set_pending.add(node)
 
     while active_set_pending:
         node = active_set_pending.pop()
-        #print("PURGE NODE: ", node)
+        # print("PURGE NODE: ", node)
         active_set.add(node)
         for snode in emap[node]:
             if snode not in active_set:
                 active_set_pending.add(snode)
     full_set = set(seq.keys())
     purge_set = full_set - active_set
-    #print("FULL_SET", active_set)
-    #print("PURGE", len(purge_set), len(full_set))
+    # print("FULL_SET", active_set)
+    # print("PURGE", len(purge_set), len(full_set))
     purge_subgraph_inplace(seq, req, edges, purge_set)
 
 
 def purge_reqless_inplace(
-        seq,
-        req,
-        except_set = None,
-        req_alpha  = None,
-        seq_beta   = None,
-        edges   = None,
+    seq,
+    req,
+    except_set=None,
+    req_alpha=None,
+    seq_beta=None,
+    edges=None,
 ):
     if except_set is None:
         except_set = set(req_alpha.keys())
     color_purge_inplace(
-        except_set, seq,
-        seq, req, edges,
+        except_set,
+        seq,
+        seq,
+        req,
+        edges,
     )
     if seq_beta is not None:
         rmnodes = list()
@@ -136,18 +141,21 @@ def purge_reqless_inplace(
 
 
 def purge_seqless_inplace(
-        seq,
-        req,
-        except_set = None,
-        req_alpha  = None,
-        seq_beta   = None,
-        edges   = None,
+    seq,
+    req,
+    except_set=None,
+    req_alpha=None,
+    seq_beta=None,
+    edges=None,
 ):
     if except_set is None:
         except_set = set(seq_beta.keys())
     color_purge_inplace(
-        except_set, req,
-        seq, req, edges,
+        except_set,
+        req,
+        seq,
+        req,
+        edges,
     )
     if req_alpha is not None:
         rmnodes = list()
@@ -166,25 +174,26 @@ def purge_inplace(
     edges,
 ):
     purge_reqless_inplace(
-        seq        = seq,
-        req        = req,
-        seq_beta   = seq_beta,
-        req_alpha  = req_alpha,
-        edges   = edges,
+        seq=seq,
+        req=req,
+        seq_beta=seq_beta,
+        req_alpha=req_alpha,
+        edges=edges,
     )
     purge_seqless_inplace(
-        seq        = seq,
-        req        = req,
-        seq_beta   = seq_beta,
-        req_alpha  = req_alpha,
-        edges   = edges,
+        seq=seq,
+        req=req,
+        seq_beta=seq_beta,
+        req_alpha=req_alpha,
+        edges=edges,
     )
     return
 
+
 def edgedelwarn(
-        edges,
-        nfrom,
-        nto,
+    edges,
+    nfrom,
+    nto,
 ):
     if edges is None:
         return
@@ -193,8 +202,10 @@ def edgedelwarn(
     except KeyError:
         warnings.warn(repr(("Missing edge", nfrom, nto)))
 
+
 def purge_subgraph_inplace(
-    seq, req,
+    seq,
+    req,
     edges,
     purge_set,
 ):
@@ -205,7 +216,7 @@ def purge_subgraph_inplace(
                 req[snode].remove(node)
         del seq[node]
         for rnode in req[node]:
-            #edgedelwarn(edges, rnode, node)
+            # edgedelwarn(edges, rnode, node)
             if rnode not in purge_set and (rnode, node):
                 seq[rnode].remove(node)
         del req[node]
@@ -213,23 +224,23 @@ def purge_subgraph_inplace(
 
 
 def pre_purge_inplace(seq, req, edges):
-    #print("PRE-PURGING")
+    # print("PRE-PURGING")
     total_N = 0
     purge_N = 0
-    #actually needs to list this as seq is mutating
+    # actually needs to list this as seq is mutating
     for inode, smap in list(seq.items()):
         for snode in list(smap):
             total_N += 1
             if (inode, snode) not in edges:
-                #if purge_N % 100:
+                # if purge_N % 100:
                 #    print("DEL: ", inode, snode)
                 purge_N += 1
                 smap.remove(snode)
-    for snode, rmap in (req.items()):
+    for snode, rmap in req.items():
         for inode in list(rmap):
             if (inode, snode) not in edges:
                 rmap.remove(inode)
-    #print("FRAC REMOVED: ", purge_N / total_N, purge_N)
+    # print("FRAC REMOVED: ", purge_N / total_N, purge_N)
 
 
 def SRABE_copy(SRE):
