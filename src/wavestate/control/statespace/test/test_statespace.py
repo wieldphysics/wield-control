@@ -14,15 +14,14 @@ import scipy.signal
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from transient.statespace import dense
-from transient.statespace import ACE
-from transient.statespace.dense.zpk_algorithms import zpk_cascade
-from transient.statespace.dense.xfer_algorithms import ss2xfer
+from wavestate.control.statespace import dense
+from wavestate.control.statespace import ACE
+from wavestate.control.statespace.dense.zpk_algorithms import zpk_cascade
+from wavestate.control.statespace.dense.xfer_algorithms import ss2xfer
 
 from wavestate.pytest import (  # noqa: F401
-    ic,
     tpath_join,
-    pprint,
+    dprint,
     plot,
     fpath_join,
 )
@@ -40,14 +39,14 @@ def print_ssd(ssd):
     print("D", ssd.D)
 
 
-def test_ACE_tupleize(pprint, tpath_join, fpath_join):
-    pprint(ACE.tupleize("A.B"))
-    pprint(ACE.tupleize(("A.B",)))
-    pprint(ACE.tupleize((None, ("A.B",), "C")))
-    pprint(ACE.tupleize(None))
+def test_ACE_tupleize(dprint, tpath_join, fpath_join):
+    dprint(ACE.tupleize("A.B"))
+    dprint(ACE.tupleize(("A.B",)))
+    dprint(ACE.tupleize((None, ("A.B",), "C")))
+    dprint(ACE.tupleize(None))
 
 
-def test_xfers_ACE(pprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_xfers_ACE(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     Zc = [-1 + 1j, -1 + 5j]
     Zr = [-100, -200]
     Pc = [-1 + 2j, -1 + 6j]
@@ -107,33 +106,33 @@ def test_xfers_ACE(pprint, test_trigger, tpath_join, tpath_preclear, plot):
     ace2 = ACE.ACE()
     for idx, sys in enumerate(syslist):
         ace2.insert(sys, cmn="sys{}".format(idx))
-        pprint(sys.Eranks)
+        dprint(sys.Eranks)
     for idx in range(len(syslist) - 1):
         ace2.bind_equal(
             {"sys{}.O".format(idx), "sys{}.I".format(idx + 1)},
             constr="s{}{}".format(idx, idx + 1),
         )
     ace2.io_add("in", {"sys0.I": None}, constr=True)
-    pprint("TEST", ace2.cr2stA)
+    dprint("TEST", ace2.cr2stA)
 
-    pprint(ace2.states_edges())
-    pprint(ace2.states_reducible())
-    pprint(ace2.io2st)
+    dprint(ace2.states_edges())
+    dprint(ace2.states_reducible())
+    dprint(ace2.io2st)
 
     ssB1 = ace2.statespace(inputs=["in"], outputs=["sys2.O"], Dreduce=False)
 
     # no longer a good test, since there isn't an internal constraint
     sccs = ace2.states_reducible_sccs()
-    pprint("TEST", ace2.cr2stA)
-    pprint(sccs)
-    pprint("scc2", sccs)
+    dprint("TEST", ace2.cr2stA)
+    dprint(sccs)
+    dprint("scc2", sccs)
     for st_set, cr_set in sccs[:]:
-        pprint("SCC_reduce", st_set, cr_set)
+        dprint("SCC_reduce", st_set, cr_set)
         ace2.simplify_scc(st_set, cr_set)
-    # pprint(ace2.io2st)
-    pprint("TEST", ace2.cr2stA)
+    # dprint(ace2.io2st)
+    dprint("TEST", ace2.cr2stA)
 
-    # pprint(ssB1)
+    # dprint(ssB1)
     ssB2 = ace2.statespace(inputs=["in"], outputs=["sys2.O"], Dreduce=False)
     ssB3 = ace2.statespace(inputs=["in"], outputs=["sys2.O"], Dreduce=True)
     printSSBnz(ssB1)
@@ -141,9 +140,9 @@ def test_xfers_ACE(pprint, test_trigger, tpath_join, tpath_preclear, plot):
     printSSBnz(ssB2)
     print("----------------------------")
     printSSBnz(ssB3)
-    # pprint(ace2.states_edges())
-    # pprint(ace2.st2crE)
-    # pprint(ace2.states_reducible())
+    # dprint(ace2.states_edges())
+    # dprint(ace2.st2crE)
+    # dprint(ace2.states_reducible())
 
     xfer = ss2xfer(*ssB0.ABCDE, F_Hz=F_Hz)
 
@@ -223,7 +222,7 @@ def ziplines(*args, delim=""):
         print(delim.join(line))
 
 
-def test_reducer(pprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_reducer(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     ace = ACE.ACE()
 
     seis_acc = dense.zpk_rc(
@@ -266,10 +265,10 @@ def test_reducer(pprint, test_trigger, tpath_join, tpath_preclear, plot):
     ace.io_input("g1.I")
 
     sccs = ace.states_reducible_sccs()
-    pprint("TEST", ace.cr2stA)
-    pprint(sccs)
-    pprint("scc2", sccs)
+    dprint("TEST", ace.cr2stA)
+    dprint(sccs)
+    dprint("scc2", sccs)
     for st_set, cr_set in sccs[:]:
-        pprint("SCC_reduce", st_set, cr_set)
+        dprint("SCC_reduce", st_set, cr_set)
         ace.simplify_scc(st_set, cr_set)
     return

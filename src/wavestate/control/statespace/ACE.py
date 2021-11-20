@@ -11,16 +11,10 @@ State Space System
 
 import numpy as np
 import copy
-from wavestate import declarative
 from collections import defaultdict, Mapping
-import functools
-from numbers import Number
+from wavestate.utilities.np import broadcast_shapes
 
 from . import tupleize
-from ..matrix.utilities import (
-    # broadcast_deep,
-    broadcast_shapes,
-)
 
 
 class ACE(object):

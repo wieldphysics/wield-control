@@ -15,8 +15,8 @@ import pytest
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from transient.TFmath import statespace
-import transient.statespace.dense as SS
+from wavestate.control.TFmath import statespace
+import wavestate.control.statespace.dense as SS
 from os import path
 
 pytestmark = pytest.mark.xfail(reason="Need to revisit these")

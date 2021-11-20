@@ -11,25 +11,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sympy
-
-from wavestate.pytest import (  # noqa: F401
-    ic,
-    tpath_join,
-    pprint,
-    plot,
-    fpath_join,
-)
 from wavestate.utilities.mpl import mplfigB
 from wavestate.utilities.np import logspaced
-import transient
+import wavestate.control
 import re
 
-from transient.statespace import tupleize
-from transient.SFLU import SFLU
+from wavestate.control.statespace import tupleize
+from wavestate.control.SFLU import SFLU
 from quantum_lib import mats_planewave as ilib
 
 
-def T_SFLU_FP(pprint, tpath_join, fpath_join):
+from wavestate.pytest.fixtures import (  # noqa: F401
+    tpath_join,
+    dprint,
+    plot,
+    fpath_join,
+)
+
+
+def T_SFLU_FP(dprint, tpath_join, fpath_join):
     """
     Setup a cavity with fields
     a2:a1 ---- b1:b2
@@ -70,9 +70,9 @@ def T_SFLU_FP(pprint, tpath_join, fpath_join):
     print("row2", sflu.row2)
     print("col1", sflu.col)
     print("col2", sflu.col2)
-    pprint(sflu.oplistE)
+    dprint(sflu.oplistE)
     oplistN = sflu.subinverse("a2_o", "a2_i")
-    pprint(oplistN)
+    dprint(oplistN)
 
     F_Hz = logspaced(1, 1e5, 1000)
     L_m = 4000

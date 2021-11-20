@@ -14,19 +14,16 @@ import scipy.signal
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from transient.statespace import ACE
-from transient.statespace import ace_electrical
-from transient.statespace.dense.xfer_algorithms import ss2xfer
+from wavestate.control.statespace import ACE
+from wavestate.control.statespace import ace_electrical
+from wavestate.control.statespace.dense.xfer_algorithms import ss2xfer
 
 from wavestate.pytest import (  # noqa: F401
-    ic,
     tpath_join,
-    pprint,
+    dprint,
     plot,
     fpath_join,
 )
-
-import scipy.signal
 
 c_m_s = 299792458
 
@@ -39,7 +36,7 @@ def print_ssd(ssd):
     print("D", ssd.D)
 
 
-def test_opamp(pprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_opamp(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     F_Hz = logspaced(0.01, 1e7, 100)
 
     ace = ACE.ACE()
@@ -67,7 +64,7 @@ def test_opamp(pprint, test_trigger, tpath_join, tpath_preclear, plot):
     return
 
 
-def test_opamp_fb(pprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_opamp_fb(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     F_Hz = logspaced(0.01, 1e7, 100)
 
     ace = ACE.ACE()
@@ -79,8 +76,8 @@ def test_opamp_fb(pprint, test_trigger, tpath_join, tpath_preclear, plot):
     ace.io_input("Vp.V")
     ace.bind_ports("op1.out", "op1.inN")
     ssB = ace.statespace(inputs=["Vp.V"], outputs=["op1.outV"], Dreduce=False)
-    pprint(ssB.A.shape)
-    pprint(ssB.E.shape)
+    dprint(ssB.A.shape)
+    dprint(ssB.E.shape)
     printSSBnz(ssB)
     axB = mplfigB(Nrows=2)
     xfer = ss2xfer(*ssB.ABCDE, F_Hz=F_Hz, idx_in=0)

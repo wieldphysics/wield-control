@@ -16,10 +16,10 @@ from collections import defaultdict, Mapping
 import functools
 from numbers import Number
 
-from transient.statespace import dense
-from transient.statespace import ACE
-from transient.statespace.dense.zpk_algorithms import zpk_cascade
-from transient.statespace.dense.xfer_algorithms import ss2xfer
+from wavestate.control.statespace import dense
+from wavestate.control.statespace import ACE
+from wavestate.control.statespace.dense.zpk_algorithms import zpk_cascade
+from wavestate.control.statespace.dense.xfer_algorithms import ss2xfer
 
 
 def zpkACE(Zr=(), Zc=(), Pr=(), Pc=(), k=1):

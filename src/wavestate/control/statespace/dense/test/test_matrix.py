@@ -15,7 +15,7 @@ import pytest
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from transient.statespace.dense import matrix_algorithms
+from wavestate.control.statespace.dense import matrix_algorithms
 
 import numpy.testing
 

@@ -18,6 +18,10 @@ from . import ss_algorithms
 from . import reduce_algorithms
 from . import shuffle_algorithms
 
+from wavestate.pytest.fixtures import (
+    tpath_join,
+    dprint,
+)
 
 class StateSpaceDense(object):
     def __init__(
@@ -940,7 +944,7 @@ class StateSpaceDense(object):
                 statesSl = slice(*statesR)
                 # TODO, make the zero check a touch smarter for symbolics
                 mask = ~np.any(self.E[constrSl, statesSl], axis=1)
-                # ic(mask)
+                # dprint(mask)
                 if statemask is None:
                     statemask = mask
                 else:
@@ -960,7 +964,7 @@ class StateSpaceDense(object):
                 constrSl = slice(*constrR)
                 # TODO, make the zero check a touch smarter for symbolics
                 mask = ~np.any(self.E[constrSl, statesSl], axis=0)
-                # ic(mask)
+                # dprint(mask)
                 if statemask is None:
                     statemask = mask
                 else:

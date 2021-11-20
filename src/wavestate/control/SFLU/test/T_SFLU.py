@@ -11,22 +11,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sympy
+from wavestate.utilities.mpl import mplfigB
+import wavestate.control
+import re
+
+from wavestate.control.SFLU import SFLU
 
 from wavestate.pytest import (  # noqa: F401
-    ic,
     tpath_join,
-    pprint,
+    dprint,
     plot,
     fpath_join,
 )
-from wavestate.utilities.mpl import mplfigB
-import transient
-import re
-
-from transient.SFLU import SFLU
 
 
-def T_SFLU_pre1(pprint, tpath_join, fpath_join):
+def T_SFLU_pre1(dprint, tpath_join, fpath_join):
     """
     Setup 2-node problem, nodes a and b with edges Eaa, Eab, Eba, Ebb.
     """
@@ -42,20 +41,20 @@ def T_SFLU_pre1(pprint, tpath_join, fpath_join):
     sflu = SFLU.SFLU(edges)
 
     print("-----------------------")
-    pprint(sflu.edges)
+    dprint(sflu.edges)
     sflu.reduce("a")
     print("-----------------------")
-    pprint(sflu.edges)
-    pprint(sflu.row2)
-    pprint(sflu.col2)
+    dprint(sflu.edges)
+    dprint(sflu.row2)
+    dprint(sflu.col2)
     sflu.reduce("b")
     print("-----------------------")
-    pprint(sflu.edges)
-    pprint(sflu.row2)
-    pprint(sflu.col2)
+    dprint(sflu.edges)
+    dprint(sflu.row2)
+    dprint(sflu.col2)
     print("-----------------------oplist")
-    pprint(sflu.oplistE)
-    pprint(sflu.subinverse("a_out", "a_in"))
+    dprint(sflu.oplistE)
+    dprint(sflu.subinverse("a_out", "a_in"))
 
     return
 
@@ -71,7 +70,7 @@ def T_sympy(pprint):
             i += 1
 
     E = x * y ** 2 - (y ** -2 * x) ** -2
-    pprint(E)
+    dprint(E)
     subexprs, cse_expr = sympy.cse(E, symbols=symbols())
 
     def transform(ex):

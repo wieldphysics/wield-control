@@ -15,18 +15,17 @@ import itertools
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from transient.statespace import dense
-from transient.statespace import ACE
-from transient.statespace.dense.zpk_algorithms import zpk_cascade
-from transient.statespace.dense.xfer_algorithms import ss2xfer
-import transient
+from wavestate.control.statespace import dense
+from wavestate.control.statespace import ACE
+from wavestate.control.statespace.dense.zpk_algorithms import zpk_cascade
+from wavestate.control.statespace.dense.xfer_algorithms import ss2xfer
+import wavestate.control
 
-from IIRrational import AAA
+from wavestate.AAA import AAA
 
 from wavestate.pytest import (  # noqa: F401
-    ic,
     tpath_join,
-    pprint,
+    dprint,
     plot,
     fpath_join,
 )
@@ -44,7 +43,7 @@ def print_ssd(ssd):
     print("D", ssd.D)
 
 
-def test_lqe1(pprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_lqe1(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     ace = ACE.ACE()
 
     seis_acc = dense.zpk_rc(
@@ -125,9 +124,9 @@ def test_lqe1(pprint, test_trigger, tpath_join, tpath_preclear, plot):
     ace.insert(Aweights_acc, cmn="ws1")
     ace.insert(Aweights_acc, cmn="ws2")
 
-    pprint([(d["order"], d["res_rms"]) for d in wTF.fit_list])
-    pprint(wTF.supports)
-    pprint(wTF.zpk)
+    dprint([(d["order"], d["res_rms"]) for d in wTF.fit_list])
+    dprint(wTF.supports)
+    dprint(wTF.zpk)
     axB = mplfigB()
 
     w_xfer = weights_acc.xfer(F_Hz, iname="zpk.i0", oname="zpk.o0")
@@ -178,9 +177,9 @@ def test_lqe1(pprint, test_trigger, tpath_join, tpath_preclear, plot):
     ACE.printSSBnz(ssB)
 
     sccs = ace.states_reducible_sccs()
-    pprint("scc2", sccs)
+    dprint("scc2", sccs)
     for st_set, cr_set in sccs[:]:
-        pprint("SCC_reduce", st_set, cr_set)
+        dprint("SCC_reduce", st_set, cr_set)
         ace.simplify_scc(st_set, cr_set)
 
     ssB = ace.statespace(
@@ -207,7 +206,7 @@ def test_lqe1(pprint, test_trigger, tpath_join, tpath_preclear, plot):
 
     import control
 
-    pprint("D", ssB.D)
+    dprint("D", ssB.D)
     A = ssB.A
     B = ssB.B
     C = ssB.C[:2, :]
@@ -303,7 +302,7 @@ def test_lqe1(pprint, test_trigger, tpath_join, tpath_preclear, plot):
     return
 
 
-def test_lqe2(pprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_lqe2(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     A = np.array(
         [
             [0.00000000e00, -5.00000000e-01, 0.00000000e00, 0.00000000e00],

@@ -12,11 +12,11 @@ import numpy as np
 import pytest
 import copy
 from wavestate import declarative
-import transient
+import wavestate.control
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from transient.statespace import dense, StateSpaceDense
+from wavestate.control.statespace import dense, StateSpaceDense
 
 import scipy.linalg
 import IFO_model

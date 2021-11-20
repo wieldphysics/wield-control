@@ -14,7 +14,7 @@ from wavestate import declarative
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from transient.statespace import dense, StateSpaceDense
+from wavestate.control.statespace import dense, StateSpaceDense
 
 
 c_m_s = 299792458

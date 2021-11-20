@@ -14,7 +14,7 @@ import scipy.signal
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from transient.statespace import dense
+from wavestate.control.statespace import dense
 
 import scipy.signal
 

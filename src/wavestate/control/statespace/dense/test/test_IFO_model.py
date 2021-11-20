@@ -12,14 +12,19 @@ import numpy as np
 import pytest
 import copy
 from wavestate import declarative
-import transient
+import wavestate.control
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from transient.statespace import dense, StateSpaceDense
+from wavestate.control.statespace import dense, StateSpaceDense
 
 import IFO_model
 import IFO_model_noM
+
+from wavestate.pytest.fixtures import (
+    tpath_join,
+    dprint,
+)
 
 
 # TODO, should check this against the analytical model in setups
@@ -59,19 +64,19 @@ def test_IFO_model(tpath_join):
     axB.save(tpath_join("REFL"))
 
 
-def test_reduce(test_trigger, tpath_join, plot, ic):
+def test_reduce(test_trigger, tpath_join, plot, dprint):
     model = IFO_model.build_model(theta=+0.01)
     sys1 = model.sys1
     sys1c = sys1.copy()
 
     sys1.reduce()
     sys1.reduce()
-    ic(sys1.E[-2:, :])
-    ic(sys1.E[:, -2:])
-    ic(sys1.A[-2:, :])
-    ic(sys1.A[:, -2:])
-    ic(sys1.B[-2:, :])
-    ic(sys1.C[:-2, :])
+    dprint(sys1.E[-2:, :])
+    dprint(sys1.E[:, -2:])
+    dprint(sys1.A[-2:, :])
+    dprint(sys1.A[:, -2:])
+    dprint(sys1.B[-2:, :])
+    dprint(sys1.C[:-2, :])
 
     F_Hz = logspaced(1, model.FSR_Hz * 0.8, 1000)
     xfer_DARM = sys1.xfer(
@@ -272,7 +277,7 @@ def test_save(test_trigger, tpath_join, plot):
     print("Inputs: ", sys1.inputs.idx2name)
     print("Output: ", sys1.output.idx2name)
     print("Output[n]: ", sys1.output.idx2name.index("Msrm+A-oP"))
-    transient.save(
+    wavestate.control.save(
         tpath_join("system.mat"),
         dict(
             A=sys1.A,
