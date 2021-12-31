@@ -21,6 +21,11 @@ class SFLU(object):
         inputs=None,
         outputs=None,
     ):
+        """
+        This takes a dictionary of edges which are (row, col) tuples, matched to a value name.
+
+        The value name will be mapped into the Espace
+        """
         row = defaultdict(set)
         col = defaultdict(set)
 
@@ -30,11 +35,13 @@ class SFLU(object):
         col2 = defaultdict(set)
 
         edges2 = dict()
+        edges_original = dict()
 
         for (R, C), E in edges.items():
             R = tupleize.tupleize(R)
             C = tupleize.tupleize(C)
-            edges2[R, C] = E
+            edges2[tupleize.EdgeTuple(R, C)] = E
+            edges_original[tupleize.EdgeTuple(R, C)] = E
             row[C].add(R)
             col[R].add(C)
             nodes.add(R)
@@ -113,14 +120,17 @@ class SFLU(object):
         check(row2, col2)
 
         self.edges = edges2
-        self.edgesO = dict(edges)
+        #  the original edges
+        self.edges_original = edges_original
+
         self.nodes = nodes
 
         self.inputs = inputs
         self.outputs = outputs
 
+        # the series of operations to act on the edge space during computation
         self.oplistE = []
-        self.oplistN = []
+        return
 
     def invertE(self, E):
         return Op("invert", E)
@@ -299,6 +309,9 @@ class SFLU(object):
         return True
 
     def subinverse(self, R, C):
+        """
+        This computes the matrix element for an inverse from C to R
+        """
         R = tupleize.tupleize(R)
         C = tupleize.tupleize(C)
         ops = []
@@ -323,10 +336,46 @@ class SFLU(object):
                     used = True
                 elif done[cN]:
                     # load a node multiplied by an edge
+                    # N_sum does not know if the target node has been loaded or exists already
+                    # TODO, make this smarter by knowing if the target node has been loaded and
+                    # using finer-grained code
                     ops.append(
                         OpComp("N_sum", node, (tupleize.EdgeTuple(node, cN), cN))
                     )
                     used = True
+            return used
+
+        recurse(R)
+        ops.append(OpComp("N_ret", R, ()))
+        return ops
+
+    def inverse(self, R, Cin):
+        """
+        This computes the oplist to invert the matrix having loaded all or many of the columns C
+        """
+        R = tupleize.tupleize(R)
+        Cin = {tupleize.tupleize(C) for C in Cin}
+        ops = []
+        done = {}
+
+        # since the graph is manefestly a DAG without cycles, can use depth first search
+        # as a topological sort
+        def recurse(node):
+            cS = self.col2[node]
+            # print('node', node, ' cS', cS)
+            for cN in cS:
+                if cN in Cin:
+                    done[cN] = True
+                elif cN not in done:
+                    done[cN] = recurse(cN)
+
+            used = False
+            for cN in cS:
+                # load a node multiplied by an edge
+                ops.append(
+                    OpComp("N_sum", node, (tupleize.EdgeTuple(node, cN), cN))
+                )
+                used = True
             return used
 
         recurse(R)

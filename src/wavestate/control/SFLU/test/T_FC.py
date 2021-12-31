@@ -82,7 +82,7 @@ def T_SFLU_FP(dprint, tpath_join, fpath_join):
 
     Espace = computeLU(
         oplistE=sflu.oplistE,
-        edges=sflu.edgesO,
+        edges=sflu.edges_original,
         nodesizes={},
         defaultsize=2,
         **dict(
@@ -96,7 +96,8 @@ def T_SFLU_FP(dprint, tpath_join, fpath_join):
             Lmat=ilib.diag(np.exp(-i2pi * F_Hz * L_m / c_m_s)),
         ),
     )
-    print(list(Espace.keys()))
+    # print("ESPACE: ", Espace)
+    # print(list(Espace.keys()))
 
     SI = compute_subinverse(
         oplistN=oplistN,
@@ -125,8 +126,8 @@ def computeLU(
     # TODO, allow this to include operations
     for ek, ev in edges.items():
         r, c = ek
-        r = tupleize.tupleize(r)
-        c = tupleize.tupleize(c)
+        # r = tupleize.tupleize(r)
+        # c = tupleize.tupleize(c)
         Espace[tupleize.EdgeTuple(r, c)] = kwargs[ev]
 
     for op in oplistE:
@@ -205,6 +206,7 @@ def compute_subinverse(
             else:
                 Nspace[op.targ] = Ntarg + E
 
+        # N_sum does not know if the node has been loaded already
         elif op.op == "N_sum":
             argE, argN = op.args
             Ntarg = Nspace.get(op.targ, None)
