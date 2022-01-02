@@ -10,6 +10,17 @@
 from collections import defaultdict, namedtuple
 from ..statespace import tupleize
 
+try:
+    import networkx as nx
+except ImportError:
+    nx = None
+
+try:
+    import sympy as sp
+except ImportError:
+    sp = None
+
+
 Op = namedtuple("Op", ("op", "args"))
 OpComp = namedtuple("OpComp", ("op", "targ", "args"))
 
@@ -20,17 +31,26 @@ class SFLU(object):
         edges,
         inputs=None,
         outputs=None,
+        graph=False,
     ):
         """
         This takes a dictionary of edges which are (row, col) tuples, matched to a value name.
 
         The value name will be mapped into the Espace
         """
+        if graph:
+            self.G = nx.DiGraph()
+        else:
+            self.G = None
+
+        # this takes a column and provides the row edges
         row = defaultdict(set)
+        # this takes a row and provides the column edges
         col = defaultdict(set)
 
         nodes = set()
 
+        # this second set are the row and col edge sets that are cycle-free
         row2 = defaultdict(set)
         col2 = defaultdict(set)
 
@@ -46,6 +66,15 @@ class SFLU(object):
             col[R].add(C)
             nodes.add(R)
             nodes.add(C)
+
+        if self.G is not None:
+            def to_label(val):
+                return '$' + sp.latex(sp.var(str(val))) + '$'
+            for (R, C), E in edges2.items():
+                self.G.add_edge(C, R, label=to_label(E))
+            for n in nodes:
+                print('tuplized: ', str(n))
+                self.G.nodes[n]['label'] = to_label(n)
         # print('row', row)
         # print('col', col)
 
@@ -132,6 +161,69 @@ class SFLU(object):
         self.oplistE = []
         return
 
+    def graph_labels(self, labels):
+        pos2 = {}
+        for n, l in labels.items():
+            n = tupleize.tupleize(n)
+            pos2[n] = l
+        nx.set_node_attributes(self.G, pos2, 'label')
+        return
+
+    def graph_positions(self, pos):
+        pos2 = {}
+        for n, p in pos.items():
+            n = tupleize.tupleize(n)
+            pos2[n] = p
+        nx.set_node_attributes(self.G, pos2, 'pos')
+        return
+
+    def graph_nodes_repr(self):
+        strs = []
+        for n in self.G.nodes:
+            strs.append(str(n))
+        return strs
+
+    def graph_nodes_pos(self, pos, *nodes):
+        if nodes:
+            # assign pos to each node in nodes
+            for n in nodes:
+                n = tupleize.tupleize(n)
+                self.G.nodes[n]['pos'] = pos
+        else:
+            # assumes it is a dictionary
+            for n, p in pos.items():
+                n = tupleize.tupleize(n)
+                self.G.nodes[n]['pos'] = p
+        return
+
+    def graph_nodes_posX(self, posX, *nodes):
+        for n in nodes:
+            n = tupleize.tupleize(n)
+            pos = self.G.nodes[n].get('pos', (None, None))
+            self.G.nodes[n]['pos'] = (posX, pos[1])
+
+    def graph_nodes_posY(self, posY, *nodes):
+        for n in nodes:
+            n = tupleize.tupleize(n)
+            pos = self.G.nodes[n].get('pos', (None, None))
+            self.G.nodes[n]['pos'] = (pos[0], posY)
+
+    def graph_nodes_pos_get(self, *nodes):
+        if not nodes:
+            pos = nx.get_node_attributes(self.G, 'pos')
+            pos2 = {}
+            for k, p in pos.items():
+                pos2[str(k)] = p
+            return pos2
+
+        for n in nodes:
+            n2 = tupleize.tupleize(n)
+            p = self.G.nodes[n2].get('pos', None)
+            if p is None:
+                continue
+            pos2[n] = p
+            return pos2
+
     def invertE(self, E):
         return Op("invert", E)
 
@@ -186,6 +278,8 @@ class SFLU(object):
         self.edges[NsfB, NsfA] = CLG
         self.row2[NsfA].add(NsfB)
         self.col2[NsfB].add(NsfA)
+        if self.G is not None:
+            self.G.add_edge(NsfA, NsfB)
 
         if selfE is not None:
             self.oplistE.append(
@@ -201,6 +295,7 @@ class SFLU(object):
                 OpComp("E_CLGd", tupleize.EdgeTuple(NsfB, NsfA), (Nsf,))
             )
 
+        # process all of the internal edges
         for R in self.row[Nsf]:
             edgeR = self.edges[R, Nsf]
             for C in self.col[Nsf]:
@@ -237,7 +332,10 @@ class SFLU(object):
 
                 self.row[C].add(R)
                 self.col[R].add(C)
+                if self.G is not None:
+                    self.G.add_edge(C, R)
 
+        # now process all of the no_cycle edges
         for R in self.row[Nsf]:
             edge = self.edges.pop((R, Nsf))
             self.edges[R, NsfA] = self.mulE(edge, CLG)
@@ -252,8 +350,12 @@ class SFLU(object):
             self.row2[NsfA].add(R)
             self.col2[R].add(NsfA)
             self.col[R].remove(Nsf)
+
+            if self.G is not None:
+                self.G.add_edge(NsfA, R, type='no_cycle')
         del self.row[Nsf]
 
+        # now process all of the no_cycle edges
         for C in self.col[Nsf]:
             edge = self.edges.pop((Nsf, C))
             self.edges[NsfB, C] = self.mulE(CLG, edge)
@@ -271,6 +373,10 @@ class SFLU(object):
             self.row2[C].add(NsfB)
             self.col2[NsfB].add(C)
             self.row[C].remove(Nsf)
+
+            if self.G is not None:
+                self.G.add_edge(C, NsfB, type='no_cycle')
+
         del self.col[Nsf]
 
         for R in self.row2[Nsf]:
@@ -287,6 +393,8 @@ class SFLU(object):
             self.row2[NsfB].add(R)
             self.col2[R].add(NsfB)
             self.col2[R].remove(Nsf)
+            if self.G is not None:
+                self.G.add_edge(NsfB, R)
         del self.row2[Nsf]
 
         for C in self.col2[Nsf]:
@@ -303,9 +411,15 @@ class SFLU(object):
             self.row2[C].add(NsfA)
             self.col2[NsfA].add(C)
             self.row2[C].remove(Nsf)
+
+            if self.G is not None:
+                self.G.add_edge(C, NsfA)
         del self.col2[Nsf]
 
         self.nodes.remove(Nsf)
+
+        if self.G is not None:
+            self.G.remove_node(Nsf)
         return True
 
     def subinverse(self, R, C):

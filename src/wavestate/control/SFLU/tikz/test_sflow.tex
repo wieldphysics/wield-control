@@ -1,0 +1,279 @@
+\documentclass{standalone}
+\pdfminorversion=7
+
+\usepackage[english]{babel}
+\usepackage[bbgreekl]{mathbbol}
+\usepackage{amsfonts}
+
+\DeclareSymbolFontAlphabet{\mathbb}{AMSb}
+\DeclareSymbolFontAlphabet{\mathbbl}{bbold}
+
+\usepackage{enumitem}
+\usepackage{braket}
+%\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{txfonts}
+\usepackage{comment}
+\usepackage{bm}
+\usepackage{mathtools}
+
+\usepackage{tikzsignalflow}
+\usepackage{sflow}
+
+%needed for the latex tex render to find the files
+\graphicspath{{figures/}}
+\pdfsuppresswarningpagegroup=1
+
+%\usepackage{showlabels}
+
+\newcommand{\rmd}{\mathrm{d}}
+\newcommand{\rme}{\mathrm{e}}
+\newcommand{\rmi}{\mathrm{i}}
+\newcommand{\hrms}{\ensuremath{h_{\text{rms}}}}
+\newcommand{\htot}{\ensuremath{h_{\text{T}}}}
+
+\newcommand{\FBW}{\ensuremath{f_{\text{bw}}}}
+\newcommand{\rate}{\ensuremath{r}}
+\newcommand{\msol}{\ensuremath{M_\odot}}
+\newcommand{\omegaL}{\ensuremath{\nu}}
+
+\newcommand{\E}[1]{
+  \ensuremath{\mathrm{E}\!\left\{ #1 \right\}}
+  }
+\newcommand{\VAR}[1]{
+  \ensuremath{\mathrm{VAR}\!\left\{ #1 \right\}}
+  }
+\newcommand{\COV}[1]{
+  \ensuremath{\mathrm{COV}\!\left\{ #1 \right\}}
+  }
+\newcommand{\Tr}[1]{
+  \ensuremath{\text{Tr}\left\{#1\right\}}
+}
+
+\newcommand{\stat}[1]{\ensuremath{\hat{#1}}}
+\newcommand{\qhat}[1]{\ensuremath{\hat{#1}}}
+\newcommand{\sqzOP}{\ensuremath{\qhat{\mathcal{S}}}}
+\newcommand{\dispOP}{\ensuremath{\qhat{\mathcal{D}}}}
+\newcommand{\bsOP}{\ensuremath{\qhat{\mathcal{B}}}}
+
+\newcommand{\Marrow}[1]{\overset{\text{\tiny$\bm\leftrightarrow$}}{#1}}
+\newcommand{\mat}[1]{\ensuremath{\mathbf{#1}}}
+\newcommand{\Tmat}[1]{\ensuremath{\mathbbl{#1}}}
+\newcommand{\Tvec}[1]{\overset{\raisebox{-2pt}{\text{\tiny$\bm\rightarrow$}}}{\mathbbl{#1}}}
+\newcommand{\Marrowbbl}[1]{\overset{\raisebox{-1pt}{\text{\tiny$\bm\Leftrightarrow$}}}{#1}}
+\newcommand{\Dmat}[1]{\ensuremath{\Marrowbbl{\mathbf{#1}}}}
+\newcommand{\Mrarrowbbl}[1]{\overset{\raisebox{-1pt}{\text{\tiny$\bm\Rightarrow$}}}{#1}}
+\newcommand{\Dvec}[1]{\ensuremath{\Mrarrowbbl{\mathbf{#1}}}}
+\newcommand{\delay}{\ensuremath{L}}
+\newcommand{\K}{\ensuremath{\mathcal{K}}}
+
+\newcommand{\Psqz}{\ensuremath{\vec{E}_{\text{SQZ}}}}
+%\newcommand{\Pread}{\ensuremath{\vec{E}_{\text{OMC}}}}
+\newcommand{\Pread}{\ensuremath{\vec{\mathcal{P}_{2}}}}
+
+\newcommand{\conj}[1]{\ensuremath{{#1}^*}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\MM}{\ensuremath{\Upsilon}}
+\newcommand{\MMR}{\ensuremath{\Upsilon_{\text{R}}}}
+\newcommand{\MMI}{\ensuremath{\Upsilon_{\text{I}}}}
+\newcommand{\MMO}{\ensuremath{\Upsilon_{\text{O}}}}
+\newcommand{\MMF}{\ensuremath{\Upsilon_{\text{F}}}}
+\newcommand{\cMM}{\ensuremath{1{-}\MM}}
+\newcommand{\cMMR}{\ensuremath{1{-}\MMR}}
+\newcommand{\cMMI}{\ensuremath{1{-}\MMI}}
+\newcommand{\cMMO}{\ensuremath{1{-}\MMO}}
+\newcommand{\cMMF}{\ensuremath{1{-}\MMF}}
+
+\newcommand{\LT}{\ensuremath{\Lambda_{\text{T}}}}
+\newcommand{\ET}{\ensuremath{\eta_{\text{T}}}}
+\newcommand{\LI}{\ensuremath{\Lambda_{\text{I}}}}
+\newcommand{\LO}{\ensuremath{\Lambda_{\text{O}}}}
+
+\newcommand{\sqzang}{\ensuremath{\phi}}
+\newcommand{\sqzrot}{\ensuremath{\theta}}
+
+\newcommand{\aFactor}{\ensuremath{\alpha}}
+\newcommand{\bFactor}{\ensuremath{\beta}}
+\newcommand{\psiR}{\ensuremath{\psi_\text{R}}}
+\newcommand{\psiG}{\ensuremath{\psi_\text{G}}}
+\newcommand{\psiS}{\ensuremath{\psi_\text{S}}}
+\newcommand{\psiI}{\ensuremath{\psi_\text{I}}}
+\newcommand{\psiO}{\ensuremath{\psi_\text{O}}}
+
+%\newcommand{\Ophi}{\ensuremath{\overline{\phi}}}
+\newcommand{\Ophi}{\ensuremath{\phi}}
+\newcommand{\phiRMS}{\ensuremath{\phi_{\text{rms}}}}
+\newcommand{\phiRMSsq}{\ensuremath{\phi^2_{\text{rms}}}}
+
+\newcommand{\thetaRMS}{\ensuremath{\theta_{\text{rms}}}}
+\newcommand{\thetaRMSsq}{\ensuremath{\theta^2_{\text{rms}}}}
+
+\newcommand{\TLO}{\ensuremath{\Tvec{v}^{\dagger}}}
+\newcommand{\TLOa}{\ensuremath{\Tvec{v}}}
+\newcommand{\DLO}{\ensuremath{\Dvec{v}^\dagger}}
+\newcommand{\DLOa}{\ensuremath{\Dvec{v}}}
+
+\newcommand{\Hloss}{\ensuremath{\Tmat{H}_{\text{loss}}}}
+
+\newcommand{\Mq}{\ensuremath{m_q}}
+\newcommand{\Mp}{\ensuremath{m_p}}
+\newcommand{\cMp}{\ensuremath{\conj{m}_p}}
+
+\newcommand{\sql}{\ensuremath{\text{sql}}}
+\newcommand{\subI}{\ensuremath{\text{I}}}
+\newcommand{\subO}{\ensuremath{\text{O}}}
+\newcommand{\subR}{\ensuremath{\text{R}}}
+\newcommand{\subFC}{\ensuremath{\text{FC}}}
+\newcommand{\subfc}{\ensuremath{\text{fc}}}
+\newcommand{\IRO}{\ensuremath{\text{IRO}}}
+
+\newcommand{\subF}{\ensuremath{\text{F}}}
+
+\newcommand{\arm}{\ensuremath{\text{a}}}
+\newcommand{\Arm}{\ensuremath{\text{A}}}
+\newcommand{\src}{\ensuremath{\text{s}}}
+\newcommand{\Src}{\ensuremath{\text{S}}}
+\newcommand{\itm}{\ensuremath{\text{a}}}
+\newcommand{\etm}{\ensuremath{\text{e}}}
+\newcommand{\srm}{\ensuremath{\text{s}}}
+\newcommand{\xarm}{\ensuremath{\text{x}}}
+\newcommand{\yarm}{\ensuremath{\text{y}}}
+
+\newcommand{\prm}{\ensuremath{\text{p}}}
+\newcommand{\bs}{\ensuremath{\text{b}}}
+
+\newcommand{\tfh}{\ensuremath{\mathfrak{h}}}
+\newcommand{\tfr}{\ensuremath{\mathfrak{r}}}
+\newcommand{\tft}{\ensuremath{\mathfrak{t}}}
+\newcommand{\tfrH}{\ensuremath{\mathfrak{r}_{\text{hom}}}}
+
+\newcommand{\rsrm}{\ensuremath{\Tmat{r}_\srm}}
+\newcommand{\rprm}{\ensuremath{\Tmat{r}_\prm}}
+\newcommand{\rxarm}{\ensuremath{\Tmat{r}_\xarm}}
+\newcommand{\ryarm}{\ensuremath{\Tmat{r}_\yarm}}
+
+\newcommand{\smu}{\ensuremath{{\,\mu}}}
+\newcommand{\snu}{\ensuremath{{\,\nu}}}
+
+
+\begin{document}
+
+\begin{tikzpicture}[
+  signal flow,
+  pin distance=1pt,
+  label distance=-2pt,
+  x=0.5em, y=.5em,
+  baseline=(current  bounding  box.center),
+  ]
+  %Place the nodes
+  \node[nodeS, pin={+90: $ $}] (Pi) at (-5,-5) {};
+  \node[nodeS, pin={-90: $ $}] (Po) at (-5,+5) {};
+
+  \node[nodeS, pin={+90: $ $}] (Xi) at (+25,+5) {};
+  \node[nodeS, pin={-90: $ $}] (Xo) at (+25,-5) {};
+  \node[nodeS, pin={+90: $ $}] (Xi2) at (+30,-5) {};
+  \node[nodeS, pin={-90: $ $}] (Xo2) at (+30,+5) {};
+  
+  \node[nodeS, pin={+90: $ $}] (eXi) at (+40,+5) {};
+  \node[nodeS, pin={-90: $ $}] (eXo) at (+40,-5) {};
+  \node[nodeS, pin={+90: $ $}] (eXo2) at (+45,+5) {};
+  \node[nodeS, pin={-90: $ $}] (eXi2) at (+45,-5) {};
+
+  \node[nodeS, pin={+90: $ $}] (Yi) at (+5, +15) {};
+  \node[nodeS, pin={-90: $ $}] (Yo) at (+15,+15) {};
+  \node[nodeS, pin={+90: $ $}] (Yo2) at (+5, +20) {};
+  \node[nodeS, pin={-90: $ $}] (Yi2) at (+15,+20) {};
+
+  \node[nodeS, pin={+90: $ $}] (eYi) at (+5, +30) {};
+  \node[nodeS, pin={-90: $ $}] (eYo) at (+15,+30) {};
+  \node[nodeS, pin={+90: $ $}] (eYo2) at (+5, +35) {};
+  \node[nodeS, pin={-90: $ $}] (eYi2) at (+15,+35) {};
+
+  \node[nodeS, pin={+90: $ $}] (Si) at (+15, -15) {};
+  \node[nodeS, pin={-90: $ $}] (So) at (+5,-15) {};
+  \node[nodeS, pin={+90: $ $}] (So2) at (+15, -20) {};
+  \node[nodeS, pin={-90: $ $}] (Si2) at (+5,-20) {};
+
+  \node[nodeS, pin={+90: $ $}] (BsPi) at (-0,+5) {};
+  \node[nodeS, pin={-90: $ $}] (BsPo) at (-0,-5) {};
+
+  \node[nodeS, pin={+90: $ $}] (BsXi) at (+20,-5) {};
+  \node[nodeS, pin={-90: $ $}] (BsXo) at (+20,+5) {};
+
+  \node[nodeS, pin={+90: $ $}] (BsYo) at (+5,+10) {};
+  \node[nodeS, pin={-90: $ $}] (BsYi) at (+15,+10) {};
+
+  \node[nodeS, pin={-90: $ $}] (BsSi) at (+5,-10) {};
+  \node[nodeS, pin={+90: $ $}] (BsSo) at (+15,-10) {};
+
+  \node[nodeS, pin={-90: $S$}] (SmE) at (+5,-25) {};
+  \node[nodeS, pin={-90: $R$}] (SrO) at (+15,-25) {};
+  \node[nodeS, pin={-90: $X$}] (XmE) at (+40,-10) {};
+  \node[nodeS, pin={-90: $Y$}] (YmE) at (+20,+30) {};
+  %Draw the connections
+  \path 
+  (BsPi) edge[sflow=.4] node {$\tft_\bs$} (BsXo)
+  (BsXi) edge[sflow=.4] node {$\tft_\bs$} (BsPo)
+  
+  (BsYi) edge[sflow=.6] node {$\tft_\bs$} (BsSo)
+  (BsSi) edge[sflow=.6] node {$\tft_\bs$} (BsYo)
+
+  (BsPi) edge[sflow=.5] node {$\tfr_\bs$} (BsYo)
+  (BsYi) edge[sflow=.5] node {$\tfr_\bs$} (BsPo)
+
+  (BsSi) edge[sflow=.5] node {$\tfr_\bs$} (BsXo)
+  (BsXi) edge[sflow=.5] node {$\tfr_\bs$} (BsSo)
+
+  (BsPo) edge[sflow=.5] node {$\Tmat{L}_\prm$} (Pi)
+  (Po) edge[sflow=.5] node {$\Tmat{L}_\prm$} (BsPi)
+  (Pi) edge[sflow=.5] node {$r_\prm$} (Po)
+
+  (BsYo) edge[sflow=.5] node {$\Tmat{U}_\xarm\Tmat{L}_\yarm$} (Yi)
+  (Yo) edge[sflow=.5] node {$\Tmat{L}_\yarm\Tmat{U}^{-1}_\yarm$} (BsYi)
+  (Yi) edge[sflow'=.5] node {$r_{iy}$} (Yo)
+  (Yi2) edge[sflow'=.5] node {$-r_{iy}$} (Yo2)
+  (Yi) edge[sflow=.5] node {$t_{iy}$} (Yo2)
+  (Yi2) edge[sflow=.5] node {$t_{iy}$} (Yo)
+
+  (eYi) edge[sflow'=.5] node {$-r_{ey}$} (eYo)
+  (eYi2) edge[sflow'=.5] node {$r_{ey}$} (eYo2)
+  (eYi) edge[sflow=.5] node {$t_{ey}$} (eYo2)
+  (eYi2) edge[sflow=.5] node {$t_{ey}$} (eYo)
+
+  (BsXo) edge[sflow=.5] node {$\Tmat{U}_\xarm\Tmat{L}_\xarm$} (Xi)
+  (Xo) edge[sflow=.5] node {$\Tmat{L}_\xarm\Tmat{U}^{-1}_\xarm$} (BsXi)
+  (Xi) edge[sflow'=.5] node {$r_{ix}$} (Xo)
+  (Xi2) edge[sflow'=.5] node {$-r_{ix}$} (Xo2)
+  (Xi) edge[sflow=.5] node {$t_{ix}$} (Xo2)
+  (Xi2) edge[sflow=.5] node {$t_{ix}$} (Xo)
+
+  (SmE) edge[sflow=.5] node {$\Tmat{1}$} (Si2)
+  (So2) edge[sflow=.5] node {$\Tmat{1}$} (SrO)
+  (XmE) edge[sflow=.5] node {$\Tmat{1}$} (eXo)
+  (YmE) edge[sflow=.5] node {$\Tmat{1}$} (eYo)
+
+  (Xo2) edge[sflow'=.5] node {$\Tmat{L}_a$} (eXi)
+  (eXo) edge[sflow'=.5] node {$\Tmat{L}_a$} (Xi2)
+
+  (Yo2) edge[sflow'=.5] node {$\Tmat{L}_a$} (eYi)
+  (eYo) edge[sflow'=.5] node {$\Tmat{L}_a$} (Yi2)
+
+  (eXi) edge[sflow'=.5] node {$-r_{ex}$} (eXo)
+  (eXi2) edge[sflow'=.5] node {$r_{ex}$} (eXo2)
+  (eXi) edge[sflow=.5] node {$t_{ex}$} (eXo2)
+  (eXi2) edge[sflow=.5] node {$t_{ex}$} (eXo)
+
+  (BsSo) edge[sflow=.5] node {$\Tmat{L}_\src$} (Si)
+  (So) edge[sflow=.5] node {$\Tmat{L}_\src$} (BsSi)
+  (Si) edge[sflow=.5] node {$r_\srm$} (So)
+  (Si2) edge[sflow=.5] node {$-r_\srm$} (So2)
+  (Si) edge[sflow=.5] node {$t_\srm$} (So2)
+  (Si2) edge[sflow=.5] node {$t_\srm$} (So)
+  ;
+\end{tikzpicture}
+
+\end{document}
+

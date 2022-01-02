@@ -1,0 +1,71 @@
+
+
+%for conveniently including sflow graphs as equations
+\newcommand{\sinput}[1]{\text{\input{#1}}}
+\newcommand{\esinput}[1]{\begin{equation}\text{\input{#1}}\end{equation}}
+
+\usepackage{amsfonts} %% <- also included by amssymb
+\usepackage{mathpazo}
+\DeclareMathSymbol{\shortminus}{\mathbin}{AMSa}{"39}
+
+\newcommand{\QPdot}[0]{
+    \begin{bmatrix}
+      \dot{\vec{q}}
+      \\ \dot{\vec{p}}
+    \end{bmatrix}
+}
+\newcommand{\QPvec}[0]{
+    \begin{bmatrix}
+      {\vec{q}}
+      \\ {\vec{p}}
+    \end{bmatrix}
+}
+\newcommand{\evalthrough}[2]{\left.#1\right\rvert_{#2}}
+
+\newcommand{\nA}{\ensuremath{\alpha}}
+\newcommand{\nB}{\ensuremath{\beta}}
+\newcommand{\nC}{\ensuremath{\gamma}}
+\newcommand{\nD}{\ensuremath{\delta}}
+\newcommand{\nE}{\ensuremath{\zeta}}
+\newcommand{\nF}{\ensuremath{\eta}}
+\newcommand{\nG}{\ensuremath{\theta}}
+\newcommand{\nH}{\ensuremath{\kappa}}
+\newcommand{\nI}{\ensuremath{\lambda}}
+\newcommand{\nJ}{\ensuremath{\mu}}
+\newcommand{\nK}{\ensuremath{\nu}}
+
+\newcommand{\Na}{\ensuremath{\vec{\alpha}}}
+\newcommand{\Nb}{\ensuremath{\vec{\beta}}}
+\newcommand{\Ng}{\ensuremath{\vec{\gamma}}}
+\newcommand{\Nd}{\ensuremath{\vec{\delta}}}
+\newcommand{\Nk}{\ensuremath{\vec{\kappa}}}
+\newcommand{\Ne}{\ensuremath{\vec{\eta}}}
+\newcommand{\Nt}{\ensuremath{\vec{\theta}}}
+\newcommand{\Nz}{\ensuremath{\vec{\zeta}}}
+\newcommand{\Nl}{\ensuremath{\vec{\lambda}}}
+\newcommand{\Nm}{\ensuremath{\vec{\mu}}}
+\newcommand{\Nn}{\ensuremath{\vec{\nu}}}
+\newcommand{\Nu}{\ensuremath{\vec{u}}}
+\newcommand{\Nx}{\ensuremath{\vec{x}}}
+\newcommand{\Ny}{\ensuremath{\vec{y}}}
+
+\newcommand{\eE}{\ensuremath{e}}
+\newcommand{\eF}{\ensuremath{f}}
+\newcommand{\eG}{\ensuremath{g}}
+\newcommand{\eH}{\ensuremath{h}}
+\newcommand{\eS}{\ensuremath{s}}
+\newcommand{\eT}{\ensuremath{t}}
+\newcommand{\eU}{\ensuremath{u}}
+\newcommand{\eV}{\ensuremath{v}}
+\newcommand{\eW}{\ensuremath{w}}
+\newcommand{\eX}{\ensuremath{x}}
+%\newcommand{\Ke9}{\ensuremath{H}}
+%\newcommand{\e7}{\ensuremath{l}}
+%\newcommand{\e8}{\ensuremath{r}}
+
+\newcommand{\inv}{\ensuremath{{\shortminus 1}}}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "sflow.tex"
+%%% End: 

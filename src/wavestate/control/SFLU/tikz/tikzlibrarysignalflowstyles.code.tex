@@ -1,0 +1,176 @@
+
+\tikzset{
+  sflow/.default=.45,
+  sflow/.style={
+    semithick,
+    every node/.style={
+      pos=#1,
+      name=elabel,
+      auto,
+      shape=rectangle,
+      outer sep = -3pt,
+      inner sep = 5pt,
+    },
+    %shorten <=2pt,
+    shorten >= 1pt,
+    edge node={
+      node [
+        name = earrow,
+        inner sep=0pt,
+        outer sep=0pt,
+        minimum size=0pt] {}
+    },
+    postaction={
+      decorate,
+      decoration={
+        markings,
+        %there is a bug in bent arrows,
+        %making them disappear with pos=1
+        mark=at position .999 with { 
+          \arrow[scale=.7, xshift=0pt]{stealth},
+        }
+      },
+    },
+    postaction={
+      decorate,
+      decoration={
+        markings,
+        mark=at position {#1} with { 
+          \arrow[scale=.7, xshift=1pt]{stealth},
+        }
+      },
+    },
+    %{triangle 90 cap reversed}-{stealth},
+  },
+  sflow'/.style={
+    sflow=#1,
+    every node/.style={
+      pos=#1,
+      name=elabel,
+      auto,
+      shape=rectangle,
+      outer sep = -3pt,
+      inner sep = 5pt,
+      swap,
+    },
+  },
+  sflowC/.style={
+    sflow=#1,
+    every node/.style={
+      pos=#1,
+      name=elabel,
+      auto,
+      shape=rectangle,
+      outer sep = -3pt,
+      inner sep = 3pt,
+    },
+  },
+  sflowC'/.style={
+    sflow=#1,
+    every node/.style={
+      pos=#1,
+      name=elabel,
+      auto,
+      shape=rectangle,
+      outer sep = -3pt,
+      inner sep = 3pt,
+      swap,
+    },
+  },
+  sflow'/.default=.45,
+  sflowU/.style={
+    sflow=#1,
+      edge node={node [
+      inner sep = 0pt,
+      outer sep = .5pt,
+      text opacity=.4] {\tiny 1}
+    },
+    %an alternative way, which circles the arrow
+    %postaction={
+    %  decorate,
+    %  decoration={
+    %    markings,
+    %    mark=at position {#1} with { 
+    %      \arrow[scale=.7, xshift=0pt]{stealth};
+    %      \draw circle[radius = 2pt, xshift=-1pt];
+    %    }
+    %  },
+    %},
+  },
+  sflowU/.default=.5,
+  sflowU'/.style={
+    sflow=#1,
+      edge node={node [
+      swap,
+      inner sep = 0pt,
+      outer sep = 1pt,
+      text opacity=.5] {\tiny 1}
+    },
+  },
+  sflowU'/.default=.5,
+}
+
+\tikzset{signal flow/.style = {
+  pin distance=.5ex,
+  %label distance=-2pt,
+  every pin/.style={
+    draw=none,
+    shape=rectangle,
+    inner sep = 0pt,
+    outer sep = 1pt,
+  },
+  nodeB/.style={
+    draw,
+    outer sep=1pt,
+    inner sep=0pt,
+    minimum size = 2pt,
+    every label/.style={
+      draw=none,
+      shape=rectangle,
+      inner sep = 0pt,
+      outer sep = 0pt
+    }
+  },
+  nodeS/.style={
+    nodeB, circle, fill,
+    minimum size = 2pt,
+  },
+  nodeR/.style={
+    nodeB, circle,
+    minimum size = 3pt,
+  },
+  nodeA/.style={
+    nodeS, fill,
+    minimum size = 1.8pt,
+  },
+  nodeL/.style={
+    nodeB, square, fill,
+    minimum size = 2pt,
+  },
+  loop N/.style={min distance=5mm,   in=125,    out=55,     looseness=25}, 
+  loop S/.style={min distance=5mm,   in=-125,   out=-55,    looseness=25}, 
+  loop E/.style={min distance=5mm,   in=-35,    out=35,     looseness=25}, 
+  loop W/.style ={min distance=5mm,  in=-145,   out=-215,   looseness=25}, 
+  loop NE/.style={min distance=5mm,  in=80,     out=10,     looseness=25}, 
+  loop NW/.style={min distance=5mm,  in=170,    out=100,    looseness=25}, 
+  loop SE/.style={min distance=5mm,  in=-80,    out=-10,    looseness=25}, 
+  loop SW/.style={min distance=5mm,  in=-170,   out=-100,   looseness=25}, 
+  loop NNE/.style={min distance=5mm, in=102.5,  out=32.5,   looseness=25}, 
+  loop NNW/.style={min distance=5mm, in=147.5,  out=77.5,   looseness=25}, 
+  loop SSE/.style={min distance=5mm, in=-102.5, out=-32.5,  looseness=25}, 
+  loop SSW/.style={min distance=5mm, in=-147.5, out=-77.5,  looseness=25}, 
+  loop ENE/.style={min distance=5mm, in=57.5,   out=-12.5,  looseness=25}, 
+  loop WNW/.style={min distance=5mm, in=192.5,  out=122.5,  looseness=25}, 
+  loop ESE/.style={min distance=5mm, in=-57.5,  out=+12.5,  looseness=25}, 
+  loop WSW/.style={min distance=5mm, in=-192.5, out=-122.5, looseness=25}, 
+  loop above/.style={loop N}, 
+  loop below/.style={loop S}, 
+  loop right/.style={loop E}, 
+  loop left/.style ={loop W}, 
+  loopW N/.style={min distance=5mm,   in=130,    out=50,     looseness=25}, 
+  loopW S/.style={min distance=5mm,   in=-130,   out=-50,    looseness=25}, 
+  loopW E/.style={min distance=5mm,   in=-40,    out=40,     looseness=25}, 
+  loopW W/.style ={min distance=5mm,  in=-140,   out=-220,   looseness=25}, 
+  x=1em,
+  y=1em,
+}}
