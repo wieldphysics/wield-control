@@ -57,18 +57,19 @@ def T_networkx_basic(dprint, tpath_join, fpath_join):
     )
     pass
 
+
 edges_FP = {
-        ("a2_o", "a2_i"): "r_a2",  # make this a load operator
-        ("a1_o", "a2_i"): "t_a",
-        ("a1_o", "a1_i"): "r_a",
-        ("a2_o", "a1_i"): "t_a",
-        ("b1_o", "b1_i"): "r_b",
-        ("b2_o", "b1_i"): "t_b",
-        ("b2_o", "b2_i"): "r_b2",  # make this a load operator
-        ("b1_o", "b2_i"): "t_b",
-        ("b1_i", "a1_o"): "l",
-        ("a1_i", "b1_o"): "l",
-    }
+    ("a2_o", "a2_i"): "r_a2",  # make this a load operator
+    ("a1_o", "a2_i"): "t_a",
+    ("a1_o", "a1_i"): "r_a",
+    ("a2_o", "a1_i"): "t_a",
+    ("b1_o", "b1_i"): "r_b",
+    ("b2_o", "b1_i"): "t_b",
+    ("b2_o", "b2_i"): "r_b2",  # make this a load operator
+    ("b1_o", "b2_i"): "t_b",
+    ("b1_i", "a1_o"): "l",
+    ("a1_i", "b1_o"): "l",
+}
 
 def T_networkx_SFLU_FP(dprint, tpath_join, fpath_join):
     """
@@ -133,27 +134,53 @@ def T_networkx_SFLU_FP2(dprint, tpath_join, fpath_join):
     G1 = sflu.G.copy()
     sflu.reduce("a1_o")
     sflu.graph_nodes_pos({
-        'L.a1_o': (-50, 150),
-        'U.a1_o': (250, 150),
+        'L.a1_o': (-50, -100),
+        # 'U.a1_o': (250, -100),
     })
     print(sflu.graph_nodes_repr())
     G2 = sflu.G.copy()
     sflu.reduce("b1_i")
     sflu.graph_nodes_pos({
-        'L.b1_i': (-50, 120),
-        'U.b1_i': (250, 120),
+        'L.b1_i': (-50, -120),
+        'U.b1_i': (250, -120),
     })
-    print(sflu.graph_nodes_repr())
     G3 = sflu.G.copy()
+    sflu.reduce("a1_i")
+    sflu.graph_nodes_pos({
+        # 'L.a1_i': (-50, -140),
+        'U.a1_i': (250, -140),
+    })
+    G4 = sflu.G.copy()
+    sflu.reduce("b1_o")
+    sflu.graph_nodes_pos({
+        'L.b1_o': (-50, -160),
+        'U.b1_o': (250, -160),
+    })
+    G5 = sflu.G.copy()
     nx2tikz.dump_pdf(
-        G1,
-        G2,
-        G3,
+        *[G1, G2, G3, G4, G5],
         fname = tpath_join('testG.pdf'),
         texname = tpath_join('testG.tex'),
         preamble = preamble,
         scale='1pt',
     )
+
+    import yaml
+    print("DONE? ", sflu.nodes)
+    oplist = []
+    for op in sflu.oplistE:
+        n, targ, args = op
+        args2 = []
+        for a in args:
+            if isinstance(a, tuple):
+                a = tuple(a)
+            args2.append(a)
+        odict = dict(op=n, targ=tuple(targ))
+        if args2:
+            odict['args'] = args2
+        oplist.append(odict)
+
+    print(yaml.safe_dump([oplist], default_flow_style=None))
     pass
 
 locs = {

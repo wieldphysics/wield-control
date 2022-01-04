@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# SPDX-License-Identifier: BSD-3
-# Originally from https://github.com/johnyf/nx2tikz
-"""Export NetworkX graphs to TikZ graphs with automatic layout."""
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2021 Massachusetts Institute of Technology.
+# SPDX-FileCopyrightText: © 2021 Lee McCuller <mcculler@mit.edu>
+# NOTICE: authors should document their contributions in concisely in NOTICE
+# with details inline in source files, comments, and docstrings.
+"""
+Export networkx graphs into tikz using signal flow style.
+
+TODO, need to include the style files into TEXINPUTS or this will fail
+"""
 import subprocess
 import tempfile
 import os
@@ -24,7 +31,7 @@ def dumps_tikz(g, scale='0.5em'):
 ]""").format(scale=scale))
     def fix(n):
         n = str(n)
-        return "{" + n.replace('=', '').replace('.', '+') + "}"
+        return "{" + n.replace('.', '/') + "}"
 
     for n, d in g.nodes(data=True):
         n = fix(n)
@@ -46,16 +53,22 @@ def dumps_tikz(g, scale='0.5em'):
     s.append(r'\path')
 
     for u, v, d in g.edges(data=True):
-        u = fix(u)
-        v = fix(v)
+        u2 = fix(u)
+        v2 = fix(v)
 
         edge_text = d.get('edge_text', None)
-        if edge_text is None:
-            handed = d.get('handed', 'l')
-            dist = d.get('handed', 0.5)
 
-            label = d.get('label', '')
-            color = d.get('color', '')
+        handed = d.get('handed', 'l')
+        dist = d.get('handed', 0.5)
+
+        label = d.get('label', '')
+        color = d.get('color', '')
+        bend = d.get('bend', 0)
+        suppress = d.get('suppress', False)
+        if suppress:
+            continue
+
+        if edge_text is None:
             if label:
                 label = ' node {{{label}}}'.format(label=label)
             if handed == 'l':
@@ -64,11 +77,23 @@ def dumps_tikz(g, scale='0.5em'):
                 etype = "sflow'={}".format(dist)
             else:
                 raise NotImplementedError("unknown handedness")
+            if bend != 0:
+                bend = 'bend right={}'.format(bend)
+            else:
+                bend = None
 
-            style = r', '.join(filter(None, [etype, color]))
-            s.append(r'({u}) edge[{style}]{label} ({v})'.format(style=style, label=label, u=u, v=v))
+            if u == v:
+                loop = g.nodes[u].get('loop', 70)
+                loop_width = g.nodes[u].get('loop_width', 70)
+                loop = 'min distance=5mm, in={i}, out={o}, looseness=25'.format(i=loop + loop_width/2, o=loop - loop_width/2)
+                bend = None
+            else:
+                loop = None
+
+            style = r', '.join(filter(None, [etype, bend, loop, color]))
+            s.append(r'({u}) edge[{style}]{label} ({v})'.format(style=style, label=label, u=u2, v=v2))
         else:
-            s.append("({u}) {etext} ({v})".format(u=u, v=v, etext=edge_text))
+            s.append("({u}) {etext} ({v})".format(u=u2, v=v2, etext=edge_text))
     s.append(';')
     s.append(r'\end{tikzpicture}')
 
@@ -158,7 +183,6 @@ def dump_pdf(*g, fname, texname = None, **kwargs):
         else:
             base, ext = os.path.splitext(os.path.split(texname)[1])
             texbase = os.path.join(dname, base)
-            print('texbase', texbase)
 
         with open(texname, 'w') as f:
             f.write(s)
