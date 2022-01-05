@@ -465,3 +465,12 @@ preamble = padding_remove(r"""
 \newcommand{\smu}{\ensuremath{{\,\mu}}}
 \newcommand{\snu}{\ensuremath{{\,\nu}}}
 """)
+
+
+def T_cytoscape(dprint, tpath_join, fpath_join):
+    from py2cytoscape.data.cyrest_client import CyRestClient
+    cy = CyRestClient()
+    network = cy.network.create(name='My Network', collection='My network collection')
+    print(network.get_id())
+    import time
+    time.sleep(100)
