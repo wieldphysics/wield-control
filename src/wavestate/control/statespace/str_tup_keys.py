@@ -36,10 +36,10 @@ class KeyTuple(tuple):
 @functools.total_ordering
 class EdgeTuple(namedtuple("EdgeBase", ("r", "c"))):
     def __str__(self):
-        return "<{R}&{C}>".format(R=self.r, C=self.c)
+        return "{{{R}<{C}}}".format(R=self.r, C=self.c)
 
     def __repr__(self):
-        return "<{R}&{C}>".format(R=self.r, C=self.c)
+        return "{{{R}<{C}}}".format(R=self.r, C=self.c)
 
     def __lt__(self, other):
         if isinstance(other, str):

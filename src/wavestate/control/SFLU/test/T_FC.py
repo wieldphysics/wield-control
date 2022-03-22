@@ -7,17 +7,16 @@
 # with details inline in source files, comments, and docstrings.
 """
 """
+
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import sympy
+# import matplotlib.pyplot as plt
+# import matplotlib.animation as animation
+# import sympy
 from wavestate.utilities.mpl import mplfigB
 from wavestate.utilities.np import logspaced
-import wavestate.control
-import re
 
-from wavestate.control.statespace import tupleize
 from wavestate.control.SFLU import SFLU
+
 from quantum_lib import mats_planewave as ilib
 
 

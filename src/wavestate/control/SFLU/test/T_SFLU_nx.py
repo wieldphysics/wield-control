@@ -24,17 +24,17 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 
 
 FP_edges = {
-        ("a2_o", "a2_i"): "r_a2",  # make this a load operator
-        ("a1_o", "a2_i"): "t_a",
-        ("a1_o", "a1_i"): "r_a",
-        ("a2_o", "a1_i"): "t_a",
-        ("b1_o", "b1_i"): "r_b",
-        ("b2_o", "b1_i"): "t_b",
-        ("b2_o", "b2_i"): "r_b2",  # make this a load operator
-        ("b1_o", "b2_i"): "t_b",
-        ("b1_i", "a1_o"): "Lmat",
-        ("a1_i", "b1_o"): "Lmat",
-    }
+    ("a2_o", "a2_i"): "r_a2",  # make this a load operator
+    ("a1_o", "a2_i"): "t_a",
+    ("a1_o", "a1_i"): "r_a",
+    ("a2_o", "a1_i"): "t_a",
+    ("b1_o", "b1_i"): "r_b",
+    ("b2_o", "b1_i"): "t_b",
+    ("b2_o", "b2_i"): "r_b2",  # make this a load operator
+    ("b1_o", "b2_i"): "t_b",
+    ("b1_i", "a1_o"): "Lmat",
+    ("a1_i", "b1_o"): "Lmat",
+}
 
 
 def T_networkx_basic(dprint, tpath_join, fpath_join):
@@ -73,7 +73,9 @@ edges_FP = {
 
 def T_networkx_SFLU_FP(dprint, tpath_join, fpath_join):
     """
-    most basic checks about how networkx is used
+    most basic checks about how networkx is used to great tikz output.
+
+    Reductions aren't performed much.
     """
     sflu = SFLU.SFLU(edges_FP, graph=True)
 
@@ -115,7 +117,7 @@ def T_networkx_SFLU_FP(dprint, tpath_join, fpath_join):
 
 def T_networkx_SFLU_FP2(dprint, tpath_join, fpath_join):
     """
-    most basic checks about how networkx is used
+    Show a graph reduction using networkx+tikz
     """
     sflu = SFLU.SFLU(edges_FP, graph=True)
     sflu.graph_nodes_pos({
@@ -158,7 +160,7 @@ def T_networkx_SFLU_FP2(dprint, tpath_join, fpath_join):
     })
     G5 = sflu.G.copy()
     nx2tikz.dump_pdf(
-        *[G1, G2, G3, G4, G5],
+        [G1, G2, G3, G4, G5],
         fname = tpath_join('testG.pdf'),
         texname = tpath_join('testG.tex'),
         preamble = preamble,
@@ -182,6 +184,7 @@ def T_networkx_SFLU_FP2(dprint, tpath_join, fpath_join):
 
     print(yaml.safe_dump([oplist], default_flow_style=None))
     pass
+
 
 locs = {
     "Pi": (-5, -5),
@@ -321,18 +324,17 @@ def T_networkx_lg(dprint, tpath_join, fpath_join):
     axB.save(tpath_join('test'))
 
     nx2tikz.dump_tex(
-        G,
-        G,
+        [G, G,],
         fname = tpath_join('test.tex'),
         preamble = preamble,
     )
     nx2tikz.dump_pdf(
-        G,
-        G,
+        [G, G,],
         fname = tpath_join('testG.pdf'),
         preamble = preamble,
     )
     pass
+
 
 preamble = padding_remove(r"""
 \newcommand{\rmd}{\mathrm{d}}
@@ -466,11 +468,3 @@ preamble = padding_remove(r"""
 \newcommand{\snu}{\ensuremath{{\,\nu}}}
 """)
 
-
-def T_cytoscape(dprint, tpath_join, fpath_join):
-    from py2cytoscape.data.cyrest_client import CyRestClient
-    cy = CyRestClient()
-    network = cy.network.create(name='My Network', collection='My network collection')
-    print(network.get_id())
-    import time
-    time.sleep(100)

@@ -8,9 +8,12 @@
 """
 """
 import numpy as np
+import yaml
+import re
 
 from collections import defaultdict, namedtuple
-from ..statespace import str_tup_keys as stk 
+
+from ..statespace import str_tup_keys as stk
 
 try:
     import networkx as nx
@@ -25,7 +28,6 @@ except ImportError:
 
 Op = namedtuple("Op", ("op", "args"))
 OpComp = namedtuple("OpComp", ("op", "targ", "args"))
-
 
 class SFLU(object):
     def __init__(
@@ -61,6 +63,9 @@ class SFLU(object):
         edges_original = dict()
 
         for (R, C), E in edges.items():
+            # normalize computation-based edges
+            E = normalize_list2tuple(E)
+
             R = stk.key_map(R)
             C = stk.key_map(C)
             edges2[stk.key_edge(R, C)] = E
@@ -72,7 +77,11 @@ class SFLU(object):
 
         if self.G is not None:
             def to_label(val):
-                return '$' + sp.latex(sp.var(str(val))) + '$'
+                if not val:
+                    return ""
+                if sp is not None:
+                    return '$' + sp.latex(sp.var(str(val))) + '$'
+                return val
             for (R, C), E in edges2.items():
                 self.G.add_edge(C, R, label=to_label(E))
             for n in nodes:
@@ -80,65 +89,92 @@ class SFLU(object):
         # print('col2row', col2row)
         # print('row2col', row2col)
 
-        if inputs is None:
-            inputs = set()
-            for rN in nodes:
-                cS = row2col.get(rN, None)
-                if cS is None or len(cS) == 0:
-                    inputs.add(rN)
-                elif len(cS) == 1 and rN in cS:
-                    inputs.add(rN)
+        # TODO: need to remove missing inputs and output nodes from
+        # the node list
+        # ONLY matters if inputs/outputs are specified
 
-        if outputs is None:
-            outputs = set()
-            for cN in nodes:
-                rS = col2row.get(cN, None)
-                if rS is None or len(rS) == 0:
-                    outputs.add(cN)
-                elif len(rS) == 1 and cN in rS:
-                    outputs.add(cN)
+        inputs_ = set()
+        for rN in nodes:
+            cS = row2col.get(rN, None)
+            if cS is None or len(cS) == 0:
+                inputs_.add(rN)
+            elif len(cS) == 1 and rN in cS:
+                inputs_.add(rN)
 
-        for iN in inputs:
+        outputs_ = set()
+        for cN in nodes:
+            rS = col2row.get(cN, None)
+            if rS is None or len(rS) == 0:
+                outputs_.add(cN)
+            elif len(rS) == 1 and cN in rS:
+                outputs_.add(cN)
+
+        if inputs is not None:
+            inputs = set(inputs)
+            assert(inputs.issubset(inputs_))
+        else:
+            inputs = inputs_
+
+        if outputs is not None:
+            outputs = set(outputs)
+            assert(outputs.issubset(outputs_))
+        else:
+            outputs = outputs_
+        outputs = set(outputs)
+        assert(outputs.issubset(outputs_))
+
+        for iN in inputs_:
             cS = row2col[iN]
+            do_move = (iN in inputs)
             if len(cS) == 1:
                 assert iN in cS
-                row2col_cf[iN].update(cS)
+                if do_move:
+                    row2col_cf[iN].update(cS)
             else:
                 assert len(cS) == 0
             del row2col[iN]
 
             rS = col2row[iN]
             dS = rS  # rS.intersection(outputs)
-            col2row_cf[iN].update(dS)
+            if do_move:
+                col2row_cf[iN].update(dS)
             for rN in dS:
                 row2col[rN].remove(iN)
-                row2col_cf[rN].add(iN)
+                if do_move:
+                    row2col_cf[rN].add(iN)
 
             rS.difference_update(dS)
             nodes.remove(iN)
-            # nodes_cf.add(iN)
+            if self.G is not None and not do_move:
+                self.G.remove_node(iN)
 
-        for oN in outputs:
+        for oN in outputs_:
+            do_move = (oN in outputs)
             rS = col2row[oN]
             if len(rS) == 1:
                 assert oN in rS
-                row2col_cf[oN].update(rS)
+                if do_move:
+                    row2col_cf[oN].update(rS)
             else:
                 assert len(rS) == 0
             del col2row[oN]
 
             cS = row2col[oN]
             dS = cS  # cS.intersection(inputs)
-            row2col_cf[oN].update(dS)
+            if do_move:
+                row2col_cf[oN].update(dS)
             for cN in dS:
                 col2row[cN].remove(oN)
-                col2row_cf[cN].add(oN)
+                if do_move:
+                    col2row_cf[cN].add(oN)
             cS.difference_update(dS)
             nodes.remove(oN)
-            # nodes_cf.add(oN)
+            if self.G is not None and not do_move:
+                self.G.remove_node(oN)
 
         self.col2row = col2row
         self.row2col = row2col
+        self.dropped = (outputs_ - outputs) | (inputs_ - inputs)
 
         self.col2row_cf = col2row_cf
         self.row2col_cf = row2col_cf
@@ -160,6 +196,9 @@ class SFLU(object):
 
         self.nodes = nodes
         self.nodes_cf = nodes_cf
+        self.reduced = []
+        self.reducedL = []
+        self.reducedU = []
 
         self.inputs = inputs
         self.outputs = outputs
@@ -190,27 +229,48 @@ class SFLU(object):
             strs.append(str(n))
         return strs
 
-    def graph_nodes_pos(self, pos, *nodes):
+    def graph_nodes_pos(self, pos, *nodes, match=True):
+        """
+        Assigns the position keyword to nodes.
+
+        The first argument "pos" is a tuple of (x, y) locations.
+        """
         if nodes:
             # assign pos to each node in nodes
             for n in nodes:
+                if n in self.dropped:
+                    continue
                 n = stk.key_map(n)
-                self.G.nodes[n]['pos'] = pos
+                try:
+                    self.G.nodes[n]['pos'] = pos
+                except KeyError:
+                    if match:
+                        raise
         else:
             # assumes it is a dictionary
             for n, p in pos.items():
                 n = stk.key_map(n)
-                self.G.nodes[n]['pos'] = p
+                if n in self.dropped:
+                    continue
+                try:
+                    self.G.nodes[n]['pos'] = p
+                except KeyError:
+                    if match:
+                        raise
         return
 
     def graph_nodes_posX(self, posX, *nodes):
         for n in nodes:
+            if n in self.dropped:
+                continue
             n = stk.key_map(n)
             pos = self.G.nodes[n].get('pos', (None, None))
             self.G.nodes[n]['pos'] = (posX, pos[1])
 
     def graph_nodes_posY(self, posY, *nodes):
         for n in nodes:
+            if n in self.dropped:
+                continue
             n = stk.key_map(n)
             pos = self.G.nodes[n].get('pos', (None, None))
             self.G.nodes[n]['pos'] = (pos[0], posY)
@@ -224,12 +284,46 @@ class SFLU(object):
             return pos2
 
         for n in nodes:
+            if n in self.dropped:
+                continue
             n2 = stk.key_map(n)
             p = self.G.nodes[n2].get('pos', None)
             if p is None:
                 continue
             pos2[n] = p
             return pos2
+
+    _G_reduce_lX_rX_Y_dY = None
+
+    def graph_reduce_auto_pos(self, lX, rX, Y, dY):
+        self._G_reduce_lX_rX_Y_dY = (lX, rX, Y, dY)
+        return
+
+    def graph_reduce_auto_pos_io(self, lX, rX, Y, dY):
+        # prevent issue where inputs are connected directly to outputs
+        reducedL2 = list(self.outputs) + list(self.reducedL)
+        reducedU2 = list(self.inputs) + list(self.reducedU)
+
+        def key(iN):
+            iS = self.col2row_cf[iN]
+            return tuple(sorted([reducedL2.index(r) for r in iS]))
+        Y_ = Y
+        for iN in sorted(self.inputs, key=key):
+            self.graph_nodes_pos({
+                iN: (lX, Y_),
+            })
+            Y_ += dY
+
+        def key(oN):
+            oS = self.row2col_cf[oN]
+            return tuple(sorted([reducedU2.index(c) for c in oS]))
+        Y_ = Y
+        for oN in sorted(self.outputs, key=key):
+            self.graph_nodes_pos({
+                oN: (rX, Y_),
+            })
+            Y_ += dY
+        return
 
     def invertE(self, E):
         return Op("invert", E)
@@ -266,7 +360,12 @@ class SFLU(object):
         else:
             return Op("mul", tuple(flat))
 
-    def reduce(self, node):
+    def reduce(self, *nodes):
+        for node in nodes:
+            self.reduce_single(node)
+        return
+
+    def reduce_single(self, node):
         Nsf = stk.key_map(node)
 
         # the following two if statements
@@ -470,56 +569,36 @@ class SFLU(object):
         self.nodes_cf.add(NsfB)
         self.nodes_cf.add(NsfA)
 
+        self.reduced.append(Nsf)
+        if NsfA_needed:
+            self.reducedL.append(NsfA)
+        if NsfB_needed:
+            self.reducedU.append(NsfB)
+
         if self.G is not None:
             self.G.remove_node(Nsf)
+            if self._G_reduce_lX_rX_Y_dY is not None:
+                lX, rX, Y, dY = self._G_reduce_lX_rX_Y_dY
+                if NsfA_needed:
+                    self.graph_nodes_pos({
+                        NsfA: (lX, Y),
+                    })
+                if NsfB_needed:
+                    self.graph_nodes_pos({
+                        NsfB: (rX, Y),
+                    })
+                self._G_reduce_lX_rX_Y_dY = (lX, rX, Y + dY, dY)
+
         return True
 
-
-def purge_inplace(
-    keep,
-    col2row,
-    row2col,
-    edges,
-):
-    # can't actually purge, must color all nodes
-    # from the exception set and then subtract the
-    # remainder.
-    # purging algorithms otherwise have to deal with
-    # strongly connected components, which makes them
-    # no better than coloring
-    active_set = set()
-    active_set_pending = set(keep)
-
-    while active_set_pending:
-        node = active_set_pending.pop()
-        active_set.add(node)
-        for snode in node:
-            if snode not in active_set:
-                active_set_pending.add(snode)
-
-    full_set = set(col2row.keys()) | set(row2col.keys())
-    purge = full_set - active_set
-    purge_subgraph_inplace(col2row, row2col, edges, purge)
-
-
-def purge_subgraph_inplace(
-    purge,
-    col2row,
-    row2col,
-    edges,
-):
-    for node in purge:
-        for rN in col2row[node]:
-            if rN not in purge:
-                row2col[rN].remove(node)
-        del col2row[node]
-
-        for cN in row2col[node]:
-            if cN not in purge and (cN, node):
-                col2row[cN].remove(node)
-                del edges[node, cN]
-        del row2col[node]
-    return
+    def computer(self, **kwargs):
+        return SFLUCompute(
+            oplistE = self.oplistE,
+            edges   = self.edges_original,
+            row2col = dict(self.row2col_cf),
+            col2row = dict(self.col2row_cf),
+            **kwargs
+        )
 
 
 class SFLUCompute:
@@ -538,6 +617,7 @@ class SFLUCompute:
         self.col2row     = col2row
         self.defaultsize = defaultsize
         self.nodesizes   = nodesizes
+
         return
 
     def compute(self, **kwargs):
@@ -720,3 +800,145 @@ class SFLUCompute:
         recurse(R)
         ops.append(OpComp("N_ret", R, ()))
         return ops
+
+    @classmethod
+    def from_yaml(cls, y, **kwargs):
+        if isinstance(y, str):
+            y = yaml.safe_load(y)
+        oplistE = cls.convert_yamlpy2oplistE(y['oplistE'])
+        row2col = cls.convert_yamlpy2row2col(y['row2col'])
+        edges = cls.convert_yamlpy2edges(y['edges'])
+
+        col2row = defaultdict(set)
+        for rN, cS in row2col.items():
+            for cN in cS:
+                col2row[cN].add(rN)
+        col2row = dict(col2row)
+
+        return cls(
+            oplistE = oplistE,
+            edges = edges,
+            row2col=row2col,
+            col2row=col2row,
+            **kwargs,
+        )
+
+    def convert_self2yamlpy(self):
+        yamlpy_oplistE = self.convert_oplistE2yamlpy()
+        yamlpy_edges = self.convert_edges2yamlpy()
+        yamlpy_row2col = self.convert_row2col2yamlpy()
+
+        return dict(
+            oplistE = yamlpy_oplistE,
+            edges = yamlpy_edges,
+            row2col = yamlpy_row2col,
+        )
+
+    def convert_self2yamlstr(self):
+        return yaml.safe_dump(
+            self.convert_self2yamlpy(),
+            default_flow_style=None,
+        )
+        
+    def convert_oplistE2yamlpy(self):
+        oplistE_yamlpy = []
+
+        for op in self.oplistE:
+            n, targ, args = op
+            args = [yamlstr_convert(a) for a in args]
+            odict = dict(op=n, targ=yamlstr_convert(targ))
+            if args:
+                odict['args'] = args
+            oplistE_yamlpy.append(odict)
+
+        return oplistE_yamlpy
+
+    @classmethod
+    def convert_yamlpy2oplistE(cls, yamlpy):
+        oplist_conv = []
+        for op in yamlpy:
+            oplist_conv.append(
+                OpComp(
+                    op['op'],
+                    yamlstr_convert_rev(op['targ']),
+                    tuple(yamlstr_convert_rev(arg) for arg in op.get('args', ())),
+                )
+            )
+        return oplist_conv
+
+    def convert_row2col2yamlpy(self):
+        row2col = {}
+
+        for rN, cS in self.row2col.items():
+            row2col[yamlstr_convert(rN)] = [yamlstr_convert(cN) for cN in cS]
+
+        return row2col
+
+    @classmethod
+    def convert_yamlpy2row2col(cls, yamlpy):
+        row2col = {}
+
+        for rN, cS in yamlpy.items():
+            row2col[yamlstr_convert_rev(rN)] = set(yamlstr_convert_rev(cN) for cN in cS)
+
+        return row2col
+
+    def convert_edges2yamlpy(self):
+        edges = {}
+
+        for k, v in self.edges.items():
+            edges[yamlstr_convert(k)] = v
+
+        return edges
+
+    @classmethod
+    def convert_yamlpy2edges(cls, yamlpy):
+        edges = {}
+
+        for k, v in yamlpy.items():
+            edges[yamlstr_convert_rev(k)] = normalize_list2tuple(v)
+
+        return edges
+
+    def convert_oplistE2yamlstr(self):
+        oplistE_yaml = yaml.safe_dump(
+            self.convert_oplistE2yamlpy(),
+            default_flow_style=None,
+        )
+        return oplistE_yaml
+
+    @classmethod
+    def convert_yamlstr2oplistE(cls, s):
+        oplistE_yamlpy = yaml.safe_load(s)
+        return cls.convert_yamlpy2oplistE(oplistE_yamlpy)
+
+
+RE_VEC = re.compile(r"\((.*)<(.*)\)")
+
+
+def yamlstr_convert(a):
+    # TODO, make this a little less fragile for generalized edges
+    # also check that node names don't look like edges
+    if isinstance(a, stk.KeyTuple):
+        a = tuple(a)
+    elif isinstance(a, stk.EdgeTuple):
+        a = "({}<{})".format(a.r, a.c)
+    elif isinstance(a, str):
+        pass
+    else:
+        raise a
+    return a
+
+
+def yamlstr_convert_rev(s):
+    m = RE_VEC.match(s)
+    if m:
+        a = stk.key_edge(m.group(1), m.group(2))
+    else:
+        a = stk.key_map(s)
+    return a
+
+def normalize_list2tuple(v):
+    if isinstance(v, list):
+        v = tuple(normalize_list2tuple(i) for i in v)
+    return v

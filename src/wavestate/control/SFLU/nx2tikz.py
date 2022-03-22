@@ -100,8 +100,15 @@ def dumps_tikz(g, scale='0.5em'):
     return '\n'.join(s)
 
 
-def _document(*Gs, preamble='', **kwargs):
-    """Return `str` that contains a preamble and tikzpicture."""
+def _document(Gs, preamble='', **kwargs):
+    """ Return `str` that contains a preamble and tikzpicture.
+
+    The first positional argument is a graph or a list of graphs to combine into a picture.
+
+    """
+    if not isinstance(Gs, (list, tuple)):
+        Gs = [Gs]
+
     tikz = []
     for g in Gs:
         tikz_tex = padding_remove(r"""
@@ -155,25 +162,38 @@ def _document(*Gs, preamble='', **kwargs):
 
 
 def dump_tikz(g, fname, **kwargs):
-    """Write TikZ picture as TeX file."""
+    """Write TikZ picture as TeX file.
+
+    The first positional argument is a graph or a list of graphs to combine into a picture.
+
+    """
     s = dumps_tikz(g, **kwargs)
     with open(fname, 'w') as f:
         f.write(s)
     return
 
 
-def dump_tex(*g, fname, **kwargs):
-    """Write TeX document (use this as an example)."""
-    s = _document(*g, **kwargs)
+def dump_tex(g, fname, **kwargs):
+    """Write TeX document.
+
+    The first positional argument is a graph or a list of graphs to combine into a picture.
+
+    """
+    s = _document(g, **kwargs)
     with open(fname, 'w') as f:
         f.write(s)
     return
 
 
-def dump_pdf(*g, fname, texname = None, **kwargs):
+def dump_pdf(g, fname, texname = None, **kwargs):
+    """Write PDF from TeX document using pdflatex.
+
+    The first positional argument is a graph or a list of graphs to combine into a picture.
+
+    """
     fpath, fbase = os.path.split(fname)
 
-    s = _document(*g, **kwargs)
+    s = _document(g, **kwargs)
     # typeset
     with tempfile.TemporaryDirectory(dir=fpath) as dname:
         if texname is None:
@@ -186,6 +206,15 @@ def dump_pdf(*g, fname, texname = None, **kwargs):
 
         with open(texname, 'w') as f:
             f.write(s)
+
+        dtikz = os.path.join(os.path.split(__file__)[0], 'tikz') 
+        files = [
+             'sflow.sty',
+            'tikzlibrarysignalflowstyles.code.tex',
+             'tikzsignalflow.sty'
+        ]
+        for f in files:
+            os.link(os.path.join(dtikz, f),  os.path.join(dname, f))
 
         opt = ['pdflatex', '-interaction=batchmode', '-output-directory=' + dname, texname]
         try:
