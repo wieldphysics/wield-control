@@ -278,8 +278,8 @@ def T_SFLU_DRFPMI_show_sub(dprint, tpath_join, fpath_join):
         comp.edge_map(edge_map = edge_map, default = 1)
         print(edge_map)
 
-        T_etm = 1
-        T_itm = 1
+        T_etm = 0
+        T_itm = 0.0148
         T_prm = 0.03
         T_srm = 0.35
         emap = {
