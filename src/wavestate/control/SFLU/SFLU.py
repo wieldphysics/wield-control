@@ -11,7 +11,7 @@ import numpy as np
 import yaml
 import re
 
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, deque
 
 from ..statespace import str_tup_keys as stk
 
@@ -53,7 +53,6 @@ class SFLU(object):
         row2col = defaultdict(set)
 
         nodes = set()
-        nodes_cf = set()
 
         # this second set are the row and col edge sets that are cycle-free
         col2row_cf = defaultdict(set)
@@ -76,12 +75,6 @@ class SFLU(object):
             nodes.add(C)
 
         if self.G is not None:
-            def to_label(val):
-                if not val:
-                    return ""
-                if sp is not None:
-                    return '$' + sp.latex(sp.var(str(val))) + '$'
-                return val
             for (R, C), E in edges2.items():
                 self.G.add_edge(C, R, label=to_label(E))
             for n in nodes:
@@ -195,7 +188,6 @@ class SFLU(object):
         self.edges_original = edges_original
 
         self.nodes = nodes
-        self.nodes_cf = nodes_cf
         self.reduced = []
         self.reducedL = []
         self.reducedU = []
@@ -405,10 +397,14 @@ class SFLU(object):
         # save_self_edge indicates if the self edge could be
         # deleted at the end
         delete_self_edge = False
-        if self.row2col[Nsf] or self.col2row[Nsf]:
+        if (
+                (self.row2col[Nsf] or self.col2row[Nsf])
+                or (self.row2col_cf[Nsf] or self.col2row_cf[Nsf])
+        ):
             if not (NsfA_needed and NsfB_needed):
                 delete_self_edge = True
             if selfE is not None:
+                print("LOOP CLG", Nsf)
                 self.oplistE.append(
                     OpComp(
                         "E_CLG",
@@ -430,6 +426,8 @@ class SFLU(object):
                 edgeC = self.edges[Nsf, C]
 
                 ACedge = self.edges.get((R, C), None)
+                if R == C:
+                    print("LOOP add", R)
                 if ACedge is not None:
                     self.edges[(R, C)] = self.addE(self.mulE(edgeR, CLG, edgeC), ACedge)
                     self.oplistE.append(
@@ -487,6 +485,8 @@ class SFLU(object):
 
                 if self.G is not None:
                     self.G.add_edge(NsfA, R, type='no_cycle')
+            if self.G is not None:
+                self.G.nodes[NsfA]['label'] = to_label(NsfA)
         else:
             for R in self.col2row[Nsf]:
                 edge = self.edges.pop((R, Nsf))
@@ -514,6 +514,9 @@ class SFLU(object):
 
                 if self.G is not None:
                     self.G.add_edge(C, NsfB, type='no_cycle')
+            if self.G is not None:
+                self.G.nodes[NsfB]['label'] = to_label(NsfB)
+                self.G.nodes[NsfB]['angle'] = -135
         else:
             for C in self.row2col[Nsf]:
                 edge = self.edges.pop((Nsf, C))
@@ -566,8 +569,6 @@ class SFLU(object):
             self.oplistE.append(OpComp("E_del", stk.key_edge(NsfB, NsfA), ()))
 
         self.nodes.remove(Nsf)
-        self.nodes_cf.add(NsfB)
-        self.nodes_cf.add(NsfA)
 
         self.reduced.append(Nsf)
         if NsfA_needed:
@@ -620,49 +621,161 @@ class SFLUCompute:
 
         return
 
-    def compute(self, **kwargs):
-        Espace = dict()
+    def genmul(self, A, B):
+        if A is 1:
+            return B
+        elif B is 1:
+            return A
 
-        # load all of the initial values
-        # TODO, allow this to include operations
+        if isinstance(A, np.ndarray):
+            if A.shape == ():
+                A_scalar = True
+            else:
+                A_scalar = False
+        else:
+            A_scalar = True
+
+        if isinstance(B, np.ndarray):
+            if B.shape == ():
+                B_scalar = True
+            else:
+                B_scalar = False
+        else:
+            B_scalar = True
+
+        if A_scalar or B_scalar:
+            return A * B
+        else:
+            return A @ B
+
+    def genadd(self, A, B):
+        if A is 0:
+            return B
+        elif B is 0:
+            return A
+
+        if isinstance(A, np.ndarray):
+            if A.shape == ():
+                A_scalar = True
+            else:
+                A_scalar = False
+        else:
+            A_scalar = True
+
+        if isinstance(B, np.ndarray):
+            if B.shape == ():
+                B_scalar = True
+            else:
+                B_scalar = False
+        else:
+            B_scalar = True
+
+        if A_scalar:
+            if B_scalar:
+                return A + B
+            else:
+                assert(B.shape[-1] == B.shape(-2))
+                A = A * np.eye(B.shape[-1])
+                # TODO, handle A reshape to broadcast
+                return A + B
+        else:
+            if B_scalar:
+                assert(A.shape[-1] == A.shape(-2))
+                B = B * np.eye(A.shape[-1])
+                # TODO, handle A reshape to broadcast
+                return A + B
+            else:
+                return A + B
+
+    def geninv(self, A):
+        if isinstance(A, np.ndarray):
+            if A.shape == ():
+                A_scalar = True
+            else:
+                A_scalar = False
+        else:
+            A_scalar = True
+        if A_scalar:
+            return 1/A
+        else:
+            return np.linalg.inv(A)
+
+    def edge_map(self, edge_map, default = None):
+        def edge_compute(ev):
+            if isinstance(ev, str):
+                if ev[0] == '-':
+                    ev = ev[1:]
+                    if default is not False:
+                        return -edge_map.setdefault(ev, default)
+                    else:
+                        return -edge_map[ev]
+                else:
+                    if default is not False:
+                        return edge_map.setdefault(ev, default)
+                    else:
+                        return edge_map[ev]
+            else:
+                # then it must be an edge computation
+                op = ev[0]
+                if op == '*':
+                    prod = edge_compute(ev[1])
+                    for v in ev[2:]:
+                        prod = self.genmul(prod, edge_compute(v))
+                    return prod
+                elif op == '-':
+                    if len(ev) == 2:
+                        return -edge_compute(ev[1])
+                    elif len(ev) == 3:
+                        return edge_compute(ev[1])-edge_compute(ev[2])
+                    else:
+                        assert(False)
+                else:
+                    raise NotImplementedError("Unrecognized edge computation opcode")
+            return
+
+        Espace = {}
         for ek, ev in self.edges.items():
-            r, c = ek
-            # r = tupleize.tupleize(r)
-            # c = tupleize.tupleize(c)
-            Espace[stk.key_edge(r, c)] = kwargs[ev]
+            assert(isinstance(ek, stk.EdgeTuple))
+            Espace[ek] = edge_compute(ev)
+
+        return Espace
+
+    def compute(self, edge_map):
+        Espace = self.edge_map(edge_map, default = False)
 
         for op in self.oplistE:
             print(op)
             if op.op == "E_CLG":
                 (arg,) = op.args
                 E = Espace[arg]
-                E.shape[-1]
-                assert E.shape[-1] == E.shape[-2]
-                I = np.eye(E.shape[-1])
-                I = I.reshape((1,) * (len(E.shape) - 2) + (E.shape[-2:]))
+                # assert E.shape[-1] == E.shape[-2]
+                # I = np.eye(E.shape[-1])
+                # I = I.reshape((1,) * (len(E.shape) - 2) + (E.shape[-2:]))
 
-                E2 = np.linalg.inv(I - E)
+                E2 = self.geninv(self.genadd(1, -E))
 
                 Espace[op.targ] = E2
+                print("CLG: ", op.targ, E2)
 
             elif op.op == "E_CLGd":
-                (arg,) = op.args
-                size = self.nodesizes.get(arg, self.defaultsize)
-                I = np.eye(size)
+                # (arg,) = op.args
+                # size = self.nodesizes.get(arg, self.defaultsize)
+                # I = np.eye(size)
+                I = 1
                 Espace[op.targ] = I
 
             elif op.op == "E_mul2":
                 arg1, arg2 = op.args
                 E1 = Espace[arg1]
                 E2 = Espace[arg2]
-                Espace[op.targ] = E1 @ E2
+                Espace[op.targ] = self.genmul(E1, E2)
 
             elif op.op == "E_mul3":
                 arg1, arg2, arg3 = op.args
                 E1 = Espace[arg1]
                 E2 = Espace[arg2]
                 E3 = Espace[arg3]
-                Espace[op.targ] = E1 @ E2 @ E3
+                Espace[op.targ] = self.genmul(self.genmul(E1, E2), E3)
 
             elif op.op == "E_mul3add":
                 arg1, arg2, arg3, argA = op.args
@@ -670,7 +783,9 @@ class SFLUCompute:
                 E2 = Espace[arg2]
                 E3 = Espace[arg3]
                 EA = Espace[argA]
-                Espace[op.targ] = E1 @ E2 @ E3 + EA
+
+                Espace[op.targ] = self.genadd(self.genmul(self.genmul(E1, E2), E3), EA)
+                print("MUL3ADD: ", op.targ, Espace[op.targ], E1, E2, E3, EA)
 
             elif op.op == "E_assign":
                 (arg,) = op.args
@@ -683,10 +798,6 @@ class SFLUCompute:
                 raise RuntimeError("Unrecognized Op {}".format(op))
 
         self.Espace = Espace
-
-
-    def subinverse(self):
-        return
 
 
     def subinverse_by(self, oplistN):
@@ -724,49 +835,78 @@ class SFLUCompute:
             else:
                 raise RuntimeError("Unrecognized Op {}".format(op))
 
-    def subinverse_ops(self, R, C):
+    def inverse_col(self, Rset, Cmap):
         """
         This computes the matrix element for an inverse from C to R
 
-        TODO, the algorithm could/should use some work. Should make a copy of row2col_cf
+        TODO, the algorithm could/should use some work. Should make a copy of col2row
         then deplete it
         """
-        R = stk.key_map(R)
-        C = stk.key_map(C)
-        ops = []
-        done = {}
+        Rset = set(stk.key_map(R) for R in Rset)
+        Cmap = {stk.key_map(C): v for C, v in Cmap.items()}
 
-        # since the graph is manefestly a DAG without cycles, can use depth first search
-        # as a topological sort
-        def recurse(node):
-            cS = self.row2col_cf[node]
-            # print('node', node, ' cS', cS)
+        # here, create a col2row dict with only the subset of nodes needed
+        # to reach the requested output Rset
+        col2row = defaultdict(set)
+        row_stack = list(Rset)
+        while row_stack:
+            rN = row_stack.pop()
+            cS = self.row2col[rN]
             for cN in cS:
-                if cN == C:
-                    done[cN] = True
-                elif cN not in done:
-                    done[cN] = recurse(cN)
+                rS = col2row[cN]
+                if not rS:
+                    if cN in self.row2col:
+                        row_stack.append(cN)
+                rS.add(rN)
 
-            used = False
-            for cN in cS:
-                if cN == C:
-                    # load an edge into a node
-                    ops.append(OpComp("N_edge", node, (stk.key_edge(node, cN),)))
-                    used = True
-                elif done[cN]:
-                    # load a node multiplied by an edge
-                    # N_sum does not know if the target node has been loaded or exists already
-                    # TODO, make this smarter by knowing if the target node has been loaded and
-                    # using finer-grained code
-                    ops.append(
-                        OpComp("N_sum", node, (stk.key_edge(node, cN), cN))
-                    )
-                    used = True
-            return used
+        row2col = defaultdict(set)
+        col_stack = list(Cmap.keys())
+        while col_stack:
+            cN = col_stack.pop()
+            rS = col2row[cN]
+            for rN in rS:
+                cS = row2col[rN]
+                if not cS:
+                    if rN in col2row:
+                        col_stack.append(rN)
+                cS.add(cN)
 
-        recurse(R)
-        ops.append(OpComp("N_ret", R, ()))
-        return ops
+        Nspace = dict(Cmap)
+        Nnum = dict()
+        col_stack = list(Cmap.keys())
+
+        while col_stack:
+            cN = col_stack.pop()
+            v = Nspace[cN]
+            # free space now that v is captured
+            if cN not in Rset:
+                del Nspace[cN]
+
+            rS = col2row[cN]
+            for rN in rS:
+                E = self.Espace[rN, cN]
+                prev = Nspace.get(rN, None)
+                addin = self.genmul(E, v)
+                if prev is None:
+                    Nspace[rN] = addin
+                    Nnum[rN] = 1
+                else:
+                    # TODO, could make this in-place
+                    Nspace[rN] = self.genadd(prev, addin)
+                    Nnum[rN] += 1
+                # this condition means that the row node has been fully filled by
+                # all col nodes
+                if Nnum[rN] == len(row2col[rN]):
+                    col_stack.append(rN)
+
+        assert(set(Nspace.keys()) == Rset)
+
+        # ops.append(OpComp("N_edge", node, (stk.key_edge(node, cN),)))
+        # ops.append(
+        #     OpComp("N_sum", node, (stk.key_edge(node, cN), cN))
+        # )
+        # ops.append(OpComp("N_ret", R, ()))
+        return Nspace
 
     def inverse_ops(self, R, Cin):
         """
@@ -942,3 +1082,11 @@ def normalize_list2tuple(v):
     if isinstance(v, list):
         v = tuple(normalize_list2tuple(i) for i in v)
     return v
+
+
+def to_label(val):
+    if not val:
+        return ""
+    if sp is not None:
+        return '$' + sp.latex(sp.var(str(val))) + '$'
+    return val
