@@ -192,6 +192,8 @@ in_out = dict(
         'X.etm.A.o.exc',
         'prm.A.i.exc',
         'srm.B.i.exc',
+        'X.etm.B.i',
+        'Y.etm.B.i',
     ],
     outputs = [
         'srm.B.o.tp',
@@ -199,6 +201,8 @@ in_out = dict(
         'X.etm.A.o.tp',
         'Y.etm.A.o.tp',
         'srm.B.o.tp',
+        'X.etm.B.o',
+        'Y.etm.B.o',
     ],
 )
 
@@ -364,17 +368,15 @@ def T_SFLU_DRFPMI_working(dprint, tpath_join, fpath_join):
     comp.edge_map(edge_map = edge_map, default = 1)
     print(edge_map)
 
-    T_etm = 0
+    T_etm = 80e-6
     T_itm = 0.0148
     T_prm = 0.03
     T_srm = 0.35
     emap = {
         '1': 1,
-        # 'BS.r': 0.5**0.5,
-        # 'BS.t': 0.5**0.5,
-        'BS.r': 1,
-        'BS.t': 0,
-        'BS_X.tau': np.exp(np.pi*2j*0),
+        'BS.r': 0.5**0.5,
+        'BS.t': 0.5**0.5,
+        'BS_X.tau': np.exp(np.pi*0.5j),
         'BS_Y.tau': np.exp(np.pi*2j*0),
         'X.etm.r': (1-T_etm)**0.5,
         'X.etm.t': T_etm**0.5,
@@ -397,8 +399,17 @@ def T_SFLU_DRFPMI_working(dprint, tpath_join, fpath_join):
 
     comp.compute(edge_map=emap)
     dprint(list(comp.Espace.keys()))
-    results = comp.inverse_col(['srm.B.o.tp'], {'srm.B.i.exc':1})['srm.B.o.tp']
+    #results = comp.inverse_col(['srm.B.o.tp'], {'srm.B.i.exc':1})['srm.B.o.tp']
+    results = comp.inverse_single('srm.B.o.tp', 'srm.B.i.exc')
     print("CALC: ", abs(results)**2)
+
+    results = comp.inverse_row({'srm.B.o.tp': None}, {
+        'srm.B.i.exc',
+        'prm.A.i.exc',
+        'X.etm.B.i',
+        'Y.etm.B.i',
+    })
+    print("CALC: ", {k : abs(r)**2 for k, r in results.items()}, sum(abs(r)**2 for k, r in results.items()))
     pass
 
 
