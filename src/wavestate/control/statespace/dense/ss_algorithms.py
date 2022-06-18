@@ -8,13 +8,18 @@
 """
 """
 
+import collections
 import numpy as np
 import scipy
 import scipy.signal
 import scipy.linalg
+from wavestate.bunch import Bunch
 
 from .eig_algorithms import eigspaces_right_real
 from . import matrix_algorithms
+
+
+TupleABCDE = collections.namedtuple("ABCDE", ('A', 'B', 'C', 'D', 'E'))
 
 
 def inverse_DSS(A, B, C, D, E):
@@ -261,3 +266,80 @@ def controllable_staircase(
     if reciprocal_system:
         E, A = A, E
     return A, B, C, D, E
+
+
+def chain(SSs):
+    ss_seq = []
+    constrN = 0
+    statesN = 0
+    inputsN = 0
+    outputN = 0
+    for idx, ss in enumerate(SSs):
+        ssB = Bunch()
+        if len(ss) == 4:
+            A, B, C, D = ss
+            E = np.eye(A.shape[-1])
+            assert(A.shape[-1] == A.shape[-2])
+        elif len(ss) == 5:
+            A, B, C, D, E = ss
+        ssB.A = A
+        ssB.B = B
+        ssB.C = C
+        ssB.D = D
+        ssB.E = E
+        ssB.sN = slice(statesN, statesN + A.shape[-2])
+        ssB.cN = slice(constrN, constrN + A.shape[-1])
+        ssB.iN = slice(0, B.shape[-1])
+        ssB.oN = slice(0, C.shape[-2])
+        
+        if E is not None:
+            assert(E.shape == A.shape)
+
+        constrN += A.shape[-2]
+        statesN += A.shape[-1]
+        if idx == 0:
+            inputsN = B.shape[-1]
+            outputN = C.shape[-2]
+        else:
+            assert(inputsN == B.shape[-1])
+            assert(outputN == C.shape[-2])
+        ss_seq.append(ssB)
+    del ss
+
+    A = np.zeros((constrN, statesN))
+    E = np.zeros((constrN, statesN))
+    B = np.zeros((constrN, inputsN))
+    C = np.zeros((outputN, statesN))
+
+    D = None  # D is defined on the first iteration
+    for idx_ss, ssB in enumerate(ss_seq):
+        A[..., ssB.cN, ssB.sN] = ssB.A
+        E[..., ssB.cN, ssB.sN] = ssB.E
+        if idx_ss > 0:
+            B_ud = ssB.B
+            idx_down = idx_ss - 1
+            while True:
+                ss_down = ss_seq[idx_down]
+                A[ssB.cN, ss_down.sN] = B_ud @ ss_down.C
+                if idx_down == 0:
+                    break
+                B_ud = B_ud @ ss_down.D
+                idx_down -= 1
+
+            B[ssB.cN, :] = ssB.B @ D
+            D = ssB.D @ D
+        else:
+            B[ssB.cN, :] = ssB.B
+            D = ssB.D
+
+    ssB = ss_seq[-1]
+    C[:, ssB.sN] = ssB.C
+    D_rev = ssB.D
+    # now loop down through the D matrices
+    for ssB in ss_seq[-2::-1]:
+        C_into = D_rev @ ssB.C
+        C[:, ssB.sN] = C_into
+        D_rev = D_rev @ ssB.D
+
+    return TupleABCDE(A, B, C, D, E)
+

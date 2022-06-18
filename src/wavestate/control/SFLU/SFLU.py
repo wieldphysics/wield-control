@@ -11,11 +11,11 @@ import numpy as np
 import yaml
 import re
 
-from collections import defaultdict, namedtuple, deque
+from collections import defaultdict, namedtuple
+
+from wavestate.utilities.np import matrix_stack
 
 from ..import string_tuple_keys as stk
-from ..import linear_values as lv
-
 try:
     import networkx as nx
 except ImportError:
@@ -608,13 +608,25 @@ class SFLUCompute:
         edges,
         row2col,
         col2row,
-        nodesizes={},
-        defaultsize=None,
+        typemap_to = None,
+        typemap_fr = None,
     ):
         self.oplistE     = oplistE
         self.edges       = edges
         self.row2col     = row2col
         self.col2row     = col2row
+
+        if typemap_to is None:
+            def typemap_to(v):
+                if isinstance(v, list):
+                    v = matrix_stack(v)
+                else:
+                    v = np.asarray(v)
+                    if len(v.shape) == 0:
+                        v = v.reshape(1, 1)
+                    elif len(v.shape) == 1:
+                        v = v.reshape(v.shape[0], 1, 1)
+                return v
         return
 
     def edge_map(self, edge_map, default = None):
@@ -623,14 +635,14 @@ class SFLUCompute:
                 if ev[0] == '-':
                     ev = ev[1:]
                     if default is not False:
-                        return lv.as_linval(-edge_map.setdefault(ev, default))
+                        return self.typemap(-edge_map.setdefault(ev, default))
                     else:
-                        return lv.as_linval(-edge_map[ev])
+                        return self.typemap(-edge_map[ev])
                 else:
                     if default is not False:
-                        return lv.as_linval(edge_map.setdefault(ev, default))
+                        return self.typemap(edge_map.setdefault(ev, default))
                     else:
-                        return lv.as_linval(edge_map[ev])
+                        return self.typemap(edge_map[ev])
             else:
                 # then it must be an edge computation
                 op = ev[0]

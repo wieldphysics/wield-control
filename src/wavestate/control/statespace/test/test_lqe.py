@@ -23,11 +23,13 @@ import wavestate.control
 
 from wavestate.AAA import AAA
 
-from wavestate.pytest import (  # noqa: F401
+from wavestate.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,
     fpath_join,
+    test_trigger,
+    tpath_preclear,
 )
 
 import scipy.signal

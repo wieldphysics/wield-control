@@ -11,12 +11,6 @@
 import numpy as np
 import scipy
 import scipy.signal
-from ...TFmath import order_reduce
-
-from numpy.polynomial.chebyshev import (
-    chebfromroots,
-    # chebcompanion,
-)
 
 from . import zpk_algorithms
 
@@ -67,3 +61,13 @@ def bessel_delay(delay_s, order=1, rescale=None):
     zdict = dict(c=-Rc.conjugate(), r=-Rr)
 
     return zdict, pdict, k
+
+
+def bessel_delay_ABCDE(delay_s, order=1, rescale=None):
+    zdict, pdict, k = bessel_delay(delay_s, order=order, rescale=rescale)
+    return zpk_algorithms.ZPKdict(
+        zdict=zdict,
+        pdict=pdict,
+        k=k,
+        convention="scipy",
+    )

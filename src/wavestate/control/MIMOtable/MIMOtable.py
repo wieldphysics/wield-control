@@ -43,6 +43,12 @@ class MIMOTable(object):
         return other
 
     def sort(self, rownames=None, colnames=None):
+        """
+        Sorts the table by rows or columns
+
+        The inputs are the rownames or colnames which have been sorted.
+        If either is not specified, then the existing order is used
+        """
         if colnames is None:
             colnames = self.colnames
         if rownames is None:
@@ -56,10 +62,13 @@ class MIMOTable(object):
         self.rowunits = [self.rowunits[i] for i in rowidx]
         self.colunits = [self.colunits[i] for i in colidx]
 
-        self.table = self.table[..., rowidx, :][..., colidx]
+        self.table = self.table[..., rowidx, :][..., :, colidx]
         return
 
     def push_col(self, colname):
+        """
+        Pushes a column to the back of the table
+        """
         col = self.colnames.index(colname)
         self.colnames[col:-1] = self.colnames[col + 1 :]
         self.colnames[-1] = colname
@@ -73,6 +82,9 @@ class MIMOTable(object):
         self.table[..., :, -1] = vec
 
     def push_row(self, rowname):
+        """
+        Pushes a row to the back of the table
+        """
         row = self.rownames.index(rowname)
         self.rownames[row:-1] = self.rownames[row + 1 :]
         self.rownames[-1] = rowname
@@ -86,12 +98,18 @@ class MIMOTable(object):
         self.table[..., -1, :] = vec
 
     def cut(self, threshold, replace=None, inplace=False):
+        """
+        Apply a threshold and cutoff to the table. This will hide elements that are under the cutoff
+
+        threshold represents a ratio of each element to the max of its column or the max of its row.
+        """
         if not inplace:
             self = self.copy()
         abstable = abs(self.table)
         row = np.max(abstable, axis=-2)
         abstable = abstable / row.reshape(1, -1)
         select_bad_r = abstable < threshold
+
         col = np.max(abstable, axis=-1)
         abstable = abstable / col.reshape(-1, 1)
         select_bad_c = abstable < threshold
@@ -108,6 +126,11 @@ class MIMOTable(object):
             return
 
     def loop_close(self, row, col, pushrow=True, pushcol=True):
+        """
+        Apply an infinite-gain loop from the row sensor to the col actuator.
+        This then propagates the cross couplings to give the residual couplings
+        of other matrix entrees.
+        """
         rowname = row
         colname = col
         row = self.rownames.index(rowname)
@@ -126,7 +149,9 @@ class MIMOTable(object):
 
         newrow = self.rownames[row] = colname + "-CL"
         newcol = self.colnames[col] = rowname + "-SG"
+
         self.colunits[col], self.rowunits[row] = self.rowunits[row], self.colunits[col]
+
         # new b'
         for idx_row in range(self.table.shape[-2]):
             if row == idx_row:

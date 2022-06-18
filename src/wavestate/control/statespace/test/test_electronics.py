@@ -18,12 +18,15 @@ from wavestate.control.statespace import ACE
 from wavestate.control.statespace import ace_electrical
 from wavestate.control.statespace.dense.xfer_algorithms import ss2xfer
 
-from wavestate.pytest import (  # noqa: F401
+from wavestate.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,
     fpath_join,
+    test_trigger,
+    tpath_preclear,
 )
+
 
 c_m_s = 299792458
 

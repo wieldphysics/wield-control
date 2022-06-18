@@ -11,10 +11,13 @@ State Space System
 
 import numpy as np
 import copy
+import numbers
+
+from wavestate.bunch import Bunch
 from collections import defaultdict, Mapping
 from wavestate.utilities.np import broadcast_shapes
 
-from . import tupleize
+from .tupleize import tupleize
 
 
 class ACE(object):
@@ -25,10 +28,11 @@ class ACE(object):
         # indicates the known rank of E matrix 0 or missing means 0 rank. -1 means full rank (min of row or col rank)
         # None means that the rank is unknown or a numerical rank.
         self.Eranks = dict()
+
         self.Cs = dict()
 
         # matrix into Cs to add more states, but make it more obvious that
-        # controllability and observability are maintained by not adding excessive Cs requiring later reduction
+        # controllability and observability are maintained by not adding excessive Cs requiring later reductions
         # this is in (io, xo) pairs, as though it multiplies Cs
         self.Xs = dict()
 
@@ -46,19 +50,19 @@ class ACE(object):
         self.cr2stA = defaultdict(set)
         self.st2crE = defaultdict(set)
         self.cr2stE = defaultdict(set)
-        self.st2io = defaultdict(set)
-        self.io2st = defaultdict(set)
+        self.st2io  = defaultdict(set)
+        self.io2st  = defaultdict(set)
         # for the Xs matrix
         # this is in C2io to Cio edges
         self.xo2io = defaultdict(set)
 
-        self.st = defaultdict(wavestate.bunch.Bunch)
-        self.cr = defaultdict(wavestate.bunch.Bunch)
+        self.st = defaultdict(Bunch)
+        self.cr = defaultdict(Bunch)
         # also contains the xo's, as they are a form (2nd layer) of io
-        self.io = defaultdict(wavestate.bunch.Bunch)
+        self.io = defaultdict(Bunch)
 
         # mapping of port names to Bunches, containing the individual xo's to bind
-        # flow types contain a .in = xo, and .out = xo. Conserved quantities are in
+        # flow types contain a .I = xo, and .O = xo. Conserved quantities are in
         # .potential = xo and .flow = xo
         self.pt = dict()
         return
@@ -134,15 +138,15 @@ class ACE(object):
         if C is not None or D is not None:
             assert output is not None
 
-        cmn = tupleize.tupleize(cmn)
-        states = cmn + tupleize.tupleize(states)
-        constr = cmn + tupleize.tupleize(constr)
-        output = cmn + tupleize.tupleize(output)
-        inputs = cmn + tupleize.tupleize(inputs)
+        cmn = tupleize(cmn)
+        states = cmn + tupleize(states)
+        constr = cmn + tupleize(constr)
+        output = cmn + tupleize(output)
+        inputs = cmn + tupleize(inputs)
         if instates is None:
             instates = inputs
         else:
-            instates = cmn + tupleize.tupleize(instates)
+            instates = cmn + tupleize(instates)
 
         N_states = None
         N_constr = None
@@ -297,7 +301,7 @@ class ACE(object):
         cr_map = dict()
         io_map = dict()
         pt_map = dict()
-        cmn = tupleize.tupleize(cmn)
+        cmn = tupleize(cmn)
 
         def anno_update(xx_map, self_xx, ace_xx):
             for xx, xx_ace in ace_xx.items():
@@ -369,7 +373,7 @@ class ACE(object):
             # self.Eranks[instates, constr] = 0
             assert mat_prev is mat
             Erank = ace.Eranks.get((st, cr), 0)
-            if Erank is not 0:
+            if Erank != 0:
                 self.Eranks.setdefault((st_new, cr_new), Erank)
 
         for (st, io), mat in ace.Cs.items():
@@ -400,48 +404,60 @@ class ACE(object):
 
         return
 
-    def port_add(
+    def port_add_conserved(
         self,
         pt,
         type,
         flow=None,
         potential=None,
-        impedance=None,
-        I=None,
-        O=None,
     ):
-        pt = tupleize.tupleize(pt)
-        pB = self.pt[pt] = wavestate.bunch.Bunch()
+        pt = tupleize(pt)
+        pB = self.pt.setdefault(pt, Bunch())
         if type is not None:
             pB.type = type
+
         if flow is not None or potential is not None:
             assert flow is not None
             assert potential is not None
-            flow = tupleize.tupleize(flow)
-            potential = tupleize.tupleize(potential)
+            flow = tupleize(flow)
+            potential = tupleize(potential)
             assert flow in self.io
             assert potential in self.io
             pB.flow = flow
             pB.potential = potential
-        if I is not None or O is not None:
-            assert I is not None
-            assert O is not None
-            I = tupleize.tupleize(I)
-            O = tupleize.tupleize(O)
-            assert I in self.io
-            assert O in self.io
-            pB.I = I
-            pB.O = potential
+        return
+
+    def port_add_scatter(
+        self,
+        pt,
+        type,
+        In=None,
+        Out=None,
+        impedance=None,
+    ):
+        pt = tupleize(pt)
+        pB = self.pt.setdefault(pt, Bunch())
+
+        if type is not None:
+            pB.type = type
+
+        if In is not None or Out is not None:
+            assert In is not None
+            assert Out is not None
+            In = tupleize(In)
+            Out = tupleize(Out)
+            assert In in self.io
+            assert Out in self.io
+            pB.In = In
+            pB.Out = Out
             if impedance is not None:
                 self.impedance = impedance
-        else:
-            assert impedance is None
         return
 
     def noise_add(self, noise, io_set=(), noise_set=(), categories=()):
-        noise = tupleize.tupleize(noise)
-        io_set = set(tupleize.tupleize(io) for io in io_set)
-        noise_set = set(tupleize.tupleize(n) for n in noise_set)
+        noise = tupleize(noise)
+        io_set = set(tupleize(io) for io in io_set)
+        noise_set = set(tupleize(n) for n in noise_set)
         categories = set(categories)
 
         for io in io_set:
@@ -453,7 +469,7 @@ class ACE(object):
         return
 
     def states_augment(self, N, st, io=None):
-        st = tupleize.tupleize(st)
+        st = tupleize(st)
 
         assert st not in self.st
         self.st[st].N = N
@@ -461,7 +477,7 @@ class ACE(object):
             if io is True:
                 io = st
             else:
-                io = tupleize.tupleize(io)
+                io = tupleize(io)
             assert io not in self.io
             self.io[io].N = N
 
@@ -477,12 +493,12 @@ class ACE(object):
         return
 
     def io_input(self, io, constr=None):
-        xo = tupleize.tupleize(io)
+        xo = tupleize(io)
         # add a zero binding
         if constr is None:
             constr = xo
         else:
-            constr = tupleize.tupleize(constr)
+            constr = tupleize(constr)
         assert xo in self.io
         # now add a noise constraint associated with the xo
         self.bound_io[xo] = constr
@@ -505,21 +521,21 @@ class ACE(object):
 
         if constr is not None, then add a single binding constraint and consider it a noise IO.
         """
-        xo = tupleize.tupleize(io)
+        xo = tupleize(io)
         N = None
 
         # this is the fundamental C mapping, mapped through the Xs
         Cmapping = dict()
 
         for io2, mat_ish in matmap.items():
-            io2 = tupleize.tupleize(io2)
+            io2 = tupleize(io2)
             ioset = self.xo2io.get(io2, None)
             scalar = None
             if mat_ish is None:
                 # is a pass-through
                 idx_ish = None
                 mat_ish = None
-            elif isinstance(mat_ish, Number):
+            elif isinstance(mat_ish, numbers.Number):
                 scalar = mat_ish
                 idx_ish = None
                 mat_ish = None
@@ -668,7 +684,7 @@ class ACE(object):
                 if mat_ish is not None:
                     if mat is 1:
                         pass
-                    elif isinstance(mat, Number) or isinstance(mat_ish, Number):
+                    elif isinstance(mat, numbers.Number) or isinstance(mat_ish, numbers.Number):
                         mat_ish = mat * mat_ish
                     else:
                         mat_ish = mat @ mat_ish
@@ -685,7 +701,7 @@ class ACE(object):
                         else:
                             assert N == N2
                         update_Cs(st, c_new)
-                elif isinstance(mat_ish, Number):
+                elif isinstance(mat_ish, numbers.Number):
                     for st in io2st[io2]:
                         c = self.Cs[st, io2]
                         c_new = -c[..., idx_ish, :]
@@ -718,7 +734,8 @@ class ACE(object):
         """
         TODO, do more type checking in here
         """
-        ports = [tupleize.tupleize(pt) for pt in ports]
+        ports = [tupleize(pt) for pt in ports]
+
         if len(ports) == 2:
             pB1 = self.pt[ports[0]]
             pB2 = self.pt[ports[1]]
@@ -746,7 +763,7 @@ class ACE(object):
         klist = []
         if isinstance(set_or_dict, Mapping):
             for k, v in set_or_dict.items():
-                k2 = tupleize.tupleize(k)
+                k2 = tupleize(k)
                 klist.append(k2)
                 if v is 1:
                     v = None
@@ -754,7 +771,7 @@ class ACE(object):
                 assert k2 in self.io
         else:
             for k in set_or_dict:
-                k2 = tupleize.tupleize(k)
+                k2 = tupleize(k)
                 klist.append(k2)
                 mdict[k2] = None
                 assert k2 in self.io
@@ -773,14 +790,14 @@ class ACE(object):
                 sign = -1 * sign
                 # todo, make nonzero constr able to handle multiple bindings
                 if constr is None:
-                    constr_use = tupleize.tupleize((io1, io2))
+                    constr_use = tupleize((io1, io2))
                 else:
                     if isinstance(constr, str):
                         assert len(klist) == 2
                         constr_use = [constr]
                     else:
                         assert isinstance(constr, list)
-                    constr_use = tupleize.tupleize(constr[idx])
+                    constr_use = tupleize(constr[idx])
 
                 mul1 = mdict[io1]
                 if mul1 is not None:
@@ -813,9 +830,9 @@ class ACE(object):
                 mul1 = mul2
         elif form == "sum":
             if constr is None:
-                constr_use = tupleize.tupleize(klist)
+                constr_use = tupleize(klist)
             else:
-                constr_use = tupleize.tupleize(constr)
+                constr_use = tupleize(constr)
             assert constr_use not in self.cr
 
             N = None
@@ -839,7 +856,7 @@ class ACE(object):
             if constr is None:
                 constr_use = ("zero", io1)
             else:
-                constr_use = tupleize.tupleize(constr)
+                constr_use = tupleize(constr)
             assert constr_use not in self.cr
             self.cr[constr_use].N = N
             for st, C in Cs1.items():
@@ -1090,7 +1107,7 @@ class ACE(object):
 
         while st2cr:
             if st_start:
-                st = tupleize.tupleize(st_start)
+                st = tupleize(st_start)
                 st_start = None
             else:
                 st = next(iter(st2cr))
@@ -1114,8 +1131,8 @@ class ACE(object):
         else:
             st = st_set.pop()
             cr = cr_set.pop()
-            st = tupleize.tupleize(st)
-            cr = tupleize.tupleize(cr)
+            st = tupleize(st)
+            cr = tupleize(cr)
         assert self.Eranks.get((st, cr), 0) == 0
         assert self.st[st].N == self.cr[cr].N
 
@@ -1343,7 +1360,7 @@ class ACE(object):
         outCs = dict()
         outCsD = dict()
         outN = [0]
-        outputs = [tupleize.tupleize(out) for out in outputs]
+        outputs = [tupleize(out) for out in outputs]
         for out in outputs:
             assert out in self.io
             Cs, N = self._Cs_collect(out)
@@ -1361,7 +1378,7 @@ class ACE(object):
         inBs = dict()
         inBsD = dict()
         inN = [0]
-        inputs = [tupleize.tupleize(In) for In in inputs]
+        inputs = [tupleize(In) for In in inputs]
         for In in inputs:
             cr = self.bound_io[In]
             N = self.cr[cr].N
@@ -1441,7 +1458,7 @@ class ACE(object):
         else:
             descriptor = N_st_DG != N_st_tot
 
-        retB = wavestate.bunch.Bunch(
+        retB = Bunch(
             ABCDE=(A, B, C, D, E),
             A=A,
             B=B,

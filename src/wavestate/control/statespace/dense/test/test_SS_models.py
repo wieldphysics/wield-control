@@ -7,14 +7,26 @@
 # with details inline in source files, comments, and docstrings.
 """
 """
-
 import numpy as np
 import scipy
 import scipy.signal
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
+
+
+from wavestate.pytest.fixtures import (  # noqa: F401
+    tpath_join,
+    dprint,
+    plot,
+    fpath_join,
+    test_trigger,
+    tpath_preclear,
+)
+
+
 from wavestate.control.statespace import dense
+from wavestate.control.statespace.dense import zpk_algorithms, xfer_algorithms, ss_algorithms
 
 import scipy.signal
 
@@ -38,8 +50,7 @@ def settest(test_trigger, tpath_join, plot, Zc, Zr, Pc, Pr, k):
     Z = np.concatenate([Zc, Zc.conjugate(), Zr])
     P = np.concatenate([Pc, Pc.conjugate(), Pr])
 
-    sys1 = dense.ZPKdict(
-        name="zpk",
+    sys1 = zpk_algorithms.ZPKdict(
         zdict=dict(c=Zc, r=Zr),
         pdict=dict(c=Pc, r=Pr),
         k=k,
@@ -47,11 +58,7 @@ def settest(test_trigger, tpath_join, plot, Zc, Zr, Pc, Pr, k):
     print_ssd(sys1)
 
     F_Hz = logspaced(0.01, 1e3, 1000)
-    xfer = sys1.xfer(
-        F_Hz=F_Hz,
-        iname="zpk.i0",
-        oname="zpk.o0",
-    )
+    xfer = xfer_algorithms.ss2xfer(*sys1, F_Hz=F_Hz)
 
     # TODO, use IIRrational version since statespace is likely more numerically
     # stable than crappy scipy implementation
@@ -68,12 +75,8 @@ def settest(test_trigger, tpath_join, plot, Zc, Zr, Pc, Pr, k):
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer, xfer2, decimal=5)
 
-    sys_inv = sys1.inverse()
-    xfer = 1 / sys_inv.xfer(
-        F_Hz=F_Hz,
-        iname="zpk.o0",
-        oname="zpk.i0",
-    )
+    sys_inv = ss_algorithms.inverse_DSS(*sys1)
+    xfer = 1 / xfer_algorithms.ss2xfer(*sys_inv, F_Hz=F_Hz)
 
     def trigger(fail, plot):
         axB = mplfigB(Nrows=2)

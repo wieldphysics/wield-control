@@ -10,9 +10,8 @@
 
 import numpy as np
 import scipy
-from wavestate import declarative
+from wavestate.bunch import Bunch
 import scipy.signal
-import scipy.linalg
 import copy
 
 
@@ -492,7 +491,7 @@ def GQR(
             RidxX_limit += 1
 
     # Hessenberg_below returns at what column the matrix becomes strictly U-T
-    ret = wavestate.bunch.Bunch(
+    ret = Bunch(
         matX=matX,
         matY=matY,
         Hessenberg_below=CidxX,

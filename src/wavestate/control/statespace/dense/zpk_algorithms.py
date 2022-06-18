@@ -11,7 +11,10 @@
 import numpy as np
 import scipy
 import scipy.signal
+import collections
 from ...TFmath import order_reduce
+
+TupleABCDE = collections.namedtuple("ABCDE", ('A', 'B', 'C', 'D', 'E'))
 
 from numpy.polynomial.chebyshev import (
     chebfromroots,
@@ -19,6 +22,8 @@ from numpy.polynomial.chebyshev import (
 )
 
 from . import ss_algorithms
+
+pi2 = np.pi * 2
 
 
 def ss2zpk(
@@ -198,7 +203,15 @@ def zpk2rDSS(z, p, k, **kwargs):
     return A, B, C, D, E
 
 
-def poly2ss(num, den, rescale_has=None, rescale_do=None, mode="CCF"):
+def poly2ss(
+        num,
+        den,
+        rescale_has=None,
+        rescale_do=None,
+        mode="CCF"
+):
+    """
+    """
     if rescale_do is not None:
         rescale_arr = rescale_do ** (np.arange(len(den)))
         c_p = np.asarray(den) * rescale_arr
@@ -331,3 +344,44 @@ def zpkdict_cascade(
         )
         ABCDEs.append(ABCDE)
     return ABCDEs
+
+
+def zpk_rc(
+    self,
+    name,
+    Zc=[],
+    Zr=[],
+    Pc=[],
+    Pr=[],
+    k=1,
+    convention="scipy",
+):
+    if convention == "scipyHz":
+        convention = "scipy"
+        Zc = pi2 * np.array(Zc)
+        Zr = pi2 * np.array(Zr)
+        Pc = pi2 * np.array(Pc)
+        Pr = pi2 * np.array(Pr)
+
+    return self.ZPKdict(
+        name="zpk",
+        zdict=dict(c=Zc, r=Zr),
+        pdict=dict(c=Pc, r=Pr),
+        k=k,
+        convention=convention,
+    )
+
+
+def ZPKdict(
+    zdict,
+    pdict,
+    k,
+    convention="scipy",
+):
+    ABCDEs = zpkdict_cascade(
+        zdict=zdict, pdict=pdict, k=k, convention=convention
+    )
+    ABCDE = ss_algorithms.chain(ABCDEs)
+    return TupleABCDE(*ABCDE)
+
+

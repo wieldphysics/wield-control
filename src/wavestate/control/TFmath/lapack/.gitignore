@@ -1,3 +1,0 @@
-lapack_svd.*.so
-lapack_svd.pyf
-lapack_svdmodule.c

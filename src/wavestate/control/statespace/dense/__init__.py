@@ -8,11 +8,6 @@
 """
 """
 
-
-from .statespace import (
-    StateSpaceDense,
-)
-
 from .ss_algorithms import (
     reduce_modal,
 )

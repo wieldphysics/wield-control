@@ -12,9 +12,19 @@ import numpy as np
 import scipy
 import scipy.signal
 
+from wavestate.pytest.fixtures import (  # noqa: F401
+    tpath_join,
+    dprint,
+    plot,
+    fpath_join,
+    test_trigger,
+    tpath_preclear,
+)
+
+
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from wavestate.control.statespace import dense, StateSpaceDense
+from wavestate.control.statespace.dense import delay_algorithms, xfer_algorithms
 
 import scipy.signal
 
@@ -36,15 +46,12 @@ def test_delay(tpath_join, test_trigger):
     axB = mplfigB(Nrows=2)
 
     for idx_ord in range(1, 7):
-        arm1 = dense.delay("arm1", delta_t, order=idx_ord, method="bessel")
+        arm1 = delay_algorithms.bessel_delay_ABCDE(delta_t, order=idx_ord)
         print_ssd(arm1)
 
         F_Hz = logspaced(0.01 / delta_t, 2 / delta_t, 1000)
-        xfer = arm1.xfer(
-            F_Hz=F_Hz,
-            iname="arm1.i0",
-            oname="arm1.o0",
-        )
+
+        xfer = xfer_algorithms.ss2xfer(*arm1, F_Hz=F_Hz)
 
         axB.ax0.semilogx(F_Hz, abs(xfer), label="order {}".format(idx_ord))
         axB.ax1.plot(F_Hz, np.angle(xfer, deg=True))
@@ -66,15 +73,11 @@ def test_big_delay(tpath_join, test_trigger):
     axB = mplfigB(Nrows=2)
 
     idx_ord = 100
-    arm1 = dense.delay("arm1", delta_t, order=idx_ord, method="bessel")
+    arm1 = delay_algorithms.bessel_delay_ABCDE(delta_t, order=idx_ord)
     print_ssd(arm1)
 
     F_Hz = np.linspace(0.00 / delta_t, 50 / delta_t, 1000)
-    xfer = arm1.xfer(
-        F_Hz=F_Hz,
-        iname="arm1.i0",
-        oname="arm1.o0",
-    )
+    xfer = xfer_algorithms.ss2xfer(*arm1, F_Hz=F_Hz)
 
     axB.ax0.semilogx(F_Hz, abs(xfer), label="order {}".format(idx_ord))
     axB.ax1.plot(F_Hz, np.angle(xfer, deg=True))

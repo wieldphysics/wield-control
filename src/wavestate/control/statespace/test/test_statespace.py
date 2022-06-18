@@ -16,14 +16,16 @@ from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
 from wavestate.control.statespace import dense
 from wavestate.control.statespace import ACE
-from wavestate.control.statespace.dense.zpk_algorithms import zpk_cascade
+from wavestate.control.statespace.dense.zpk_algorithms import zpk_cascade, ZPKdict
 from wavestate.control.statespace.dense.xfer_algorithms import ss2xfer
 
-from wavestate.pytest import (  # noqa: F401
+from wavestate.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,
     fpath_join,
+    test_trigger,
+    tpath_preclear,
 )
 
 import scipy.signal
@@ -63,8 +65,7 @@ def test_xfers_ACE(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     Z = np.concatenate([Zc, Zc.conjugate(), Zr])
     P = np.concatenate([Pc, Pc.conjugate(), Pr])
 
-    sys1 = dense.ZPKdict(
-        name="zpk",
+    sys1 = ZPKdict(
         zdict=dict(c=Zc, r=Zr),
         pdict=dict(c=Pc, r=Pr),
         k=k,
