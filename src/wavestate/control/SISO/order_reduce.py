@@ -11,6 +11,7 @@
 import numpy as np
 
 from .roots_matching import nearest_pairs
+from . import rootset
 
 
 def Q_rank_calc(z, p):
@@ -40,18 +41,19 @@ def order_reduce_zpk(
     Q_rank_cutoff_unstable=None,
     reduce_c=True,
     reduce_r=False,
-    RBalgo=root_bunch.RBalgo,
+    classifier = rootset.default_root_classifier
 ):
-    zeros = RBalgo.expect_atleast(
-        zpk[0], constraint=RBalgo.root_constraints.mirror_real
+    classify = classifier.classify_function(
+        rootset.SDomainRootSet,
+        hermitian=True,
+        time_symm=False,
     )
-    poles = RBalgo.expect_atleast(
-        zpk[1], constraint=RBalgo.root_constraints.mirror_real
-    )
-    Pc = poles.c
-    Zc = zeros.c
-    Pr = poles.r
-    Zr = zeros.r
+    zeros = classify(zpk[0], 'zeros')
+    poles = classify(zpk[1], 'poles')
+    Pc = poles.c_plane
+    Zc = zeros.c_plane
+    Pr = poles.r_line
+    Zr = zeros.r_line
 
     # print(len(Zc), len(Pc))
     if reduce_c:

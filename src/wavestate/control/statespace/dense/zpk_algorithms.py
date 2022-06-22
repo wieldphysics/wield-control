@@ -12,9 +12,10 @@ import numpy as np
 import scipy
 import scipy.signal
 import collections
-from ...TFmath import order_reduce
 
-TupleABCDE = collections.namedtuple("ABCDE", ('A', 'B', 'C', 'D', 'E'))
+from . import xfer_algorithms
+
+from ...SISO import order_reduce
 
 from numpy.polynomial.chebyshev import (
     chebfromroots,
@@ -23,10 +24,12 @@ from numpy.polynomial.chebyshev import (
 
 from . import ss_algorithms
 
+TupleABCDE = collections.namedtuple("ABCDE", ('A', 'B', 'C', 'D', 'E'))
+
 pi2 = np.pi * 2
 
 
-def ss2zpk(
+def ss2zp(
     A,
     B,
     C,
@@ -34,10 +37,9 @@ def ss2zpk(
     E=None,
     idx_in=None,
     idx_out=None,
-    Q_rank_cutoff=1e-5,
+    Q_rank_cutoff=1e-15,
     Q_rank_cutoff_unstable=None,
-    F_match_Hz=1e-10,
-    fmt="IIRrational",
+    fmt="scipy",
 ):
     if idx_in is None:
         if B.shape[1] == 1:
@@ -49,9 +51,9 @@ def ss2zpk(
             idx_out = 0
         else:
             raise RuntimeError("Must specify idx_in if C indicates SIMO/MIMO system")
-    B = B[:, idx_in : idx_in + 1]
-    C = C[idx_out : idx_out + 1, :]
-    D = D[idx_out : idx_out + 1, idx_in : idx_in + 1]
+    B = B[:, idx_in: idx_in + 1]
+    C = C[idx_out: idx_out + 1, :]
+    D = D[idx_out: idx_out + 1, idx_in: idx_in + 1]
 
     if E is None:
         p = scipy.linalg.eig(A, left=False, right=False)
@@ -74,20 +76,78 @@ def ss2zpk(
         )
         z = scipy.linalg.eig(a=SS, b=SSE, left=False, right=False)
     z = np.asarray([_ for _ in z if np.isfinite(_.real)])
-    k = 1
-    z, p, k = order_reduce.order_reduce_zpk(
-        (z, p, k),
-        reduce_c=True,
-        reduce_r=True,
+    if Q_rank_cutoff is not None:
+        z, p, k = order_reduce.order_reduce_zpk(
+            (z, p, 1),
+            reduce_c=True,
+            reduce_r=True,
+            Q_rank_cutoff=Q_rank_cutoff,
+            Q_rank_cutoff_unstable=Q_rank_cutoff_unstable,
+        )
+    if fmt == "IIRrational":
+        z = np.asarray(z) / (2 * np.pi)
+        p = np.asarray(p) / (2 * np.pi)
+    elif fmt == "scipy":
+        pass
+    else:
+        raise RuntimeError("Unrecognized fmt parameter")
+    return z, p
+
+
+
+def ss2zpk(
+    A,
+    B,
+    C,
+    D,
+    E=None,
+    idx_in=None,
+    idx_out=None,
+    Q_rank_cutoff=1e-15,
+    Q_rank_cutoff_unstable=None,
+    F_match_Hz=None,
+    fmt="scipy",
+):
+    z, p = ss2zp(
+        A=A,
+        B=B,
+        C=C,
+        D=D,
+        E=E,
+        idx_in=idx_in,
+        idx_out=idx_out,
         Q_rank_cutoff=Q_rank_cutoff,
         Q_rank_cutoff_unstable=Q_rank_cutoff_unstable,
+        fmt="scipy",
     )
-    s_match_wHz = F_match_Hz * 2j * np.pi
-    tf0 = (
-        np.matmul(C, np.matmul(np.linalg.inv(np.eye(A.shape[0]) * s_match_wHz - A), B))
-        + D
-    )[..., 0, 0]
+    k = 1
+
+    if F_match_Hz is None:
+        # TODO, make this discover the "most isolated" poles to check
+        s_match_wHz = None
+        for root in p:
+            if root.real != 0:
+                s_match_wHz = root.imag
+        if s_match_wHz is None:
+            for root in z:
+                if root.real != 0:
+                    s_match_wHz = root.imag
+    else:
+        s_match_wHz = F_match_Hz * np.pi
+
+    tf0 = xfer_algorithms.ss2response(
+        A,
+        B,
+        C,
+        D,
+        E,
+        s=np.asarray(1j * s_match_wHz),
+        idx_in=0,
+        idx_out=0
+    )
+    # TODO, avoid using scipy.signal for this
     w, zpk0 = scipy.signal.freqs_zpk(z, p, k, s_match_wHz)
+    print('gain setup', tf0, zpk0)
     k = abs(tf0 / zpk0)
 
     if fmt == "IIRrational":
@@ -347,8 +407,6 @@ def zpkdict_cascade(
 
 
 def zpk_rc(
-    self,
-    name,
     Zc=[],
     Zr=[],
     Pc=[],
@@ -362,9 +420,12 @@ def zpk_rc(
         Zr = pi2 * np.array(Zr)
         Pc = pi2 * np.array(Pc)
         Pr = pi2 * np.array(Pr)
+    elif convention == 'scipy':
+        pass
+    else:
+        raise RuntimeError("Unrecognized Convention")
 
-    return self.ZPKdict(
-        name="zpk",
+    return ZPKdict(
         zdict=dict(c=Zc, r=Zr),
         pdict=dict(c=Pc, r=Pr),
         k=k,

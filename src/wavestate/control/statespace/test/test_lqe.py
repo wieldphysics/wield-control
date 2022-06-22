@@ -17,9 +17,7 @@ from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
 from wavestate.control.statespace import dense
 from wavestate.control.statespace import ACE
-from wavestate.control.statespace.dense.zpk_algorithms import zpk_cascade
 from wavestate.control.statespace.dense.xfer_algorithms import ss2xfer
-import wavestate.control
 
 from wavestate.AAA import AAA
 

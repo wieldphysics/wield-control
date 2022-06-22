@@ -14,11 +14,6 @@ import collections
 
 from . import shuffle_algorithms
 
-from wavestate.pytest.fixtures import (  # noqa
-    tpath_join,
-    dprint,
-)
-
 
 def nonzero_test(val):
     return val != 0
@@ -130,8 +125,8 @@ def reduce_SVD_inplace(ABCDE, Nst, Nco, tol=1e-10):
     V = V[::-1, :]
     Vi = V.T
 
-    # dprint(S)
-    # dprint(np.diagonal(mat))
+    # print(S)
+    # print(np.diagonal(mat))
     B[Ico:, :] = Ui @ B[Ico:, :]
     C[:, Ist:] = C[:, Ist:] @ Vi
     # A22
@@ -163,7 +158,7 @@ def reduce_SVD_inplace(ABCDE, Nst, Nco, tol=1e-10):
         Ui = U.T
         # redefines states
         Vi = V.T
-        # dprint(S)
+        # print(S)
         B[Ico:, :] = Ui @ B[Ico:, :]
         C[:, Ist:] = C[:, Ist:] @ Vi
 

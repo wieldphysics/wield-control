@@ -6,11 +6,13 @@
 # NOTICE: authors should document their contributions in concisely in NOTICE
 # with details inline in source files, comments, and docstrings.
 """
-Utilities to manipulate ZPK roots S to/from Z, and make transfer functions
+Utilities to manipulate ZPK roots S to/from Z, and make transfer functions.
+
+These are not mature!
 """
 
 import numpy as np
-from wavestate import declarative
+from wavestate.bunch import Bunch
 
 
 def analytic_translation(
@@ -19,7 +21,6 @@ def analytic_translation(
     F_displacement_Hz=0,
 ):
     """
-    time_bins shou
     """
     if time_s is None:
         time_s = (
@@ -65,7 +66,7 @@ def analytic_translation(
     def stability_test(cplx_vect):
         return apply_translation(cplx_vect) / apply_continuation(cplx_vect)
 
-    return wavestate.bunch.Bunch(locals())
+    return Bunch(locals())
 
 
 def analytic_translation_dual(
@@ -116,4 +117,4 @@ def analytic_translation_dual(
     def apply_continuation(cplx_vect):
         return -1j * np.dot(trans_sc, cplx_vect)
 
-    return wavestate.bunch.Bunch(locals())
+    return Bunch(locals())

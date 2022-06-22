@@ -311,26 +311,26 @@ def chain(SSs):
     B = np.zeros((constrN, inputsN))
     C = np.zeros((outputN, statesN))
 
-    D = None  # D is defined on the first iteration
-    for idx_ss, ssB in enumerate(ss_seq):
+    ssB = ss_seq[0]
+    A[..., ssB.cN, ssB.sN] = ssB.A
+    E[..., ssB.cN, ssB.sN] = ssB.E
+    B[ssB.cN, :] = ssB.B
+    D = ssB.D
+    for idx_ss, ssB in enumerate(ss_seq, 1):
         A[..., ssB.cN, ssB.sN] = ssB.A
         E[..., ssB.cN, ssB.sN] = ssB.E
-        if idx_ss > 0:
-            B_ud = ssB.B
-            idx_down = idx_ss - 1
-            while True:
-                ss_down = ss_seq[idx_down]
-                A[ssB.cN, ss_down.sN] = B_ud @ ss_down.C
-                if idx_down == 0:
-                    break
-                B_ud = B_ud @ ss_down.D
-                idx_down -= 1
+        B_ud = ssB.B
+        idx_down = idx_ss - 1
+        while True:
+            ss_down = ss_seq[idx_down]
+            A[ssB.cN, ss_down.sN] = B_ud @ ss_down.C
+            if idx_down == 0:
+                break
+            B_ud = B_ud @ ss_down.D
+            idx_down -= 1
 
-            B[ssB.cN, :] = ssB.B @ D
-            D = ssB.D @ D
-        else:
-            B[ssB.cN, :] = ssB.B
-            D = ssB.D
+        B[ssB.cN, :] = ssB.B @ D
+        D = ssB.D @ D
 
     ssB = ss_seq[-1]
     C[:, ssB.sN] = ssB.C
