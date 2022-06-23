@@ -291,7 +291,7 @@ def chain(SSs):
         ssB.cN = slice(constrN, constrN + A.shape[-1])
         ssB.iN = slice(0, B.shape[-1])
         ssB.oN = slice(0, C.shape[-2])
-        
+
         if E is not None:
             assert(E.shape == A.shape)
 
