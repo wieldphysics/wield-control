@@ -608,8 +608,8 @@ class SFLUCompute:
         edges,
         row2col,
         col2row,
-        typemap_to = None,
-        typemap_fr = None,
+        typemap_to=None,
+        typemap_fr=None,
     ):
         self.oplistE     = oplistE
         self.edges       = edges
@@ -617,17 +617,34 @@ class SFLUCompute:
         self.col2row     = col2row
 
         if typemap_to is None:
-            def typemap_to(v):
-                if isinstance(v, list):
-                    v = matrix_stack(v)
-                else:
-                    v = np.asarray(v)
-                    if len(v.shape) == 0:
-                        v = v.reshape(1, 1)
-                    elif len(v.shape) == 1:
-                        v = v.reshape(v.shape[0], 1, 1)
-                return v
+            typemap_to = self.typemap_to_default
+        if typemap_fr is None:
+            typemap_fr = self.typemap_fr_default
+        self.typemap_to = typemap_to
+        self.typemap_fr = typemap_fr
+        self.eye = self.typemap_to(1)
         return
+
+    def typemap_to_default(self, v):
+        """
+        Default conversion for edge and node values.
+        This conversion promotes scalars and arrays to become
+        1x1 matrices so that the matmul operation may be applied
+        """
+        if isinstance(v, list):
+            v = matrix_stack(v)
+        else:
+            v = np.asarray(v)
+            if len(v.shape) == 0:
+                v = v.reshape(1, 1)
+            elif len(v.shape) == 1:
+                v = v.reshape(v.shape[0], 1, 1)
+        return v
+
+    def typemap_fr_default(self, v):
+        if v.shape[-2:] == (1, 1):
+            return v[..., 0, 0]
+        return v
 
     def edge_map(self, edge_map, default = None):
         def edge_compute(ev):
@@ -635,14 +652,14 @@ class SFLUCompute:
                 if ev[0] == '-':
                     ev = ev[1:]
                     if default is not False:
-                        return self.typemap(-edge_map.setdefault(ev, default))
+                        return self.typemap_to(-edge_map.setdefault(ev, default))
                     else:
-                        return self.typemap(-edge_map[ev])
+                        return self.typemap_to(-edge_map[ev])
                 else:
                     if default is not False:
-                        return self.typemap(edge_map.setdefault(ev, default))
+                        return self.typemap_to(edge_map.setdefault(ev, default))
                     else:
-                        return self.typemap(edge_map[ev])
+                        return self.typemap_to(edge_map[ev])
             else:
                 # then it must be an edge computation
                 op = ev[0]
@@ -681,7 +698,7 @@ class SFLUCompute:
                 # I = np.eye(E.shape[-1])
                 # I = I.reshape((1,) * (len(E.shape) - 2) + (E.shape[-2:]))
 
-                E2 = (1 - E)**-1
+                E2 = (self.eye - E)**-1
 
                 Espace[op.targ] = E2
                 # print("CLG: ", op.targ, E2)
@@ -690,8 +707,7 @@ class SFLUCompute:
                 # (arg,) = op.args
                 # size = self.nodesizes.get(arg, self.defaultsize)
                 # I = np.eye(size)
-                I = 1
-                Espace[op.targ] = I
+                Espace[op.targ] = self.eye
 
             elif op.op == "E_mul2":
                 arg1, arg2 = op.args
@@ -896,7 +912,7 @@ class SFLUCompute:
         #     OpComp("N_sum", node, (stk.key_edge(node, cN), cN))
         # )
         # ops.append(OpComp("N_ret", R, ()))
-        return Nspace
+        return {k: self.typemap_fr(v) for k, v in Nspace.items()}
 
     def inverse_single(self, rN, cN):
         """
@@ -923,8 +939,8 @@ class SFLUCompute:
         col2row = dict(col2row)
 
         return cls(
-            oplistE = oplistE,
-            edges = edges,
+            oplistE=oplistE,
+            edges=edges,
             row2col=row2col,
             col2row=col2row,
             **kwargs,

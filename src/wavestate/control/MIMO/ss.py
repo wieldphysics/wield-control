@@ -91,6 +91,7 @@ class MIMOStateSpace(mimo.MIMO):
 
         self.inputs = inputs
         self.outputs = outputs
+
         def reverse(d, length):
             lst = [set() for i in len(length)]
             for k, idx in d.items():
@@ -285,6 +286,51 @@ class MIMOStateSpace(mimo.MIMO):
             )
         else:
             return NotImplemented
+
+    def feedback(self, connection_list=None, gain=1, connection_dict=None):
+        """
+        Feedback linkage for a single statespace
+        """
+
+        fbD = np.zeros((self.D.shape[-1], self.B.shape[-2]))
+
+        if connection_list is not None:
+            for tup in connection_list:
+                if len(tup) < 3:
+                    iname, oname = tup
+                    val = gain
+                else:
+                    iname, oname, val = tup
+                iidx = self.inputs[iname]
+                oidx = self.outputs[oname]
+                fbD[iidx, oidx] = val
+
+        if connection_dict is not None:
+            for (iname, oname), v in connection_dict.items():
+                iidx = self.inputs[iname]
+                oidx = self.outputs[oname]
+                fbD[iidx, oidx] = v
+
+        clD = np.inv(np.eye(self.D.shape[-1]) - fbD @ self.D)
+
+        A = self.A + self.B @ clD @ self.C
+        B = self.B + self.B @ clD @ self.D
+        C = self.C + self.D @ clD @ self.C
+        D = self.D + self.D @ clD @ self.D
+
+        return self.__class__(
+            A,
+            B,
+            C,
+            D,
+            self.E,
+            inputs=self.inputs,
+            outputs=self.outputs,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+            dt=self.dt,
+        )
 
 
 def ss(
