@@ -610,6 +610,7 @@ class SFLUCompute:
         col2row,
         typemap_to=None,
         typemap_fr=None,
+        eye = 1,
     ):
         self.oplistE     = oplistE
         self.edges       = edges
@@ -622,8 +623,11 @@ class SFLUCompute:
             typemap_fr = self.typemap_fr_default
         self.typemap_to = typemap_to
         self.typemap_fr = typemap_fr
-        self.eye = self.typemap_to(1)
+        self.eye = self.typemap_to(eye)
         return
+
+    def CLG_inv(self, E):
+        return np.linalg.inv(self.eye - E)
 
     def typemap_to_default(self, v):
         """
@@ -646,9 +650,17 @@ class SFLUCompute:
             return v[..., 0, 0]
         return v
 
-    def edge_map(self, edge_map, default = None):
+    def edge_map(self, edge_map, default=False):
+        """
+        Map the edges into an edge space for computation.
+        """
         def edge_compute(ev):
             if isinstance(ev, str):
+                # if the value is a string, then we pull it out of the edge map
+
+                # first check if we should
+                # perform some mapping operations on the string to evaluate
+                # simple mathematical operations like unary negation
                 if ev[0] == '-':
                     ev = ev[1:]
                     if default is not False:
@@ -656,6 +668,7 @@ class SFLUCompute:
                     else:
                         return self.typemap_to(-edge_map[ev])
                 else:
+                    # no operation, so directly compute the mapping
                     if default is not False:
                         return self.typemap_to(edge_map.setdefault(ev, default))
                     else:
@@ -687,7 +700,7 @@ class SFLUCompute:
         return Espace
 
     def compute(self, edge_map):
-        Espace = self.edge_map(edge_map, default = False)
+        Espace = self.edge_map(edge_map)
 
         for op in self.oplistE:
             # print(op)
@@ -697,8 +710,7 @@ class SFLUCompute:
                 # assert E.shape[-1] == E.shape[-2]
                 # I = np.eye(E.shape[-1])
                 # I = I.reshape((1,) * (len(E.shape) - 2) + (E.shape[-2:]))
-
-                E2 = (self.eye - E)**-1
+                E2 = self.CLG_inv(E)
 
                 Espace[op.targ] = E2
                 # print("CLG: ", op.targ, E2)
@@ -743,6 +755,7 @@ class SFLUCompute:
                 raise RuntimeError("Unrecognized Op {}".format(op))
 
         self.Espace = Espace
+        return Espace
 
     def subinverse_by(self, oplistN):
         Nspace = dict()
