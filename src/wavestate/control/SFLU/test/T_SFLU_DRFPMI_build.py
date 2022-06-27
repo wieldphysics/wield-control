@@ -29,19 +29,19 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 
 
 reduce_list = [
-    'X.etm.A.i',
-    'X.etm.A.o',
-    'X.itm.B.i',
-    'X.itm.B.o',
-    'Y.etm.A.i',
-    'Y.etm.A.o',
-    'Y.itm.B.i',
-    'Y.itm.B.o',
+    'Xetm.A.i',
+    'Xetm.A.o',
+    'Xitm.B.i',
+    'Xitm.B.o',
+    'Yetm.A.i',
+    'Yetm.A.o',
+    'Yitm.B.i',
+    'Yitm.B.o',
 
-    'X.itm.A.i',
-    'X.itm.A.o',
-    'Y.itm.A.i',
-    'Y.itm.A.o',
+    'Xitm.A.i',
+    'Xitm.A.o',
+    'Yitm.A.i',
+    'Yitm.A.o',
 
     'prm.A.i',
     'prm.A.o',
@@ -163,27 +163,36 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
             'BSX.tau',
             'BSY.tau',
         ],
+        reduce_list=reduce_list,
         graph=True,
     )
     # match=False allows a reduced input/output set
     # sflu.graph_nodes_pos(ifo.build_locations(), match=True)
     ifo.update_sflu(sflu)
-    yamlstr = sflu.convert_self2yamlstr()
-    print(yamlstr)
-    sflu = SFLU.SFLU.convert_yamlstr2self(yamlstr)
+    G1 = sflu.G.copy()
+
+    if True:
+        yamlstr = sflu.convert_self2yamlstr()
+        print(yamlstr)
+        with open(tpath_join('DRFPMI.yaml'), 'w') as F:
+            F.write(yamlstr)
+        sflu = SFLU.SFLU.convert_yamlstr2self(yamlstr)
     #sflu.graph_nodes_pos(DRFPMI_locs, match=True)
 
     print('inputs: ', sflu.inputs)
     print('outputs: ', sflu.outputs)
     print('nodes: ', sflu.nodes)
+    dprint('edges: ', sflu.edges)
 
     #print('nodes')
     #print(sflu.graph_nodes_repr())
-    G1 = sflu.G.copy()
-    sflu.graph_reduce_auto_pos(lX=-10, rX=+10, Y=0, dY=-2)
+    #G1 = sflu.G.copy()
+    # sflu.graph_reduce_auto_pos(lX=-10, rX=+10, Y=0, dY=-2)
     #sflu.reduce(*reduce_list)
+    #assert(not sflu.nodes)
     #sflu.graph_reduce_auto_pos_io(lX=-30, rX=+30, Y=-5, dY=-5)
-    #G2 = sflu.G.copy()
+    # G2 = sflu.G.copy()
+    dprint(G1.edges)
 
     nx2tikz.dump_pdf(
         [

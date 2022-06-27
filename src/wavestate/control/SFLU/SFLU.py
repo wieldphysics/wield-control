@@ -36,6 +36,7 @@ class SFLU(object):
         self,
         edges,
         derivatives=[],
+        reduce_list=[],
         inputs=None,
         outputs=None,
         graph=False,
@@ -57,6 +58,7 @@ class SFLU(object):
         self.inputs_init = inputs
         self.outputs_init = outputs
         self.edges_init = edges
+        self.reduce_list = reduce_list
         # this takes a column and provides the row edges
         col2row = defaultdict(set)
         # this takes a row and provides the column edges
@@ -149,10 +151,14 @@ class SFLU(object):
             edgeC = stk.key_edge(Co, C)
             inputs.add(Ri)
             outputs.add(Co)
-            inputsD.add(Ri)
-            outputsD.add(Co)
+            # # # these must go together
+            inputs_.add(Ri)
+            outputs_.add(Co)
             nodes.add(Ri)
             nodes.add(Co)
+            # # #
+            inputsD.add(Ri)
+            outputsD.add(Co)
             edges2[edgeC] = '1'
             edges2[edgeR] = '1'
             edges_original[edgeC] = '1'
@@ -161,6 +167,15 @@ class SFLU(object):
             edges2_reverse['1'].add(edgeR)
         self.inputsD = inputsD
         self.outputsD = outputsD
+
+        #if self.G is not None:
+        #    for R, C in derivatives2:
+        #        Ri = stk.key_join(R, 'Di')
+        #        Co = stk.key_join(C, 'Do')
+        #        self.G.add_edge(Co, C, suppress=True)
+        #        self.G.add_edge(R, Ri, suppress=True)
+        #        self.G.nodes[Ri]['label_default'] = to_label(Ri)
+        #        self.G.nodes[Co]['label_default'] = to_label(Co)
 
         if self.G is not None:
             pos2 = {}
@@ -380,6 +395,7 @@ class SFLU(object):
         s = dict()
         s['edges'] = {yamlstr_convert(stk.key_edge(*edge)): v for edge, v in self.edges_init.items()}
         s['derivatives'] = self.derivatives_orig
+        s['reduce_list'] = self.reduce_list
         if self.inputs_init is not None:
             s['inputs'] = list(self.inputs_init)
         if self.outputs_init is not None:
@@ -403,6 +419,7 @@ class SFLU(object):
         return yaml.safe_dump(
             self.convert_self2yamlpy(),
             default_flow_style=None,
+            sort_keys=False,
         )
 
     @classmethod
@@ -465,6 +482,11 @@ class SFLU(object):
             return 0
         else:
             return Op("mul", tuple(flat))
+
+    def reduce_auto(self):
+        self.reduce(self.reduce_list)
+        self.reduce(list(self.nodes))
+        return
 
     def reduce(self, *nodes):
         for node in nodes:
@@ -732,14 +754,12 @@ class SFLUCompute:
         self.col2row = col2row
         self.derivatives = derivatives
 
-
         edges_rev = defaultdict(set)
 
         for edge, v in self.edges:
-            self.edges_rev[v].add(edge)
+            edges_rev[v].add(edge)
 
         self.edges_rev = dict(edges_rev)
-
 
         if typemap_to is None:
             typemap_to = self.typemap_to_default

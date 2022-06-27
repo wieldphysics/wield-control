@@ -39,12 +39,12 @@ def dumps_tikz(g, scale='0.5em'):
         # label
         label = d.get('label', None)
         if not label:
-            label = d.get('label_default', '')
+            label = d.get('label_default', None)
         angle = d.get('angle', '-45')
         xy = d['pos']
         if xy is None:
-            pass
-        X, Y = d['pos']
+            continue
+        X, Y = xy
 
         if label is not None:
             label = 'pin={{{ang}: {label}}}'.format(ang=angle, label=label)
@@ -67,9 +67,10 @@ def dumps_tikz(g, scale='0.5em'):
         handed = d.get('handed', 'l')
         dist = d.get('dist', 0.4)
 
-        label = d.get('label', '')
+        label = d.get('label', None)
         if not label:
             label = d.get('label_default', '')
+
         color = d.get('color', '')
         bend = d.get('bend', 0)
         suppress = d.get('suppress', False)
