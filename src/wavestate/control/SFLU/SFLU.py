@@ -35,6 +35,7 @@ class SFLU(object):
     def __init__(
         self,
         edges,
+        derivatives=[],
         inputs=None,
         outputs=None,
         graph=False,
@@ -43,6 +44,10 @@ class SFLU(object):
         This takes a dictionary of edges which are (row, col) tuples, matched to a value name.
 
         The value name will be mapped into the Espace
+
+        derivatives: this argument is a list of either edge pair-tuples or of edge labels. It
+        establishes the list of testpoint and excitation inputs and outputs required to take
+        derivatives.
         """
         if graph:
             self.G = nx.DiGraph()
@@ -62,6 +67,7 @@ class SFLU(object):
 
         edges2 = dict()
         edges_original = dict()
+        edges2_reverse = defaultdict(set)
 
         for (R, C), E in edges.items():
             # normalize computation-based edges
@@ -69,8 +75,10 @@ class SFLU(object):
 
             R = stk.key_map(R)
             C = stk.key_map(C)
-            edges2[stk.key_edge(R, C)] = E
-            edges_original[stk.key_edge(R, C)] = E
+            edge = stk.key_edge(R, C)
+            edges2[edge] = E
+            edges_original[edge] = E
+            edges2_reverse[E].add(edge)
             col2row[C].add(R)
             row2col[R].add(C)
             nodes.add(R)
@@ -117,6 +125,49 @@ class SFLU(object):
             outputs = outputs_
         outputs = set(outputs)
         assert(outputs.issubset(outputs_))
+
+        derivatives2 = set()
+        for D in derivatives:
+            if isinstance(D, str):
+                derivatives2.update(edges2_reverse[D])
+            else:
+                R, C = D
+                edge = stk.key_edge(R, C)
+                derivatives2.add(edge)
+
+        # now augment the edges map with all of the derivatives
+        inputsD = set()
+        outputsD = set()
+        for R, C in derivatives2:
+            Ri = stk.key_join(R, 'Di')
+            Co = stk.key_join(C, 'Do')
+
+            edgeR = stk.key_edge(R, Ri)
+            edgeC = stk.key_edge(Co, C)
+            inputs.add(Ri)
+            outputs.add(Co)
+            inputsD.add(Ri)
+            outputsD.add(Co)
+            nodes.add(Ri)
+            nodes.add(Co)
+            edges2[edgeC] = '1'
+            edges2[edgeR] = '1'
+            edges_original[edgeC] = '1'
+            edges_original[edgeR] = '1'
+            edges2_reverse['1'].add(edgeC)
+            edges2_reverse['1'].add(edgeR)
+        self.inputsD = inputsD
+        self.outputsD = outputsD
+
+        if self.G is not None:
+            pos2 = {}
+            for R, C in derivatives2:
+                Ri = stk.key_join(R, 'Di')
+                Co = stk.key_join(C, 'Do')
+                pos2[Ri] = None
+                pos2[Co] = None
+            nx.set_node_attributes(self.G, pos2, 'pos')
+        self.derivatives = derivatives2
 
         for iN in inputs_:
             cS = row2col[iN]

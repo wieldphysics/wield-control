@@ -29,6 +29,7 @@ def dumps_tikz(g, scale='0.5em'):
   x={scale}, y={scale},
   baseline=(current  bounding  box.center),
 ]""").format(scale=scale))
+
     def fix(n):
         n = str(n)
         return "{" + n.replace('.', '/') + "}"
@@ -38,6 +39,9 @@ def dumps_tikz(g, scale='0.5em'):
         # label
         label = d.get('label', None)
         angle = d.get('angle', '-45')
+        xy = d['pos']
+        if xy is None:
+            pass
         X, Y = d['pos']
 
         if label is not None:
@@ -59,7 +63,7 @@ def dumps_tikz(g, scale='0.5em'):
         edge_text = d.get('edge_text', None)
 
         handed = d.get('handed', 'l')
-        dist = d.get('handed', 0.5)
+        dist = d.get('dist', 0.4)
 
         label = d.get('label', '')
         color = d.get('color', '')
