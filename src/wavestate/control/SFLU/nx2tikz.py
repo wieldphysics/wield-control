@@ -38,6 +38,8 @@ def dumps_tikz(g, scale='0.5em'):
         n = fix(n)
         # label
         label = d.get('label', None)
+        if not label:
+            label = d.get('label_default', '')
         angle = d.get('angle', '-45')
         xy = d['pos']
         if xy is None:
@@ -66,6 +68,8 @@ def dumps_tikz(g, scale='0.5em'):
         dist = d.get('dist', 0.4)
 
         label = d.get('label', '')
+        if not label:
+            label = d.get('label_default', '')
         color = d.get('color', '')
         bend = d.get('bend', 0)
         suppress = d.get('suppress', False)

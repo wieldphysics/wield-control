@@ -54,6 +54,9 @@ class SFLU(object):
         else:
             self.G = None
 
+        self.inputs_init = inputs
+        self.outputs_init = outputs
+        self.edges_init = edges
         # this takes a column and provides the row edges
         col2row = defaultdict(set)
         # this takes a row and provides the column edges
@@ -86,9 +89,9 @@ class SFLU(object):
 
         if self.G is not None:
             for (R, C), E in edges2.items():
-                self.G.add_edge(C, R, label=to_label(E))
+                self.G.add_edge(C, R, label_default=to_label(E))
             for n in nodes:
-                self.G.nodes[n]['label'] = to_label(n)
+                self.G.nodes[n]['label_default'] = to_label(n)
         # print('col2row', col2row)
         # print('row2col', row2col)
 
@@ -168,6 +171,7 @@ class SFLU(object):
                 pos2[Co] = None
             nx.set_node_attributes(self.G, pos2, 'pos')
         self.derivatives = derivatives2
+        self.derivatives_orig = derivatives
 
         for iN in inputs_:
             cS = row2col[iN]
@@ -287,7 +291,8 @@ class SFLU(object):
                     continue
                 n = stk.key_map(n)
                 try:
-                    self.G.nodes[n]['pos'] = pos
+                    x, y = pos
+                    self.G.nodes[n]['pos'] = float(x), float(y)
                 except KeyError:
                     if match:
                         raise
@@ -298,7 +303,8 @@ class SFLU(object):
                 if n in self.dropped:
                     continue
                 try:
-                    self.G.nodes[n]['pos'] = p
+                    x, y = p
+                    self.G.nodes[n]['pos'] = float(x), float(y)
                 except KeyError:
                     if match:
                         raise
@@ -369,6 +375,61 @@ class SFLU(object):
             })
             Y_ += dY
         return
+
+    def convert_self2yamlpy(self):
+        s = dict()
+        s['edges'] = {yamlstr_convert(stk.key_edge(*edge)): v for edge, v in self.edges_init.items()}
+        s['derivatives'] = self.derivatives_orig
+        if self.inputs_init is not None:
+            s['inputs'] = list(self.inputs_init)
+        if self.outputs_init is not None:
+            s['outputs'] = list(self.outputs_init)
+        if self.G:
+            G_nodes = s['G_nodes'] = dict()
+            G_edges = s['G_edges'] = dict()
+            for node, ndict in self.G.nodes.items():
+                ndict = dict(ndict)
+                ndict.pop('label_default', None)
+                if ndict:
+                    G_nodes[yamlstr_convert(node)] = ndict
+            for edge, edict in self.G.edges.items():
+                edict = dict(edict)
+                edict.pop('label_default', None)
+                if edict:
+                    G_edges[yamlstr_convert(stk.key_edge(*edge))] = edict
+        return s
+
+    def convert_self2yamlstr(self):
+        return yaml.safe_dump(
+            self.convert_self2yamlpy(),
+            default_flow_style=None,
+        )
+
+    @classmethod
+    def convert_yamlstr2self(cls, yamlstr):
+        yamlpy = yaml.safe_load(yamlstr)
+        kw = dict(
+            edges={yamlstr_convert_rev(edge): v for edge, v in yamlpy['edges'].items()},
+            derivatives=yamlpy['derivatives'],
+        )
+        inputs = yamlpy.get('inputs', None)
+        if inputs is not None:
+            kw['inputs'] = inputs
+        outputs = yamlpy.get('outputs', None)
+        if outputs is not None:
+            kw['outputs'] = outputs
+
+        if 'G_nodes' in yamlpy:
+            kw['graph'] = True
+        self = cls(
+            **kw
+        )
+        if self.G is not None:
+            for node, ndict in yamlpy['G_nodes'].items():
+                self.G.nodes[node].update(ndict)
+            for edge, edict in yamlpy['G_edges'].items():
+                self.G.edges[yamlstr_convert_rev(edge)].update(edict)
+        return self
 
     def invertE(self, E):
         return Op("invert", E)
@@ -536,7 +597,7 @@ class SFLU(object):
                 if self.G is not None:
                     self.G.add_edge(NsfA, R, type='no_cycle')
             if self.G is not None:
-                self.G.nodes[NsfA]['label'] = to_label(NsfA)
+                self.G.nodes[NsfA]['label_default'] = to_label(NsfA)
         else:
             for R in self.col2row[Nsf]:
                 edge = self.edges.pop((R, Nsf))
@@ -565,7 +626,7 @@ class SFLU(object):
                 if self.G is not None:
                     self.G.add_edge(C, NsfB, type='no_cycle')
             if self.G is not None:
-                self.G.nodes[NsfB]['label'] = to_label(NsfB)
+                self.G.nodes[NsfB]['label_default'] = to_label(NsfB)
                 self.G.nodes[NsfB]['angle'] = -135
         else:
             for C in self.row2col[Nsf]:
@@ -1099,7 +1160,7 @@ class SFLUCompute:
             self.convert_self2yamlpy(),
             default_flow_style=None,
         )
-        
+
     def convert_oplistE2yamlpy(self):
         oplistE_yamlpy = []
 

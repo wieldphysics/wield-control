@@ -70,35 +70,35 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
     Show a graph reduction using networkx+tikz
     """
     ifo = optics.GraphElement()
-    mirror = optics.Mirror()
+    lmirror = optics.LossyMirror()
     beamsplitter = optics.BeamSplitter()
     ifo.subgraph_add(
-        'prm', mirror.copy(),
+        'prm', optics.LossyBasisMirror(),
         translation_xy=(-30, 0),
         rotation_deg=180,
     )
     ifo.subgraph_add(
-        'Xitm', mirror.copy(),
+        'Xitm', optics.LossyBasisMirror(),
         translation_xy=(30, 0),
         rotation_deg=180,
     )
     ifo.subgraph_add(
-        'Xetm', mirror.copy(),
+        'Xetm', optics.LossyMirror(),
         translation_xy=(70, 0),
         rotation_deg=0
     )
     ifo.subgraph_add(
-        'srm', mirror.copy(),
+        'srm', optics.LossyBasisMirror(),
         translation_xy=(0, -30),
         rotation_deg=90+180,
     )
     ifo.subgraph_add(
-        'Yitm', mirror.copy(),
+        'Yitm', optics.LossyBasisMirror(),
         translation_xy=(0, 30),
         rotation_deg=90+180,
     )
     ifo.subgraph_add(
-        'Yetm', mirror.copy(),
+        'Yetm', optics.LossyMirror(),
         translation_xy=(0, 70),
         rotation_deg=90,
     )
@@ -126,17 +126,22 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
         ("Yetm.A.i"    ,  "Yitm.A.o"     ): "YARM.tau",
         ("Yitm.A.i"    ,  "Yetm.A.o"     ): "YARM.tau",
     })
+    ifo['Yetm'].node_angle["A.o"] = -45
+    ifo['Yitm'].node_angle["B.o"] = -45
+    ifo['srm'].node_angle["B.o"] = -45
     ifo['srm'].edges["B.i", "B.i.exc"] = "1"
     ifo['srm'].edges["B.o.tp", "B.o"] = "1"
     ifo['srm'].edge_handedness["B.o.tp", "B.o"] = "r"
 
-    ifo['srm'].locations["B.i.exc"] = (5, -15)
-    ifo['srm'].locations["B.o.tp"] = (5, 15)
+    ifo['srm'].locations["B.i.exc"] = (15, -10)
+    ifo['srm'].locations["B.o.tp"] = (15, 10)
 
     ifo['prm'].edges["B.i", "B.i.exc"] = "1"
     ifo['prm'].edges["B.o.tp", "B.o"] = "1"
-    ifo['prm'].locations["B.i.exc"] = (5, -15)
-    ifo['prm'].locations["B.o.tp"] = (5, 15)
+    ifo['prm'].node_angle["B.i.exc"] = +45
+
+    ifo['prm'].locations["B.i.exc"] = (15, -10)
+    ifo['prm'].locations["B.o.tp"] = (15, 10)
 
     ifo['Xetm'].edges["A.i.tp", "A.i"] = "1"
     ifo['Xetm'].edges["A.o", "A.o.exc"] = "1"
@@ -154,6 +159,7 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
         derivatives=[
             'Xetm.A.r',
             'Yetm.A.r',
+            'srm.A.r',
             'BSX.tau',
             'BSY.tau',
         ],
@@ -162,6 +168,9 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
     # match=False allows a reduced input/output set
     # sflu.graph_nodes_pos(ifo.build_locations(), match=True)
     ifo.update_sflu(sflu)
+    yamlstr = sflu.convert_self2yamlstr()
+    print(yamlstr)
+    sflu = SFLU.SFLU.convert_yamlstr2self(yamlstr)
     #sflu.graph_nodes_pos(DRFPMI_locs, match=True)
 
     print('inputs: ', sflu.inputs)

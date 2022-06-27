@@ -19,17 +19,15 @@ except ImportError:
 
 
 class GraphElement(object):
-    locations = {}
-    edges = {}
-    edge_handedness = {}
-    node_angle = {}
 
-    def __init__(self):
+    def __init__(self, **kw):
+
         # pull locations and edges out of the class
-        self.locations = dict(self.locations)
-        self.edges = dict(self.edges)
-        self.edge_handedness = dict(self.edge_handedness)
-        self.node_angle = dict(self.node_angle)
+        self.locations = dict()
+        self.edges = dict()
+        self.edge_handedness = dict()
+        self.node_angle = dict()
+        # self.node_properties = defaultdict(dict)
 
         # maps names to dictionaries containing the graph, transliation and rotation
         # and any other annotations
@@ -162,18 +160,20 @@ class GraphElement(object):
 
 class Mirror(GraphElement):
 
-    locations = {
-        "A.i": (-5, +5),
-        "A.o": (-5, -5),
-        "B.i": (+5, -5),
-        "B.o": (+5, +5),
-    }
-    edges = {
-        ("A.o", "B.i"): ".t",
-        ("B.o", "A.i"): ".t",
-        ("A.o", "A.i"): ".A.r",
-        ("B.o", "B.i"): ".B.r",
-    }
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.locations.update({
+            "A.i": (-5, +5),
+            "A.o": (-5, -5),
+            "B.i": (+5, -5),
+            "B.o": (+5, +5),
+        })
+        self.edges.update({
+            ("A.o", "B.i"): ".t",
+            ("B.o", "A.i"): ".t",
+            ("A.o", "A.i"): ".A.r",
+            ("B.o", "B.i"): ".B.r",
+        })
 
     def properties(self, nodes, edges, rot_deg, **kw):
         if rot_deg < 45:
@@ -213,28 +213,104 @@ class Mirror(GraphElement):
         return
 
 
+class BasisMirror(Mirror):
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.edges.update({
+            ("B.o", "A.i"): ".A.t",
+            ("A.o", "B.i"): ".B.t",
+            ("A.o", "A.i"): ".A.r",
+            ("B.o", "B.i"): ".B.r",
+        })
+
+
+
+class LossyMirror(Mirror):
+    """
+    Creates a mirror with extra nodes to add losses on reflection.
+
+    The reflectivity or transmissivity must be reduced to incorporate the loss, So
+    A.r**2 + t**2 + A.l**2 = 1
+    B.r**2 + t**2 + B.l**2 = 1
+    """
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.locations.update({
+            "A.L.i": (-2, -10),
+            "B.L.i": (+2, +10),
+        })
+        self.edges.update({
+            ("A.o", "A.L.i"): ".A.l",
+            ("B.o", "B.L.i"): ".B.l",
+        })
+
+    def properties(self, nodes, edges, rot_deg, **kw):
+        if rot_deg < 45:
+            # ~0deg
+            edges[("A.o", "A.L.i")]['handed'] = 'r'
+            edges[("A.o", "A.L.i")]['dist'] = 0.2
+
+            nodes["B.L.i"]['angle'] = +45
+            pass
+        elif rot_deg < 135:
+            edges[("A.o", "A.L.i")]['dist'] = 0.2
+            nodes["A.L.i"]['angle'] = +45
+            nodes["B.L.i"]['angle'] = -135
+            # ~90deg
+            pass
+        elif rot_deg < 180 + 45:
+            # ~180deg
+            edges[("B.o", "B.L.i")]['handed'] = 'r'
+            edges[("B.o", "B.L.i")]['dist'] = 0.2
+
+            nodes["A.L.i"]['angle'] = +45
+            pass
+        elif rot_deg < 270 + 45:
+            nodes["A.L.i"]['angle'] = -135
+            nodes["B.L.i"]['angle'] = +45
+            edges[("B.o", "B.L.i")]['dist'] = 0.2
+            # ~270deg
+            pass
+        else:
+            pass
+        super().properties(
+            nodes=nodes,
+            edges=edges,
+            rot_deg=rot_deg,
+            **kw
+        )
+        return
+
+
+class LossyBasisMirror(LossyMirror, BasisMirror, Mirror):
+    pass
+
+
 class BeamSplitter(GraphElement):
 
-    locations = {
-        "A1.i": (-10, +5),
-        "A1.o": (-10, -5),
-        "B1.i": (+10, -5),
-        "B1.o": (+10, +5),
-        "A2.o": (-5, +10),
-        "A2.i": (+5, +10),
-        "B2.i": (-5, -10),
-        "B2.o": (+5, -10),
-    }
-    edges = {
-        ("B1.o", "A1.i"): ".t",
-        ("A1.o", "B1.i"): ".t",
-        ("B2.o", "A2.i"): ".t",
-        ("A2.o", "B2.i"): ".t",
-        ("A2.o", "A1.i"): ".A.r",
-        ("A1.o", "A2.i"): ".A.r",
-        ("B1.o", "B2.i"): ".B.r",
-        ("B2.o", "B1.i"): ".B.r",
-    }
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.locations.update({
+            "A1.i": (-10, +5),
+            "A1.o": (-10, -5),
+            "B1.i": (+10, -5),
+            "B1.o": (+10, +5),
+            "A2.o": (-5, +10),
+            "A2.i": (+5, +10),
+            "B2.i": (-5, -10),
+            "B2.o": (+5, -10),
+        })
+        self.edges.update({
+            ("B1.o", "A1.i"): ".t",
+            ("A1.o", "B1.i"): ".t",
+            ("B2.o", "A2.i"): ".t",
+            ("A2.o", "B2.i"): ".t",
+            ("A2.o", "A1.i"): ".A.r",
+            ("A1.o", "A2.i"): ".A.r",
+            ("B1.o", "B2.i"): ".B.r",
+            ("B2.o", "B1.i"): ".B.r",
+        })
 
 
 
