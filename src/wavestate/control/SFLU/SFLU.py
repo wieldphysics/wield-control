@@ -644,10 +644,11 @@ class SFLU(object):
 
     def computer(self, **kwargs):
         return SFLUCompute(
-            oplistE = self.oplistE,
-            edges   = self.edges_original,
-            row2col = dict(self.row2col_cf),
-            col2row = dict(self.col2row_cf),
+            oplistE=self.oplistE,
+            edges=self.edges_original,
+            row2col=dict(self.row2col_cf),
+            col2row=dict(self.col2row_cf),
+            derivatives=self.derivatives,
             **kwargs
         )
 
@@ -659,14 +660,25 @@ class SFLUCompute:
         edges,
         row2col,
         col2row,
+        derivatives,
         typemap_to=None,
         typemap_fr=None,
-        eye = 1,
+        eye=1,
     ):
-        self.oplistE     = oplistE
-        self.edges       = edges
-        self.row2col     = row2col
-        self.col2row     = col2row
+        self.oplistE = oplistE
+        self.edges = edges
+        self.row2col = row2col
+        self.col2row = col2row
+        self.derivatives = derivatives
+
+
+        edges_rev = defaultdict(set)
+
+        for edge, v in self.edges:
+            self.edges_rev[v].add(edge)
+
+        self.edges_rev = dict(edges_rev)
+
 
         if typemap_to is None:
             typemap_to = self.typemap_to_default
@@ -874,12 +886,25 @@ class SFLUCompute:
                 cS.add(cN)
         return row2col, col2row
 
-    def inverse_col(self, Rset, Cmap):
+    def inverse_col_single(self, Rset, C, derivatives=False):
         """
-        This computes the matrix element for an inverse from C to R
+        Find the inverse of a single column into many rows given by Rset
+
+        derivatives: if True, include all derivative testpoints in Rset
+        """
+        return self.inverse_col(Rset, {C: None}, derivatives=derivatives)
+
+    def inverse_col(self, Rset, Cmap, derivatives=False):
+        """
+        This computes the matrix element for an inverse from C to R.
+
+        The columns are a dictionary mapping column names to values. The values can be vectors, matrices or None.
+        A value of None implicitly chooses the identity matrix.
 
         TODO, the algorithm could/should use some work. Should make a copy of col2row
         then deplete it
+
+        derivatives: if True, include all derivative testpoints in Rset
         """
         Rset = set(stk.key_map(R) for R in Rset)
         Cmap = {stk.key_map(C): v for C, v in Cmap.items()}
@@ -926,12 +951,22 @@ class SFLUCompute:
         # ops.append(OpComp("N_ret", R, ()))
         return Nspace
 
-    def inverse_row(self, Rmap, Cset):
+    def inverse_row_single(self, R, Cset, derivatives=False):
+        """
+        Find the inverse of a single row from many columns given by Cset
+
+        derivatives: if True, include all derivative excitations in Cset
+        """
+        return self.inverse_row({R: None}, Cset, derivatives=derivatives)
+
+    def inverse_row(self, Rmap, Cset, derivatives=False):
         """
         This computes the matrix element for an inverse from C to R
 
         TODO, the algorithm could/should use some work. Should make a copy of col2row
         then deplete it
+
+        derivatives: if True, include all derivative excitations in Cset
         """
         Cset = set(stk.key_map(C) for C in Cset)
         Rmap = {stk.key_map(R): v for R, v in Rmap.items()}
@@ -977,6 +1012,44 @@ class SFLUCompute:
         # )
         # ops.append(OpComp("N_ret", R, ()))
         return {k: self.typemap_fr(v) for k, v in Nspace.items()}
+
+    def inverse_derivative(self, Cmap, Rset, Dmap):
+        """
+        Calculate the derivative of the matrix inverse along the given derivative values.
+
+        this calculates Sum_i Dmap_i @ (M^-1)'_i by using Dmap_i @ (M^-1)'_i = Dmap_i * (M^-1 @ M'_i @ M^-1). Notably the value of M appears twice and "self" here is the second one. The first M^-1 is supplied by Cmap.
+
+        This method of calling allow for the first and second M^-1 to come from separate M evaluations. In particular,
+        it allows a DC computation to be applied first.
+
+        Cmap is a column mapping from a previous evaluation of
+        inverse_col(Cmap, Rset=any, derivative=True)
+        where Cmap is the original driving vector and Rset can be anything since it is augmented
+        appropriately by derivatives=True
+
+        Dmap must be a dictionary mapping edge pair-tuples or edge value-names to matrices.
+        """
+
+        Dval2 = {}
+        for D, Dval in Dmap:
+            if isinstance('D', str):
+                edges = self.edges_rev[D]
+                for edge in edges:
+                    Dval2[edge] = Dval
+            else:
+                Dval2[edge] = Dval
+
+        Cmap2 = {}
+        # now apply matrix multiplication through Dval2
+        for (DR, DC), DV in Dval2.items():
+            mul = DV @ Cmap[DC]
+            prev = Cmap2.setdefault(DR, mul)
+            if mul is not prev:
+                Cmap2[DR] = prev + mul
+
+        return self.inverse_col(Rset, Cmap2)
+
+
 
     def inverse_single(self, rN, cN):
         """
