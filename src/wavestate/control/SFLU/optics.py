@@ -163,43 +163,43 @@ class Mirror(GraphElement):
     def __init__(self, **kw):
         super().__init__(**kw)
         self.locations.update({
-            "A.i": (-5, +5),
-            "A.o": (-5, -5),
-            "B.i": (+5, -5),
-            "B.o": (+5, +5),
+            "fr.i": (-4, +5),
+            "fr.o": (-4, -5),
+            "bk.i": (+4, -5),
+            "bk.o": (+4, +5),
         })
         self.edges.update({
-            ("A.o", "B.i"): ".t",
-            ("B.o", "A.i"): ".t",
-            ("A.o", "A.i"): ".A.r",
-            ("B.o", "B.i"): ".B.r",
+            ("fr.o", "bk.i"): ".t",
+            ("bk.o", "fr.i"): ".t",
+            ("fr.o", "fr.i"): ".fr.r",
+            ("bk.o", "bk.i"): ".bk.r",
         })
 
     def properties(self, nodes, edges, rot_deg, **kw):
         if rot_deg < 45:
             # ~0deg
-            nodes["A.o"]['angle'] = +45
-            nodes["B.i"]['angle'] = +45
+            nodes["fr.o"]['angle'] = +45
+            nodes["bk.i"]['angle'] = +45
             pass
         elif rot_deg < 135:
-            edges[("A.o", "A.i")]['handed'] = 'r'
-            edges[("B.o", "B.i")]['handed'] = 'r'
-            nodes["A.i"]['angle'] = +45
-            nodes["A.o"]['angle'] = +45
+            edges[("fr.o", "fr.i")]['handed'] = 'r'
+            edges[("bk.o", "bk.i")]['handed'] = 'r'
+            nodes["fr.i"]['angle'] = +45
+            nodes["fr.o"]['angle'] = +45
             # ~90deg
             pass
         elif rot_deg < 180 + 45:
             # ~180deg
-            # edges[("A.o", "B.i")]['handed'] = 'r'
-            # edges[("B.o", "A.i")]['handed'] = 'r'
-            nodes["B.o"]['angle'] = +45
-            nodes["A.i"]['angle'] = +45
+            # edges[("fr.o", "bk.i")]['handed'] = 'r'
+            # edges[("bk.o", "fr.i")]['handed'] = 'r'
+            nodes["bk.o"]['angle'] = +45
+            nodes["fr.i"]['angle'] = +45
             pass
         elif rot_deg < 270 + 45:
-            edges[("A.o", "A.i")]['handed'] = 'r'
-            edges[("B.o", "B.i")]['handed'] = 'r'
-            nodes["B.i"]['angle'] = +45
-            nodes["B.o"]['angle'] = +45
+            edges[("fr.o", "fr.i")]['handed'] = 'r'
+            edges[("bk.o", "bk.i")]['handed'] = 'r'
+            nodes["bk.i"]['angle'] = +45
+            nodes["bk.o"]['angle'] = +45
             # ~270deg
             pass
         else:
@@ -217,10 +217,10 @@ class BasisMirror(Mirror):
     def __init__(self, **kw):
         super().__init__(**kw)
         self.edges.update({
-            ("B.o", "A.i"): ".A.t",
-            ("A.o", "B.i"): ".B.t",
-            ("A.o", "A.i"): ".A.r",
-            ("B.o", "B.i"): ".B.r",
+            ("bk.o", "fr.i"): ".fr.t",
+            ("fr.o", "bk.i"): ".bk.t",
+            ("fr.o", "fr.i"): ".fr.r",
+            ("bk.o", "bk.i"): ".bk.r",
         })
 
 
@@ -237,39 +237,39 @@ class LossyMirror(Mirror):
     def __init__(self, **kw):
         super().__init__(**kw)
         self.locations.update({
-            "A.L.i": (-2, -10),
-            "B.L.i": (+2, +10),
+            "frL.i": (-2, -10),
+            "bkL.i": (+2, +10),
         })
         self.edges.update({
-            ("A.o", "A.L.i"): ".A.l",
-            ("B.o", "B.L.i"): ".B.l",
+            ("fr.o", "frL.i"): ".fr.l",
+            ("bk.o", "bkL.i"): ".bk.l",
         })
 
     def properties(self, nodes, edges, rot_deg, **kw):
         if rot_deg < 45:
             # ~0deg
-            edges[("A.o", "A.L.i")]['handed'] = 'r'
-            edges[("A.o", "A.L.i")]['dist'] = 0.2
+            edges[("fr.o", "frL.i")]['handed'] = 'r'
+            edges[("fr.o", "frL.i")]['dist'] = 0.2
 
-            nodes["B.L.i"]['angle'] = +45
+            nodes["bkL.i"]['angle'] = +45
             pass
         elif rot_deg < 135:
-            edges[("A.o", "A.L.i")]['dist'] = 0.2
-            nodes["A.L.i"]['angle'] = +45
-            nodes["B.L.i"]['angle'] = -135
+            edges[("fr.o", "frL.i")]['dist'] = 0.2
+            nodes["frL.i"]['angle'] = +45
+            nodes["bkL.i"]['angle'] = -135
             # ~90deg
             pass
         elif rot_deg < 180 + 45:
             # ~180deg
-            edges[("B.o", "B.L.i")]['handed'] = 'r'
-            edges[("B.o", "B.L.i")]['dist'] = 0.2
+            edges[("bk.o", "bkL.i")]['handed'] = 'r'
+            edges[("bk.o", "bkL.i")]['dist'] = 0.2
 
-            nodes["A.L.i"]['angle'] = +45
+            nodes["frL.i"]['angle'] = +45
             pass
         elif rot_deg < 270 + 45:
-            nodes["A.L.i"]['angle'] = -135
-            nodes["B.L.i"]['angle'] = +45
-            edges[("B.o", "B.L.i")]['dist'] = 0.2
+            nodes["frL.i"]['angle'] = -135
+            nodes["bkL.i"]['angle'] = +45
+            edges[("bk.o", "bkL.i")]['dist'] = 0.2
             # ~270deg
             pass
         else:
@@ -292,24 +292,24 @@ class BeamSplitter(GraphElement):
     def __init__(self, **kw):
         super().__init__(**kw)
         self.locations.update({
-            "A1.i": (-10, +5),
-            "A1.o": (-10, -5),
-            "B1.i": (+10, -5),
-            "B1.o": (+10, +5),
-            "A2.o": (-5, +10),
-            "A2.i": (+5, +10),
-            "B2.i": (-5, -10),
-            "B2.o": (+5, -10),
+            "frA.i": (-10, +5),
+            "frA.o": (-10, -5),
+            "bkA.i": (+10, -5),
+            "bkA.o": (+10, +5),
+            "frB.o": (-5, +10),
+            "frB.i": (+5, +10),
+            "bkB.i": (-5, -10),
+            "bkB.o": (+5, -10),
         })
         self.edges.update({
-            ("B1.o", "A1.i"): ".t",
-            ("A1.o", "B1.i"): ".t",
-            ("B2.o", "A2.i"): ".t",
-            ("A2.o", "B2.i"): ".t",
-            ("A2.o", "A1.i"): ".A.r",
-            ("A1.o", "A2.i"): ".A.r",
-            ("B1.o", "B2.i"): ".B.r",
-            ("B2.o", "B1.i"): ".B.r",
+            ("bkA.o", "frA.i"): ".t",
+            ("frA.o", "bkA.i"): ".t",
+            ("bkB.o", "frB.i"): ".t",
+            ("frB.o", "bkB.i"): ".t",
+            ("frB.o", "frA.i"): ".fr.r",
+            ("frA.o", "frB.i"): ".fr.r",
+            ("bkA.o", "bkB.i"): ".bk.r",
+            ("bkB.o", "bkA.i"): ".bk.r",
         })
 
 

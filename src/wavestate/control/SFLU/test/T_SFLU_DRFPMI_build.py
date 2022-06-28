@@ -29,38 +29,38 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 
 
 reduce_list = [
-    'Xetm.A.i',
-    'Xetm.A.o',
-    'Xitm.B.i',
-    'Xitm.B.o',
-    'Yetm.A.i',
-    'Yetm.A.o',
-    'Yitm.B.i',
-    'Yitm.B.o',
+    'Xetm.fr.i',
+    'Xetm.fr.o',
+    'Xitm.bk.i',
+    'Xitm.bk.o',
+    'Yetm.fr.i',
+    'Yetm.fr.o',
+    'Yitm.bk.i',
+    'Yitm.bk.o',
 
-    'Xitm.A.i',
-    'Xitm.A.o',
-    'Yitm.A.i',
-    'Yitm.A.o',
+    'Xitm.fr.i',
+    'Xitm.fr.o',
+    'Yitm.fr.i',
+    'Yitm.fr.o',
 
-    'prm.A.i',
-    'prm.A.o',
-    'prm.B.i',
-    'prm.B.o',
+    'prm.fr.i',
+    'prm.fr.o',
+    'prm.bk.i',
+    'prm.bk.o',
 
-    'bs.A1.i',
-    'bs.A1.o',
-    'bs.A2.i',
-    'bs.A2.o',
-    'bs.B1.i',
-    'bs.B1.o',
-    'bs.B2.i',
-    'bs.B2.o',
+    'bs.frA.i',
+    'bs.frA.o',
+    'bs.frB.i',
+    'bs.frB.o',
+    'bs.bkA.i',
+    'bs.bkA.o',
+    'bs.bkB.i',
+    'bs.bkB.o',
 
-    'srm.A.i',
-    'srm.A.o',
-    'srm.B.i',
-    'srm.B.o',
+    'srm.fr.i',
+    'srm.fr.o',
+    'srm.bk.i',
+    'srm.bk.o',
 ]
 
 
@@ -70,96 +70,94 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
     Show a graph reduction using networkx+tikz
     """
     ifo = optics.GraphElement()
-    lmirror = optics.LossyMirror()
-    beamsplitter = optics.BeamSplitter()
     ifo.subgraph_add(
         'prm', optics.LossyBasisMirror(),
-        translation_xy=(-30, 0),
+        translation_xy=(-25, 0),
         rotation_deg=180,
     )
     ifo.subgraph_add(
         'Xitm', optics.LossyBasisMirror(),
-        translation_xy=(30, 0),
+        translation_xy=(25, 0),
         rotation_deg=180,
     )
     ifo.subgraph_add(
         'Xetm', optics.LossyMirror(),
-        translation_xy=(70, 0),
+        translation_xy=(55, 0),
         rotation_deg=0
     )
     ifo.subgraph_add(
         'srm', optics.LossyBasisMirror(),
-        translation_xy=(0, -30),
+        translation_xy=(0, -25),
         rotation_deg=90+180,
     )
     ifo.subgraph_add(
         'Yitm', optics.LossyBasisMirror(),
-        translation_xy=(0, 30),
+        translation_xy=(0, 25),
         rotation_deg=90+180,
     )
     ifo.subgraph_add(
         'Yetm', optics.LossyMirror(),
-        translation_xy=(0, 70),
+        translation_xy=(0, 55),
         rotation_deg=90,
     )
     ifo.subgraph_add(
-        'bs', beamsplitter.copy(),
+        'bs', optics.BeamSplitter(),
         translation_xy=(0, 0),
         rotation_deg=0
     )
     ifo.edges.update({
-        ("prm.A.i"      ,  "bs.A1.o"       ): "prc.tau",
-        ("bs.A1.i"      ,  "prm.A.o"       ): "prc.tau",
+        ("prm.fr.i",  "bs.frA.o"): "prc.tau",
+        ("bs.frA.i",  "prm.fr.o"): "prc.tau",
 
-        ("srm.A.i"      , "bs.B2.o"        ): "src.tau",
-        ("bs.B2.i"      , "srm.A.o"       ): "src.tau",
+        ("srm.fr.i", "bs.bkB.o"): "sec.tau",
+        ("bs.bkB.i", "srm.fr.o"): "sec.tau",
 
-        ("Yitm.B.i"    ,  "bs.A2.o"       ): 'BSY.tau',
-        ("bs.A2.i"      ,  "Yitm.B.o"     ): 'BSY.tau',
+        ("Yitm.bk.i", "bs.frB.o"): 'BSY.tau',
+        ("bs.frB.i",  "Yitm.bk.o"): 'BSY.tau',
 
-        ("Xitm.B.i"    ,  "bs.B1.o"       ): 'BSX.tau',
-        ("bs.B1.i"      ,  "Xitm.B.o"     ): 'BSX.tau',
+        ("Xitm.bk.i", "bs.bkA.o"): 'BSX.tau',
+        ("bs.bkA.i",  "Xitm.bk.o"): 'BSX.tau',
 
-        ("Xetm.A.i"    ,  "Xitm.A.o"     ): "XARM.tau",
-        ("Xitm.A.i"    ,  "Xetm.A.o"     ): "XARM.tau",
+        ("Xetm.fr.i", "Xitm.fr.o"): "XARM.tau",
+        ("Xitm.fr.i", "Xetm.fr.o"): "XARM.tau",
 
-        ("Yetm.A.i"    ,  "Yitm.A.o"     ): "YARM.tau",
-        ("Yitm.A.i"    ,  "Yetm.A.o"     ): "YARM.tau",
+        ("Yetm.fr.i", "Yitm.fr.o"): "YARM.tau",
+        ("Yitm.fr.i", "Yetm.fr.o"): "YARM.tau",
     })
-    ifo['Yetm'].node_angle["A.o"] = -45
-    ifo['Yitm'].node_angle["B.o"] = -45
-    ifo['srm'].node_angle["B.o"] = -45
-    ifo['srm'].edges["B.i", "B.i.exc"] = "1"
-    ifo['srm'].edges["B.o.tp", "B.o"] = "1"
-    ifo['srm'].edge_handedness["B.o.tp", "B.o"] = "r"
+    ifo['Yetm'].node_angle["fr.o"] = -45
+    ifo['Yitm'].node_angle["bk.o"] = -45
+    ifo['srm'].node_angle["bk.o"] = -45
+    ifo['srm'].edges["bk.i", "bk.i.exc"] = "sec_to"
+    ifo['srm'].edges["bk.o.tp", "bk.o"] = "sec_fr"
+    ifo['srm'].edge_handedness["bk.o.tp", "bk.o"] = "r"
 
-    ifo['srm'].locations["B.i.exc"] = (15, -10)
-    ifo['srm'].locations["B.o.tp"] = (15, 10)
+    ifo['srm'].locations["bk.i.exc"] = (15, -10)
+    ifo['srm'].locations["bk.o.tp"] = (15, 10)
 
-    ifo['prm'].edges["B.i", "B.i.exc"] = "1"
-    ifo['prm'].edges["B.o.tp", "B.o"] = "1"
-    ifo['prm'].node_angle["B.i.exc"] = +45
+    ifo['prm'].edges["bk.i", "bk.i.exc"] = "1"
+    ifo['prm'].edges["bk.o.tp", "bk.o"] = "1"
+    ifo['prm'].node_angle["bk.i.exc"] = +45
 
-    ifo['prm'].locations["B.i.exc"] = (15, -10)
-    ifo['prm'].locations["B.o.tp"] = (15, 10)
+    ifo['prm'].locations["bk.i.exc"] = (15, -10)
+    ifo['prm'].locations["bk.o.tp"] = (15, 10)
 
-    ifo['Xetm'].edges["A.i.tp", "A.i"] = "1"
-    ifo['Xetm'].edges["A.o", "A.o.exc"] = "1"
-    ifo['Xetm'].locations["A.i.tp"] = (-5, 15)
-    ifo['Xetm'].locations["A.o.exc"] = (-5, -15)
+    ifo['Xetm'].edges["fr.i.tp", "fr.i"] = "1"
+    ifo['Xetm'].edges["fr.o", "fr.o.exc"] = "1"
+    ifo['Xetm'].locations["fr.i.tp"] = (-5, 15)
+    ifo['Xetm'].locations["fr.o.exc"] = (-5, -15)
 
-    ifo['Yetm'].edges["A.i.tp", "A.i"] = "1"
-    ifo['Yetm'].edge_handedness["A.i.tp", "A.i"] = "r"
-    ifo['Yetm'].edges["A.o", "A.o.exc"] = "1"
-    ifo['Yetm'].locations["A.i.tp"] = (-5, 15)
-    ifo['Yetm'].locations["A.o.exc"] = (-5, -15)
+    ifo['Yetm'].edges["fr.i.tp", "fr.i"] = "1"
+    ifo['Yetm'].edge_handedness["fr.i.tp", "fr.i"] = "r"
+    ifo['Yetm'].edges["fr.o", "fr.o.exc"] = "1"
+    ifo['Yetm'].locations["fr.i.tp"] = (-5, 15)
+    ifo['Yetm'].locations["fr.o.exc"] = (-5, -15)
 
     sflu = SFLU.SFLU(
         edges=ifo.build_edges(),
         derivatives=[
-            'Xetm.A.r',
-            'Yetm.A.r',
-            'srm.A.r',
+            'Xetm.fr.r',
+            'Yetm.fr.r',
+            'srm.fr.r',
             'BSX.tau',
             'BSY.tau',
         ],
