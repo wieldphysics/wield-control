@@ -8,6 +8,7 @@
 """
 """
 import numpy as np
+import itertools
 import yaml
 import re
 
@@ -74,12 +75,7 @@ class SFLU(object):
         edges_original = dict()
         edges2_reverse = defaultdict(set)
 
-        for (R, C), E in edges.items():
-            # normalize computation-based edges
-            E = normalize_list2tuple(E)
-
-            R = stk.key_map(R)
-            C = stk.key_map(C)
+        def add_edge(R, C, E):
             edge = stk.key_edge(R, C)
             edges2[edge] = E
             edges_original[edge] = E
@@ -89,11 +85,23 @@ class SFLU(object):
             nodes.add(R)
             nodes.add(C)
 
+        # dress up add edge if the graph is around
         if self.G is not None:
-            for (R, C), E in edges2.items():
+            add_edge_prev = add_edge
+
+            def add_edge(R, C, E):
+                add_edge_prev(R, C, E)
                 self.G.add_edge(C, R, label_default=to_label(E))
-            for n in nodes:
-                self.G.nodes[n]['label_default'] = to_label(n)
+
+        # now loop through the edges
+        for (R, C), E in edges.items():
+            # normalize computation-based edges
+            E = normalize_list2tuple(E)
+            R = stk.key_map(R)
+            C = stk.key_map(C)
+            add_edge(R, C, E)
+
+
         # print('col2row', col2row)
         # print('row2col', row2col)
 
@@ -131,62 +139,7 @@ class SFLU(object):
         outputs = set(outputs)
         assert(outputs.issubset(outputs_))
 
-        derivatives2 = set()
-        for D in derivatives:
-            if isinstance(D, str):
-                derivatives2.update(edges2_reverse[D])
-            else:
-                R, C = D
-                edge = stk.key_edge(R, C)
-                derivatives2.add(edge)
-
-        # now augment the edges map with all of the derivatives
-        inputsD = set()
-        outputsD = set()
-        for R, C in derivatives2:
-            Ri = stk.key_join(R, 'Di')
-            Co = stk.key_join(C, 'Do')
-
-            edgeR = stk.key_edge(R, Ri)
-            edgeC = stk.key_edge(Co, C)
-            inputs.add(Ri)
-            outputs.add(Co)
-            # # # these must go together
-            inputs_.add(Ri)
-            outputs_.add(Co)
-            nodes.add(Ri)
-            nodes.add(Co)
-            # # #
-            inputsD.add(Ri)
-            outputsD.add(Co)
-            edges2[edgeC] = '1'
-            edges2[edgeR] = '1'
-            edges_original[edgeC] = '1'
-            edges_original[edgeR] = '1'
-            edges2_reverse['1'].add(edgeC)
-            edges2_reverse['1'].add(edgeR)
-        self.inputsD = inputsD
-        self.outputsD = outputsD
-
-        #if self.G is not None:
-        #    for R, C in derivatives2:
-        #        Ri = stk.key_join(R, 'Di')
-        #        Co = stk.key_join(C, 'Do')
-        #        self.G.add_edge(Co, C, suppress=True)
-        #        self.G.add_edge(R, Ri, suppress=True)
-        #        self.G.nodes[Ri]['label_default'] = to_label(Ri)
-        #        self.G.nodes[Co]['label_default'] = to_label(Co)
-
-        if self.G is not None:
-            pos2 = {}
-            for R, C in derivatives2:
-                Ri = stk.key_join(R, 'Di')
-                Co = stk.key_join(C, 'Do')
-                pos2[Ri] = None
-                pos2[Co] = None
-            nx.set_node_attributes(self.G, pos2, 'pos')
-        self.derivatives = derivatives2
-        self.derivatives_orig = derivatives
+        self.derivatives = derivatives
 
         for iN in inputs_:
             cS = row2col[iN]
@@ -236,6 +189,42 @@ class SFLU(object):
             nodes.remove(oN)
             if self.G is not None and not do_move:
                 self.G.remove_node(oN)
+
+        def add_derivative(R, C):
+            Ri = stk.key_join(R, 'Di')
+            Co = stk.key_join(C, 'Do')
+            add_edge(Co, C, '1')
+            add_edge(R, Ri, '1')
+            inputs.add(Ri)
+            outputs.add(Co)
+            nodes.remove(Co)
+            nodes.remove(Ri)
+            row2col_cf[Co].add(C)
+            col2row_cf[C].add(Co)
+            row2col_cf[R].add(Ri)
+            col2row_cf[Ri].add(R)
+            row2col[Co].remove(C)
+            col2row[C].remove(Co)
+            row2col[R].remove(Ri)
+            col2row[Ri].remove(R)
+        
+            if self.G is not None:
+                self.G.nodes[Ri]['pos'] = None
+                self.G.nodes[Co]['pos'] = None
+                self.G.edges[Ri, R]['suppress'] = True
+                self.G.edges[C, Co]['suppress'] = True
+
+        for D in derivatives:
+            if isinstance(D, str):
+                for R, C in edges2_reverse[D]:
+                    add_derivative(R, C)
+            else:
+                add_derivative(R, C)
+
+        # label all nodes
+        if self.G is not None:
+            for n in itertools.chain(nodes, inputs, outputs):
+                self.G.nodes[n]['label_default'] = to_label(n)
 
         self.col2row = col2row
         self.row2col = row2col
@@ -373,28 +362,37 @@ class SFLU(object):
         def key(iN):
             iS = self.col2row_cf[iN]
             return tuple(sorted([reducedL2.index(r) for r in iS]))
+
         Y_ = Y
         for iN in sorted(self.inputs, key=key):
             self.graph_nodes_pos({
                 iN: (lX, Y_),
             })
             Y_ += dY
+            self.G.nodes[iN]['angle'] = -135
+
+            # eset = self.col2row_cf[iN]
+            # for rN in eset:
+            #     self.G.edges[rN, iN]['bend'] = 0
 
         def key(oN):
             oS = self.row2col_cf[oN]
             return tuple(sorted([reducedU2.index(c) for c in oS]))
+
         Y_ = Y
         for oN in sorted(self.outputs, key=key):
             self.graph_nodes_pos({
                 oN: (rX, Y_),
             })
+            self.G.nodes[oN]['angle'] = -45
             Y_ += dY
+
         return
 
     def convert_self2yamlpy(self):
         s = dict()
         s['edges'] = {yamlstr_convert(stk.key_edge(*edge)): v for edge, v in self.edges_init.items()}
-        s['derivatives'] = self.derivatives_orig
+        s['derivatives'] = self.derivatives
         s['reduce_list'] = self.reduce_list
         if self.inputs_init is not None:
             s['inputs'] = list(self.inputs_init)
@@ -416,11 +414,31 @@ class SFLU(object):
         return s
 
     def convert_self2yamlstr(self):
-        return yaml.safe_dump(
-            self.convert_self2yamlpy(),
-            default_flow_style=None,
+        d = self.convert_self2yamlpy()
+        d2 = dict()
+
+        def transfer(name):
+            val = d.pop(name, None)
+            if val is not None:
+                d2[name] = val
+
+        transfer('reduce_list')
+        transfer('G_nodes')
+        transfer('G_edges')
+
+        s1 = yaml.safe_dump(
+            d, default_flow_style=False,
             sort_keys=False,
         )
+        if d2:
+            s2 = yaml.safe_dump(
+                d2,
+                default_flow_style=None,
+                sort_keys=False,
+            )
+        else:
+            s2 = ''
+        return s1 + s2
 
     @classmethod
     def convert_yamlstr2self(cls, yamlstr):
@@ -674,7 +692,8 @@ class SFLU(object):
             self.row2col_cf[R].remove(Nsf)
             if self.G is not None:
                 self.G.add_edge(NsfB, R)
-                self.G.edges[NsfB, R]['bend'] = 25
+                if R not in self.outputs:
+                    self.G.edges[NsfB, R]['bend'] = 25
         del self.col2row_cf[Nsf]
 
         for C in self.row2col_cf[Nsf]:
@@ -694,7 +713,8 @@ class SFLU(object):
 
             if self.G is not None:
                 self.G.add_edge(C, NsfA)
-                self.G.edges[C, NsfA]['bend'] = 25
+                if C not in self.inputs:
+                    self.G.edges[C, NsfA]['bend'] = 25
         del self.row2col_cf[Nsf]
 
         # check save_self_edge and add the delete operator

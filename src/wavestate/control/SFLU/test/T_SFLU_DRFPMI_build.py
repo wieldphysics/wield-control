@@ -173,7 +173,7 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
 
     if True:
         yamlstr = sflu.convert_self2yamlstr()
-        print(yamlstr)
+        # print(yamlstr)
         with open(tpath_join('DRFPMI.yaml'), 'w') as F:
             F.write(yamlstr)
         sflu = SFLU.SFLU.convert_yamlstr2self(yamlstr)
@@ -182,22 +182,22 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
     print('inputs: ', sflu.inputs)
     print('outputs: ', sflu.outputs)
     print('nodes: ', sflu.nodes)
-    dprint('edges: ', sflu.edges)
+    # dprint('edges: ', sflu.edges)
 
-    #print('nodes')
+    print('nodes')
     #print(sflu.graph_nodes_repr())
     #G1 = sflu.G.copy()
-    # sflu.graph_reduce_auto_pos(lX=-10, rX=+10, Y=0, dY=-2)
-    #sflu.reduce(*reduce_list)
-    #assert(not sflu.nodes)
-    #sflu.graph_reduce_auto_pos_io(lX=-30, rX=+30, Y=-5, dY=-5)
-    # G2 = sflu.G.copy()
+    sflu.graph_reduce_auto_pos(lX=-10, rX=+10, Y=0, dY=-2)
+    sflu.reduce(*reduce_list)
+    assert(not sflu.nodes)
+    sflu.graph_reduce_auto_pos_io(lX=-30, rX=+30, Y=10, dY=-2)
+    G2 = sflu.G.copy()
     dprint(G1.edges)
 
     nx2tikz.dump_pdf(
         [
             G1,
-            #G2,
+            G2,
         ],
         fname = tpath_join('testG.pdf'),
         texname = tpath_join('testG.tex'),
