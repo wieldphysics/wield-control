@@ -140,6 +140,8 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
 
     ifo['prm'].locations["bk.i.exc"] = (15, -10)
     ifo['prm'].locations["bk.o.tp"] = (15, 10)
+    ifo['prm'].edges["fr.i.tp", "fr.i"] = "1"
+    ifo['prm'].locations["fr.i.tp"] = (-5, 12)
 
     ifo['Xetm'].edges["fr.i.tp", "fr.i"] = "1"
     ifo['Xetm'].edges["fr.o", "fr.o.exc"] = "1"
@@ -151,6 +153,11 @@ def T_SFLU_DRFPMI_build_show(dprint, tpath_join, fpath_join):
     ifo['Yetm'].edges["fr.o", "fr.o.exc"] = "1"
     ifo['Yetm'].locations["fr.i.tp"] = (-5, 15)
     ifo['Yetm'].locations["fr.o.exc"] = (-5, -15)
+
+    ifo['Xitm'].edges["bk.i.tp", "bk.i"] = "1"
+    ifo['Xitm'].locations["bk.i.tp"] = (5, -12)
+    ifo['Yitm'].edges["bk.i.tp", "bk.i"] = "1"
+    ifo['Yitm'].locations["bk.i.tp"] = (5, -12)
 
     sflu = SFLU.SFLU(
         edges=ifo.build_edges(),
