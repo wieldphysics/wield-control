@@ -51,7 +51,10 @@ def print_dense_nonzero(ssb):
     s_str = "  " + "".join(s_str)
 
     Astr = np.array2string(nz(ssb.A), max_line_width=np.nan, threshold=100 ** 2)
-    Estr = np.array2string(nz(ssb.E), max_line_width=np.nan, threshold=30 ** 2)
+    if ssb.E is not None:
+        Estr = np.array2string(nz(ssb.E), max_line_width=np.nan, threshold=30 ** 2)
+    else:
+        Estr = ''
     Bstr = np.array2string(nz(ssb.B), max_line_width=np.nan, threshold=100 ** 2)
     Cstr = np.array2string(nz(ssb.C), max_line_width=np.nan, threshold=100 ** 2)
     Dstr = np.array2string(nz(ssb.D), max_line_width=np.nan, threshold=100 ** 2)

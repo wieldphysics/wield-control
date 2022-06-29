@@ -32,9 +32,9 @@ class MIMOStateSpace(mimo.MIMO):
     def __init__(
         self,
         A, B, C, D, E,
-        inputs = None,
-        outputs = None,
-        inout = None,
+        inputs=None,
+        outputs=None,
+        inout=None,
         hermitian: bool = True,
         time_symm: bool = False,
         dt=None,
@@ -212,7 +212,12 @@ class MIMOStateSpace(mimo.MIMO):
         raise NotImplementedError("TODO")
         return
 
-    def response(self, f=None, w=None, s=None):
+    def response(self, row=None, col=None, *, f=None, w=None, s=None):
+        if row is not None:
+            raise NotImplementedError()
+        if col is not None:
+            raise NotImplementedError()
+
         domain = None
         if f is not None:
             domain = 2j * np.pi * np.asarray(f)

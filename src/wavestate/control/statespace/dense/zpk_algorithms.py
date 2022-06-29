@@ -147,7 +147,7 @@ def ss2zpk(
     )
     # TODO, avoid using scipy.signal for this
     w, zpk0 = scipy.signal.freqs_zpk(z, p, k, s_match_wHz)
-    print('gain setup', tf0, zpk0)
+    # print('gain setup', tf0, zpk0)
     k = abs(tf0 / zpk0)
 
     if fmt == "IIRrational":
@@ -273,7 +273,8 @@ def poly2ss(
     """
     """
     if rescale_do is not None:
-        rescale_arr = rescale_do ** (np.arange(len(den)))
+        assert(abs(rescale_do) > 1e-15)
+        rescale_arr = rescale_do**(np.arange(len(den)))
         c_p = np.asarray(den) * rescale_arr
         c_z = np.asarray(num) * rescale_arr[: len(num)]
     else:
@@ -322,6 +323,15 @@ def zpkdict_cascade(
     if convention is not "scipy":
         raise RuntimeError("Only scipy convention currently supported")
 
+
+    if True:
+        def check(ABCDE):
+            for m in ABCDE:
+                assert(np.all(np.isfinite(m)))
+    else:
+        def check(ABCDE):
+            return
+
     def gen_polys(rdict):
         Rc = rdict["c"]
         Rr = rdict["r"]
@@ -330,8 +340,8 @@ def zpkdict_cascade(
         for c in Rc:
             poly.append((c.real * c.real + c.imag * c.imag, -2 * c.real, 1))
         idx = 0
-        while idx <= len(Rr) - 2:
-            r1, r2 = Rr[idx : idx + 2]
+        while idx <= len(Rr)  - 2:
+            r1, r2 = Rr[idx: idx + 2]
             poly.append((r1 * r2, -(r1 + r2), 1))
             idx += 2
         if idx < len(Rr):
@@ -349,10 +359,13 @@ def zpkdict_cascade(
     for idx in range(min(len(Zpoly), len(Ppoly))):
         zp = Zpoly[idx]
         pp = Ppoly[idx]
-        rescale = (zp[0] * pp[0]) ** 0.5
+        rescale = (zp[0] * pp[0])**0.5
+        if abs(rescale) < 1e-6:
+            rescale = None
         ABCDE = poly2ss(zp, pp, rescale_do=rescale)
         # ABCD = scipy.signal.tf2ss(zp[::-1], pp[::-1])
         # E = np.eye(2)
+        check(ABCDE)
         ABCDEs.append(ABCDE)
     if len(Zpoly) <= len(Ppoly):
         for idx in range(len(Zpoly), len(Ppoly)):
@@ -364,6 +377,7 @@ def zpkdict_cascade(
             else:
                 zp = [1]
             ABCDE = poly2ss(zp, pp, rescale_do=rescale)
+            check(ABCDE)
             ABCDEs.append(ABCDE)
     else:
         for idx in range(len(Ppoly), len(Zpoly)):
@@ -376,17 +390,20 @@ def zpkdict_cascade(
                 pp = [1]
             ABCDE = poly2ss(pp, zp, rescale_do=rescale)
             ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
+            check(ABCDE)
             ABCDEs.append(ABCDE)
     if Plast is None:
         if Zlast is not None:
             ABCDE = poly2ss([1], Zlast)
             ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
+            check(ABCDE)
             ABCDEs.append(ABCDE)
     else:
         idx += 1
         if Zlast is None:
             Zlast = [1]
         ABCDE = poly2ss(Zlast, Plast)
+        check(ABCDE)
         ABCDEs.append(ABCDE)
 
     if ABCDEs:

@@ -61,11 +61,20 @@ class SISOStateSpace(siso.SISO):
             E = np.eye(self.A.shape[-1])
         else:
             E = self.E
-        return self.A, self.B, self.C, E
+        return self.A, self.B, self.C, self.D, E
 
     @property
     def ABCDe(self):
-        return self.A, self.B, self.C, self.E
+        return self.A, self.B, self.C, self.D, self.E
+
+    @property
+    def ABCD(self):
+        if self.E is None:
+            raise RuntimeError("Cannot Drop E")
+        else:
+            assert(np.all(np.eye(self.E.shape[-1]) == self.E))
+            self.E = None
+        return self.A, self.B, self.C, self.D
 
     def __iter__(self):
         """
