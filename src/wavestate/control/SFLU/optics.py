@@ -87,14 +87,15 @@ class GraphElement(object):
     def update_sflu(self, sflu):
         sflu.graph_nodes_pos(self.build_locations(), match=True)
 
-        if sflu.G is not None:
-            nodes, edges = self.build_properties()
-            for node, ndict in nodes.items():
-                for k, v in ndict.items():
-                    sflu.G.nodes[node][k] = v
-            for edge, edict in edges.items():
-                for k, v in edict.items():
-                    sflu.G.edges[edge][k] = v
+        # shouldn't be needed
+        # if sflu.G is not None:
+        #     nodes, edges = self.build_properties()
+        #     for node, ndict in nodes.items():
+        #         for k, v in ndict.items():
+        #             sflu.G.nodes[node][k] = v
+        #     for edge, edict in edges.items():
+        #         for k, v in edict.items():
+        #             sflu.G.edges[edge][k] = v
         return
 
     def build_properties(
@@ -310,6 +311,111 @@ class BeamSplitter(GraphElement):
             ("frA.o", "frB.i"): ".fr.r",
             ("bkA.o", "bkB.i"): ".bk.r",
             ("bkB.o", "bkA.i"): ".bk.r",
+        })
+
+    def properties(self, nodes, edges, rot_deg, **kw):
+        if rot_deg < 45:
+            # ~0deg
+            pass
+        elif rot_deg < 135:
+            # ~90deg
+            pass
+        elif rot_deg < 180 + 45:
+            # ~180deg
+            pass
+        elif rot_deg < 270 + 45:
+            # ~270deg
+            pass
+        else:
+            pass
+        super().properties(
+            nodes=nodes,
+            edges=edges,
+            rot_deg=rot_deg,
+            **kw
+        )
+        return
+
+
+class LossyBeamSplitter(BeamSplitter):
+    """
+    Creates a mirror with extra nodes to add losses on reflection.
+
+    The reflectivity or transmissivity must be reduced to incorporate the loss, So
+    A.r**2 + t**2 + A.l**2 = 1
+    B.r**2 + t**2 + B.l**2 = 1
+    """
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.locations.update({
+            "frAL.i": (-2, -10),
+            "frBL.i": (-2, -10),
+            "bkAL.i": (+2, +10),
+            "bkBL.i": (+2, +10),
+        })
+        self.edges.update({
+            ("frA.o", "frAL.i"): ".fr.l",
+            ("bkA.o", "bkAL.i"): ".bk.l",
+            ("frB.o", "frBL.i"): ".fr.l",
+            ("bkB.o", "bkBL.i"): ".bk.l",
+        })
+
+    def properties(self, nodes, edges, rot_deg, **kw):
+        if rot_deg < 45:
+            # ~0deg
+            pass
+        elif rot_deg < 135:
+            # ~90deg
+            pass
+        elif rot_deg < 180 + 45:
+            # ~180deg
+            pass
+        elif rot_deg < 270 + 45:
+            # ~270deg
+            pass
+        else:
+            pass
+        super().properties(
+            nodes=nodes,
+            edges=edges,
+            rot_deg=rot_deg,
+            **kw
+        )
+        return
+
+
+class Reflection(GraphElement):
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.locations.update({
+            "frA.i": (-10, +5),
+            "frA.o": (-10, -5),
+            "frB.i": (+5, +10),
+            "frB.o": (-5, +10),
+        })
+        self.edges.update({
+            ("frB.o", "frA.i"): ".fr.r",
+            ("frA.o", "frB.i"): ".fr.r",
+        })
+
+
+class LossyReflection(GraphElement):
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.locations.update({
+            "frA.i": (-10, +5),
+            "frA.o": (-10, -5),
+            "frAL.i": (-3, -2),
+            "frB.i": (+5, +10),
+            "frB.o": (-5, +10),
+            "frBL.i": (-13, +12),
+        })
+        self.edges.update({
+            ("frB.o", "frA.i"): ".fr.r",
+            ("frA.o", "frB.i"): ".fr.r",
+            ("frA.o", "frAL.i"): ".fr.l",
+            ("frB.o", "frBL.i"): ".fr.l",
         })
 
 
