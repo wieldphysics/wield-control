@@ -7,11 +7,8 @@
 # with details inline in source files, comments, and docstrings.
 """
 """
-import numbers
-import numpy as np
-from wavestate.bunch import Bunch
-
 
 class SISO:
-    pass
+    # maximum number of fiducial points to maintain during operations
+    N_MAX_FID = 50
 

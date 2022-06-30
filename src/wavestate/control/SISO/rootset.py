@@ -354,9 +354,10 @@ class SDomainRootSet(object):
             for idx in range((mlen - 1) // group_len + 1):
                 r = roots[idx * group_len: (idx + 1) * group_len]
                 h = h * np.polynomial.polynomial.polyvalfromroots(X, r)
-                abs_max = np.max(abs_sq(h)) ** 0.5
-                h /= abs_max
-                lnG += np.log(abs_max)
+                abs_max = np.nanmax(abs_sq(h))**0.5
+                if abs_max != 0:
+                    h /= abs_max
+                    lnG += np.log(abs_max)
             return h, lnG
 
         h, lnG = VfR(self.c_plane, h, lnG)

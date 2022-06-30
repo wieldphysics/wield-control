@@ -49,7 +49,7 @@ def inverse_DSS(A, B, C, D, E):
     newB[constrN:, :inputsN] = -1
     newC[:outputN, statesN:] = 1
 
-    return newA, newB, newC, newD, newE
+    return TupleABCDE(newA, newB, newC, newD, newE)
 
 
 def reduce_modal(A, B, C, D, E, mode="C", tol=1e-7, use_svd=False):

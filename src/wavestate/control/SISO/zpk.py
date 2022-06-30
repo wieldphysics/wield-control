@@ -25,6 +25,8 @@ class ZPK(siso.SISO):
 
     This class internally uses the s-domain in units of radial frequency and gain.
     """
+    fiducial_rtol = 1e-4
+
     def __init__(
         self,
         z: SDomainRootSet,
@@ -33,7 +35,19 @@ class ZPK(siso.SISO):
         hermitian: bool = True,
         time_symm: bool = False,
         dt=None,
+        fiducial_s=None,
+        fiducial_f=None,
+        fiducial_w=None,
+        fiducial=None,
+        fiducial_rtol=None,
     ):
+        """
+        response_f: give a set of response points to use to verify that various algorithms preserve the transfer function. If None (or not given) then a set of response points are established using pole and zero locations.
+        response_w: alternate radial frequency input for response_f
+        response_s: alternate s-domain imaginary radial input for response_f
+
+        response: transfer function responses mapped to the response_w values
+        """
         assert(isinstance(z, SDomainRootSet))
         assert(isinstance(p, SDomainRootSet))
 
@@ -61,6 +75,90 @@ class ZPK(siso.SISO):
             if self.time_symm:
                 assert(self.z.mirror_disc)
                 assert(self.p.mirror_disc)
+        self.test_response(
+            s=fiducial_s,
+            f=fiducial_f,
+            w=fiducial_w,
+            response=fiducial,
+            rtol=fiducial_rtol,
+            update=True,
+        )
+        return
+
+    def test_response(
+        self,
+        s=None,
+        f=None,
+        w=None,
+        response=None,
+        rtol=None,
+        update=False,
+    ):
+        domain_w = None
+        if f is not None:
+            domain_w = 2 * np.pi * np.asarray(f)
+        if w is not None:
+            assert(domain_w is None)
+            domain_w = np.asarray(w)
+        if s is not None:
+            assert(domain_w is None)
+            domain_w = np.asarray(s) / 1j
+
+        if domain_w is not None and len(domain_w) == 0:
+            if update:
+                self.fiducial = domain_w
+                self.fiducial_w = domain_w
+                self.fiducial_rtol = rtol
+                return
+            return
+
+        if rtol is None:
+            rtol = self.fiducial_rtol
+
+        if domain_w is None:
+            # create a list of poiints at each resonance and zero, as well as 1 BW away
+            domain_w = [
+                self.z.r_line,
+                self.z.c_plane.imag,
+                abs(self.z.c_plane),
+                self.p.r_line,
+                self.p.c_plane.imag,
+                abs(self.p.c_plane),
+            ]
+            # augment the list to include midpoints between all resonances
+            domain_w = np.sort(np.concatenate(domain_w)).real
+            domain_w = np.concatenate([domain_w, (domain_w[0:-1] + domain_w[1:])/2])
+            rt_rtol = rtol**0.5
+            domain_w += rt_rtol
+
+        self_response = self.response(w=domain_w)
+
+        if response is not None:
+            if callable(response):
+                response = response(w=domain_w)
+            np.testing.assert_allclose(
+                self_response,
+                response,
+                atol=0,
+                rtol=rtol,
+                equal_nan=False,
+            )
+        else:
+            # give it one chance to select better points
+            select_bad = (~np.isfinite(self_response)) | (self_response == 0)
+            if update and np.any(select_bad):
+                if np.all(select_bad):
+                    domain_w = np.array([rt_rtol])
+                    self_response = self.response(w=domain_w)
+                else:
+                    self_response = self_response[~select_bad]
+                    domain_w = domain_w[~select_bad]
+            response = self_response
+
+        if update:
+            self.fiducial = response
+            self.fiducial_w = domain_w
+            self.fiducial_rtol = rtol
         return
 
     def __iter__(self):
@@ -96,7 +194,10 @@ class ZPK(siso.SISO):
         self._SS = ss.ss(
             ABCDE,
             hermitian=self.hermitian,
-            time_symm=self.time_symm
+            time_symm=self.time_symm,
+            fiducial=self.fiducial,
+            fiducial_w=self.fiducial_w,
+            fiducial_rtol=self.fiducial_rtol,
         )
         return self._SS
 
@@ -111,8 +212,8 @@ class ZPK(siso.SISO):
             assert(domain is None)
             domain = np.asarray(s)
 
-        h, lnG = self.p.response_lnG(domain, 1/self.k)
-        h, lnG = self.z.response_lnG(domain, 1/h, -lnG)
+        h, lnG = self.p.response_lnG(domain, 1)
+        h, lnG = self.z.response_lnG(domain, self.k/h, -lnG)
 
         if with_lnG:
             return h, lnG
@@ -126,6 +227,12 @@ class ZPK(siso.SISO):
             other = other.asZPK
             hermitian = self.hermitian and other.hermitian
             time_symm = self.time_symm and other.time_symm
+            if len(self.fiducial_w) + len(other.fiducial_w) < self.N_MAX_FID:
+                slc = slice(None, None, 1)
+            else:
+                slc = slice(None, None, 2)
+            fid_other_self = other.response(w=self.fiducial_w[slc])
+            fid_self_other = self.response(w=other.fiducial_w[slc])
             assert(self.dt == other.dt)
             return self.__class__(
                 z=self.z * other.z,
@@ -134,6 +241,15 @@ class ZPK(siso.SISO):
                 hermitian=hermitian,
                 time_symm=time_symm,
                 dt=self.dt,
+                fiducial=np.concatenate([
+                    self.fiducial[slc] * fid_other_self,
+                    fid_self_other * other.fiducial[slc]
+                ]),
+                fiducial_w=np.concatenate([
+                    self.fiducial_w[slc],
+                    other.fiducial_w[slc]
+                ]),
+                fiducial_rtol=self.fiducial_rtol,
             )
         elif isinstance(other, numbers.Number):
             return self.__class__(
@@ -143,6 +259,9 @@ class ZPK(siso.SISO):
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
                 dt=self.dt,
+                fiducial=self.fiducial * other,
+                fiducial_w=self.fiducial_w,
+                fiducial_rtol=self.fiducial_rtol,
             )
         else:
             return NotImplemented
@@ -158,11 +277,14 @@ class ZPK(siso.SISO):
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
                 dt=self.dt,
+                fiducial=other * self.fiducial,
+                fiducial_w=self.fiducial_w,
+                fiducial_rtol=self.fiducial_rtol,
             )
         else:
             return NotImplemented
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         """
         """
         if isinstance(other, numbers.Number):
@@ -173,7 +295,54 @@ class ZPK(siso.SISO):
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
                 dt=self.dt,
+                fiducial=self.fiducial / other,
+                fiducial_w=self.fiducial_w,
+                fiducial_rtol=self.fiducial_rtol,
             )
+        else:
+            return NotImplemented
+
+    def __rtruediv__(self, other):
+        """
+        """
+        if isinstance(other, numbers.Number):
+            return self.__class__(
+                z=self.p,
+                p=self.z,
+                k=other / self.k,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
+                dt=self.dt,
+                fiducial=other / self.fiducial,
+                fiducial_w=self.fiducial_w,
+                fiducial_rtol=self.fiducial_rtol,
+            )
+        else:
+            return NotImplemented
+
+    def inv(self):
+        return self.__class__(
+            z=self.p,
+            p=self.z,
+            k=1 / self.k,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+            fiducial=1/self.fiducial,
+            fiducial_w=self.fiducial_w,
+            fiducial_rtol=self.fiducial_rtol,
+        )
+
+    def __pow__(self, other):
+        """
+        """
+        if isinstance(other, numbers.Number):
+            if other == -1:
+                return self.inv()
+            elif other == 1:
+                return self
+            else:
+                return NotImplemented
         else:
             return NotImplemented
 
@@ -189,9 +358,11 @@ def zpk(
         pc=None,
         pr=None,
         pi=None,
-        response=None,
-        response_kw=None,
-        response_rtol=1e-6,
+        fiducial=None,
+        fiducial_w=None,
+        fiducial_f=None,
+        fiducial_s=None,
+        fiducial_rtol=1e-6,
         hermitian=True,
         time_symm=False,
         convention='scipy',
@@ -266,8 +437,11 @@ def zpk(
         z, p, k = args
 
     if k is None:
-        assert(response is not None)
+        assert(fiducial is not None)
         k = 1
+        k_was_None = True
+    else:
+        k_was_None = False
 
     cut_rootset = classifier.classify_function(
         tRootSet=tRootSet,
@@ -275,8 +449,10 @@ def zpk(
         time_symm=time_symm,
     )
     if z is not None:
+        z = np.asarray(z)
         zRS = cut_rootset(z, 'zeros')
     if p is not None:
+        p = np.asarray(p)
         pRS = cut_rootset(p, 'poles')
 
     if zc is not None or zr is not None or zi is not None:
@@ -310,35 +486,39 @@ def zpk(
         dt=dt,
         hermitian=hermitian,
         time_symm=time_symm,
+        fiducial_w=(),
+        fiducial_rtol=fiducial_rtol,
     )
     if ZPKprev:
         ZPKnew = ZPKprev * ZPKnew
 
-    if response is not None:
-        if response_kw is None:
-            # create a list of poiints at each resonance and zero, as well as 1 BW away
-            w_ptlist = [
-                ZPKnew.z.r_line,
-                ZPKnew.z.c_plane.imag,
-                ZPKnew.z.c_plane.imag + ZPKnew.z.c_plane.real,
-                ZPKnew.p.r_line,
-                ZPKnew.p.c_plane.imag,
-                ZPKnew.p.c_plane.imag + ZPKnew.p.c_plane.real,
-            ]
-            # augment the list to include midpoints between all resonances
-            w_ptlist = np.sort(np.concatenate(w_ptlist))
-            w_ptlist = np.concatenate([w_ptlist, (w_ptlist[0:-1] + w_ptlist[1:])/2])
-            response_kw = dict(w=w_ptlist)
-
-        norm_pts1 = response(**response_kw)
-        norm_pts2 = ZPKnew.response(**response_kw)
-        norm_rel = norm_pts1 / norm_pts2
-        norm_med = np.median(abs(norm_rel))
-        # print("NORM MEDIAN", norm_med)
-        if response_rtol is not None:
+    if k_was_None:
+        ZPKnew.test_response(
+            s=fiducial_s,
+            f=fiducial_f,
+            w=fiducial_w,
+            rtol=fiducial_rtol,
+            update=True,
+        )
+        norm_rel = fiducial / ZPKnew.fiducial
+        norm_med = np.nanmedian(abs(norm_rel))
+        if np.isfinite(norm_med):
+            ZPKnew = ZPKnew * norm_med
+            # print("NORM MEDIAN", norm_med)
             # TODO, make better error reporting that a conversion has failed
-            assert(np.all(abs(norm_rel / norm_med - 1) < response_rtol))
-        ZPKnew = ZPKnew * norm_med
+            np.testing.assert_allclose(
+                norm_rel / norm_med, 1, rtol=ZPKnew.fiducial_rtol, atol=0
+            )
+        else:
+            assert(np.all(np.isfinite(ZPKnew.fiducial)))
+    else:
+        ZPKnew.test_response(
+            response=fiducial,
+            s=fiducial_s,
+            f=fiducial_f,
+            w=fiducial_w,
+            update=True,
+        )
 
     return ZPKnew
 

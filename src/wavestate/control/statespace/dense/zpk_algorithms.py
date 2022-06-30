@@ -59,6 +59,7 @@ def ss2zp(
         p = scipy.linalg.eig(A, left=False, right=False)
     else:
         p = scipy.linalg.eig(A, E, left=False, right=False)
+        p = np.asarray([_ for _ in p if np.isfinite(_.real)])
     SS = np.block([[A, B], [C, D]])
     if E is None:
         z = scipy.linalg.eig(
