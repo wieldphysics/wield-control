@@ -19,6 +19,7 @@ from ..statespace import ssprint
 
 from . import siso
 from . import zpk
+from . import response
 
 
 class NumericalWarning(UserWarning):
@@ -40,7 +41,11 @@ class SISOStateSpace(siso.SISO):
         fiducial_w=None,
         fiducial=None,
         fiducial_rtol=1e-4,
+        flags={},
     ):
+        """
+        flags: this is a set of flags that indicate computed property flags for the state space. Examples of such properties are "schur_real_upper", "schur_complex_upper", "hessenburg_upper", "balanced", "stable"
+        """
         A = np.asarray(A)
         B = np.asarray(B)
         C = np.asarray(C)
@@ -134,10 +139,10 @@ class SISOStateSpace(siso.SISO):
                 # and midpoints
                 domain_w = np.concatenate([domain_w, (domain_w[0:-1] + domain_w[1:])/2])
             else:
-                warnings.warn("StateSpace is large (>100 states), using reduced response fiducial auditing heuristics. TODO to make this smarter", NumericalWarning)
+                warnings.warn(f"StateSpace is large (>{self.N_MAX_FID} states), using reduced response fiducial auditing heuristics. TODO to make this smarter", NumericalWarning)
                 domain_w = np.asarray([rt_rtol])
 
-        self_response = self.response(w=domain_w)
+        self_response = self.response(w=domain_w).tf
         if response is not None:
             if callable(response):
                 response = response(w=domain_w)
@@ -154,7 +159,7 @@ class SISOStateSpace(siso.SISO):
             if update and np.any(select_bad):
                 if np.all(select_bad):
                     domain_w = np.array([rt_rtol])
-                    self_response = self.response(w=domain_w)
+                    self_response = self.response(w=domain_w).tf
                 else:
                     self_response = self_response[~select_bad]
                     domain_w = domain_w[~select_bad]
@@ -259,7 +264,7 @@ class SISOStateSpace(siso.SISO):
             assert(domain is None)
             domain = np.asarray(s)
 
-        return xfer_algorithms.ss2response_siso(
+        tf = xfer_algorithms.ss2response_siso(
             A=self.A,
             B=self.B,
             C=self.C,
@@ -268,6 +273,15 @@ class SISOStateSpace(siso.SISO):
             s=domain,
             idx_in=0,
             idx_out=0,
+        )
+        return response.SISOResponse(
+            tf=tf,
+            w=w,
+            f=f,
+            s=s,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            snr=None,
         )
 
     def inv(self):
@@ -300,8 +314,8 @@ class SISOStateSpace(siso.SISO):
                 slc = slice(None, None, 1)
             else:
                 slc = slice(None, None, 2)
-            fid_other_self = other.response(w=self.fiducial_w[slc])
-            fid_self_other = self.response(w=other.fiducial_w[slc])
+            fid_other_self = other.response(w=self.fiducial_w[slc]).tf
+            fid_self_other = self.response(w=other.fiducial_w[slc]).tf
             assert(self.dt == other.dt)
             return self.__class__(
                 A=ABCDE.A,
@@ -413,11 +427,13 @@ class SISOStateSpace(siso.SISO):
         else:
             return NotImplemented
 
+
 def ss(
     *args,
     hermitian=True,
     time_symm=False,
     dt=None,
+    flags={},
     fiducial=None,
     fiducial_w=None,
     fiducial_f=None,
@@ -448,6 +464,7 @@ def ss(
         hermitian=True,
         time_symm=False,
         dt=None,
+        flags={},
         fiducial=fiducial,
         fiducial_s=fiducial_s,
         fiducial_f=fiducial_f,

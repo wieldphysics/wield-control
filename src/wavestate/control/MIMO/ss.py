@@ -184,8 +184,8 @@ class MIMOStateSpace(mimo.MIMO):
                 E=self.E,
                 inputs=inputs,
                 outputs=outputs,
-                hermitian = self.hermitian,
-                time_symm = self.time_symm,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
                 dt=self.dt,
             )
         else:

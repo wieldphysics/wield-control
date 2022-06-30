@@ -17,6 +17,7 @@ from . import rootset
 from .rootset import SDomainRootSet
 from . import siso
 from . import ss
+from . import response
 
 
 class ZPK(siso.SISO):
@@ -131,7 +132,7 @@ class ZPK(siso.SISO):
             rt_rtol = rtol**0.5
             domain_w += rt_rtol
 
-        self_response = self.response(w=domain_w)
+        self_response = self.response(w=domain_w).tf
 
         if response is not None:
             if callable(response):
@@ -149,7 +150,7 @@ class ZPK(siso.SISO):
             if update and np.any(select_bad):
                 if np.all(select_bad):
                     domain_w = np.array([rt_rtol])
-                    self_response = self.response(w=domain_w)
+                    self_response = self.response(w=domain_w).tf
                 else:
                     self_response = self_response[~select_bad]
                     domain_w = domain_w[~select_bad]
@@ -189,6 +190,7 @@ class ZPK(siso.SISO):
             Pr=p.r_line,
             k=self.k,
             convention="scipy",
+            orientation="upper"
         )
 
         self._SS = ss.ss(
@@ -198,6 +200,7 @@ class ZPK(siso.SISO):
             fiducial=self.fiducial,
             fiducial_w=self.fiducial_w,
             fiducial_rtol=self.fiducial_rtol,
+            flags={"schur_real_upper", "hessenburg_upper"},
         )
         return self._SS
 
@@ -218,7 +221,17 @@ class ZPK(siso.SISO):
         if with_lnG:
             return h, lnG
         else:
-            return h * np.exp(lnG)
+            tf = h * np.exp(lnG)
+
+        return response.SISOResponse(
+            tf=tf,
+            w=w,
+            f=f,
+            s=s,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            snr=None,
+        )
 
     def __mul__(self, other):
         """
@@ -231,8 +244,8 @@ class ZPK(siso.SISO):
                 slc = slice(None, None, 1)
             else:
                 slc = slice(None, None, 2)
-            fid_other_self = other.response(w=self.fiducial_w[slc])
-            fid_self_other = self.response(w=other.fiducial_w[slc])
+            fid_other_self = other.response(w=self.fiducial_w[slc]).tf
+            fid_self_other = self.response(w=other.fiducial_w[slc]).tf
             assert(self.dt == other.dt)
             return self.__class__(
                 z=self.z * other.z,

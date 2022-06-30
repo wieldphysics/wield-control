@@ -95,7 +95,6 @@ def ss2zp(
     return z, p
 
 
-
 def ss2zpk(
     A,
     B,
@@ -321,9 +320,11 @@ def zpkdict_cascade(
     k,
     convention="scipy",
 ):
+    """
+    Create a statespace from a cascade of ZPKs.
+    """
     if convention is not "scipy":
         raise RuntimeError("Only scipy convention currently supported")
-
 
     if True:
         def check(ABCDE):
@@ -431,6 +432,7 @@ def zpk_rc(
     Pr=[],
     k=1,
     convention="scipy",
+    orientation="lower",
 ):
     if convention == "scipyHz":
         convention = "scipy"
@@ -448,6 +450,7 @@ def zpk_rc(
         pdict=dict(c=Pc, r=Pr),
         k=k,
         convention=convention,
+        orientation=orientation,
     )
 
 
@@ -456,11 +459,32 @@ def ZPKdict(
     pdict,
     k,
     convention="scipy",
+    orientation="lower",
 ):
+    """
+    Create a statespace from dictionaries of poles and zeros separated into real and imaginary parts
+    orientation: Whether the A matrix is "upper" or "lower" triangular real Schur form
+    """
     ABCDEs = zpkdict_cascade(
         zdict=zdict, pdict=pdict, k=k, convention=convention
     )
     ABCDE = ss_algorithms.chain(ABCDEs)
+
+    orientation = orientation.lower()
+    if orientation == 'lower':
+        pass
+    elif orientation == 'upper':
+        A, B, C, D, E = ABCDE
+        ABCDE = (
+            A[..., ::-1, ::-1],
+            B[..., ::-1, :],
+            C[..., :, ::-1],
+            D,
+            E[..., ::-1, ::-1],
+        )
+    else:
+        raise RuntimeError("Unrecognized Orientation")
+
     return TupleABCDE(*ABCDE)
 
 
