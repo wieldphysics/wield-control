@@ -17,6 +17,7 @@ from ..statespace.dense import zpk_algorithms
 from ..statespace.dense import ss_algorithms
 from ..statespace import ssprint
 
+from .. import MIMO
 from . import siso
 from . import zpk
 from . import response
@@ -27,6 +28,7 @@ class NumericalWarning(UserWarning):
 
 
 class SISOStateSpace(siso.SISO):
+    fiducial_rtol = 1e-8
     """
     class to represent SISO Transfer functions using dense state space matrix representations.
     """
@@ -40,7 +42,7 @@ class SISOStateSpace(siso.SISO):
         fiducial_f=None,
         fiducial_w=None,
         fiducial=None,
-        fiducial_rtol=1e-4,
+        fiducial_rtol=None,
         flags={},
     ):
         """
@@ -119,6 +121,8 @@ class SISOStateSpace(siso.SISO):
 
         if rtol is None:
             rtol = self.fiducial_rtol
+            if rtol is None:
+                rtol = self.__class__.fiducial_rtol
 
         if domain_w is None:
             # create a list of poiints at each resonance and zero, as well as 1 BW away
@@ -253,6 +257,19 @@ class SISOStateSpace(siso.SISO):
         """
         return ssprint.print_dense_nonzero(self)
 
+    def mimo(self, row, col):
+        """
+        Convert this statespace system into a MIMO type with a single named input and output
+
+        row: name of the single output
+        col: name of the single input
+        """
+        return MIMO.MIMOStateSpace(
+            A=self.A, B=self.B, C=self.C, D=self.D, E=self.E,
+            inputs={col: 0},
+            outputs={row: 0},
+        )
+
     def response(self, f=None, w=None, s=None):
         domain = None
         if f is not None:
@@ -263,6 +280,20 @@ class SISOStateSpace(siso.SISO):
         if s is not None:
             assert(domain is None)
             domain = np.asarray(s)
+
+        # return an empty response
+        # attempting to compute it on
+        # empty input can throw errors
+        if len(domain) == 0:
+            return response.SISOResponse(
+                tf=domain,
+                w=w,
+                f=f,
+                s=s,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
+                snr=None,
+            )
 
         tf = xfer_algorithms.ss2response_siso(
             A=self.A,
@@ -427,6 +458,125 @@ class SISOStateSpace(siso.SISO):
         else:
             return NotImplemented
 
+    def __add__(self, other):
+        """
+        """
+        knownSS = False
+        if isinstance(other, numbers.Number):
+            # convert to statespace form
+            other = ss(other)
+            knownSS = True
+
+        if knownSS or isinstance(other, siso.SISOStateSpace):
+            hermitian = self.hermitian and other.hermitian
+            time_symm = self.time_symm and other.time_symm
+
+            A, E = joinAE(self, other)
+
+            self.__class__(
+                A=A,
+                B=np.block([
+                    [self.B],
+                    [other.B]
+                ]),
+                C=np.block([[self.C, other.C]]),
+                D=self.D + other.D,
+                E=E,
+                hermitian=hermitian,
+                time_symm=time_symm,
+            )
+        elif isinstance(other, siso.SISO):
+            other = other.asSS
+            warnings.warn(
+                "Implicit conversion to statespace for math. Use filt.asSS or SISO.ss(filt) to make explicit and suppress this warning"
+            )
+            # now recurse on this method
+            return self + other
+        return NotImplemented
+
+    def __radd__(self, other):
+        """
+        """
+        if isinstance(other, numbers.Number):
+            # convert to statespace form
+            other = ss(other)
+            # use commutativity of addition
+            return self + other
+
+        return NotImplemented
+
+    def __sub__(self, other):
+        """
+        """
+        knownSS = False
+        if isinstance(other, numbers.Number):
+            # convert to statespace form
+            other = ss(other)
+            knownSS = True
+
+        if knownSS or isinstance(other, siso.SISOStateSpace):
+            hermitian = self.hermitian and other.hermitian
+            time_symm = self.time_symm and other.time_symm
+
+            A, E = joinAE(self, other)
+
+            self.__class__(
+                A=A,
+                B=np.block([
+                    [self.B],
+                    [-other.B]
+                ]),
+                C=np.block([[self.C, other.C]]),
+                D=self.D - other.D,
+                E=E,
+                hermitian=hermitian,
+                time_symm=time_symm,
+            )
+        elif isinstance(other, siso.SISO):
+            other = other.asSS
+            warnings.warn(
+                "Implicit conversion to statespace for math. Use filt.asSS or SISO.ss(filt) to make explicit and suppress this warning"
+            )
+            # now recurse on this method
+            return self - other
+        return NotImplemented
+
+    def __rsub__(self, other):
+        """
+        """
+        knownSS = False
+        if isinstance(other, numbers.Number):
+            # convert to statespace form
+            other = ss(other)
+            knownSS = True
+
+        if knownSS or isinstance(other, siso.SISOStateSpace):
+            hermitian = self.hermitian and other.hermitian
+            time_symm = self.time_symm and other.time_symm
+
+            A, E = joinAE(self, other)
+
+            self.__class__(
+                A=A,
+                B=np.block([
+                    [-self.B],
+                    [other.B]
+                ]),
+                C=np.block([[self.C, other.C]]),
+                D=other.D - self.D,
+                E=E,
+                hermitian=hermitian,
+                time_symm=time_symm,
+            )
+        elif isinstance(other, siso.SISO):
+            other = other.asSS
+            warnings.warn(
+                "Implicit conversion to statespace for math. Use filt.asSS or SISO.ss(filt) to make explicit and suppress this warning"
+            )
+            # now recurse on this method
+            return self - other
+        return NotImplemented
+
 
 def ss(
     *args,
@@ -438,7 +588,7 @@ def ss(
     fiducial_w=None,
     fiducial_f=None,
     fiducial_s=None,
-    fiducial_rtol=1e-6,
+    fiducial_rtol=None,
 ):
     """
     Form a SISO LTI system from statespace matrices.
@@ -452,6 +602,20 @@ def ss(
             return arg
         elif isinstance(arg, (tuple, list)):
             A, B, C, D, E = arg
+        elif isinstance(arg, numbers.Number):
+            A = np.asarray([[]])
+            B = np.asarray([[]])
+            C = np.asarray([[]])
+            D = np.asarray([[arg]])
+            E = None
+            arg = np.asarray(arg)
+            if arg.imag == 0:
+                hermitian = True
+                if arg.real > 0:
+                    time_symm = True
+        else:
+            # TODO convert scipy LTI and python-control objects too
+            raise TypeError("Unrecognized conversion type for SISO.ss")
     elif len(args) == 4:
         A, B, C, D = args
         E = None
@@ -461,15 +625,45 @@ def ss(
         raise RuntimeError("Unrecognized argument format")
     return SISOStateSpace(
         A, B, C, D, E,
-        hermitian=True,
-        time_symm=False,
-        dt=None,
-        flags={},
+        dt=dt,
+        flags=flags,
         fiducial=fiducial,
         fiducial_s=fiducial_s,
         fiducial_f=fiducial_f,
         fiducial_w=fiducial_w,
         fiducial_rtol=fiducial_rtol,
+        hermitian=hermitian,
+        time_symm=time_symm,
     )
 
 
+def joinAE(s, o):
+    """
+    Perform a join on the A and E matrices for two statespaces.
+    This is used for the binary add and sub operations
+    """
+    blU = np.zeros((s.A.shape[-2], o.A.shape[-1]))
+    blL = np.zeros((o.A.shape[-2], s.A.shape[-1]))
+
+    if s.E is None and o.E is None:
+        E = None
+    else:
+        if s.E is None:
+            sE = np.eye(s.A.shape[-2])
+            oE = o.E
+        elif o.E is None:
+            sE = s.E
+            oE = np.eye(o.A.shape[-2])
+        else:
+            sE = s.E
+            oE = o.E
+        E = np.block([
+            [sE,  blU],
+            [blL, oE]
+        ]),
+
+    A = np.block([
+        [s.A,  blU],
+        [blL, o.A]
+    ])
+    return A, E

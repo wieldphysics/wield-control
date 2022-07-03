@@ -52,26 +52,38 @@ class SDomainRootSet(object):
             time_symm = mirror_imag
             assert(mirror_imag is not None)
 
+        if z_point is None:
+            z_point = np.array([])
+        elif isinstance(z_point, numbers.Integral):
+            z_point = np.zeros(z_point)
+
+        if r_line is None:
+            r_line = np.array([])
+        else:
+            r_line = np.asarray(r_line)
+
+        if i_line is None:
+            i_line = np.array([])
+        else:
+            i_line = np.asarray(i_line)
+
+        if c_plane is None:
+            c_plane = np.array([])
+        else:
+            c_plane = np.asarray(c_plane)
+
         if mirror_real:
             assert(r_line is not None)
+            c_plane = np.asarray(c_plane)
             assert(np.all(c_plane.imag > 0))
         
         if mirror_imag:
-            assert(self.i_line is not None)
+            assert(i_line is not None)
             assert(np.all(c_plane.real < 0))
             if mirror_real:
-                assert(self.z_point is not None)
-                assert(np.all(i_line.real > 0))
+                assert(z_point is not None)
+                assert(np.all(i_line.imag > 0))
                 assert(np.all(r_line.real < 0))
-
-        if z_point is None:
-            z_point = np.array([])
-        if r_line is None:
-            r_line = np.array([])
-        if i_line is None:
-            i_line = np.array([])
-        if c_plane is None:
-            c_plane = np.array([])
 
         self.c_plane = c_plane
         self.r_line = r_line
@@ -83,8 +95,6 @@ class SDomainRootSet(object):
         self.mirror_imag = time_symm
         self.time_symm = time_symm
 
-        if isinstance(z_point, numbers.Integral):
-            z_point = np.zeros(z_point)
         return
 
     def __iter__(self):
@@ -227,11 +237,24 @@ class SDomainRootSet(object):
             return self
 
         return self.__class__(
-            c_plane=np.concatenate([self.c_plane, -self.c_plane.conjugate()]),
+            c_plane=np.concatenate([self.c_plane, self.c_plane.conjugate()]),
             r_line=self.r_line,
-            i_line=np.concatenate([self.i_line, -self.i_line]),
+            i_line=np.concatenate([self.i_line, self.i_line.conjugate()]),
             z_point=self.z_point,
             mirror_real=False,
+            mirror_imag=self.mirror_imag,
+        )
+
+    def flip_to_stable(self):
+        c_plane = np.copy(self.c_plane)
+        select = c_plane.real > 0
+        c_plane[select] = -c_plane[select].conjugate()
+        return self.__class__(
+            c_plane=c_plane,
+            r_line=-abs(self.r_line),
+            i_line=self.i_line,
+            z_point=self.z_point,
+            mirror_real=self.mirror_real,
             mirror_imag=self.mirror_imag,
         )
 
@@ -240,7 +263,7 @@ class SDomainRootSet(object):
             return self
 
         return self.__class__(
-            c_plane=np.concatenate([self.c_plane, self.c_plane.conjugate()]),
+            c_plane=np.concatenate([self.c_plane, -self.c_plane.conjugate()]),
             r_line=np.concatenate([self.r_line, -self.r_line]),
             i_line=self.i_line,
             z_point=self.z_point,
@@ -317,6 +340,18 @@ class SDomainRootSet(object):
             c_plane=other * self.c_plane,
             r_line=other * self.r_line,
             i_line=other * self.i_line,
+            mirror_imag=self.mirror_imag,
+            mirror_real=self.mirror_real,
+        )
+
+    def __truediv__(self, other):
+        """
+        """
+        return self.__class__(
+            z_point=self.z_point / other,
+            c_plane=self.c_plane / other,
+            r_line=self.r_line / other,
+            i_line=self.i_line / other,
             mirror_imag=self.mirror_imag,
             mirror_real=self.mirror_real,
         )
@@ -417,7 +452,7 @@ class RootClassifiers:
         self.are_imag = np.vectorize(are_imag, otypes=[bool])
         self.are_zero = np.vectorize(are_zero, otypes=[bool])
 
-    def NC2MR(self, roots_u):
+    def R2MR(self, roots_u):
         real_select = self.are_real(roots_u)
         roots_r = roots_u[real_select].real
         roots_u = roots_u[~real_select]
@@ -466,7 +501,7 @@ class RootClassifiers:
             u=roots_u,
         )
 
-    def NC2MI(self, roots_u):
+    def R2MI(self, roots_u, roots_r=[]):
         imag_select = self.are_imag(roots_u)
         roots_i = roots_u[imag_select].imag
         roots_u = roots_u[~imag_select]
@@ -476,7 +511,7 @@ class RootClassifiers:
         roots_c_pos = roots_u[pos_select]
         rPB = nearest_pairs(roots_c_pos, -roots_c_neg.conjugate())
 
-        # TODO, put this logic in the NC2MR
+        # TODO, put this logic in the R2MR
 
         # fill the list with as many pairs as possible
         r12_list_full = rPB.r12_list
@@ -518,47 +553,42 @@ class RootClassifiers:
             else:
                 roots_u.append(r1)
                 roots_u.append(-r2.conjugate())
-        roots_c = np.array(roots_c)
-        roots_u = np.array(roots_u)
-        return Bunch(
-            c=roots_c,
-            i=roots_i,
-            u=roots_u,
-        )
 
-
-    def MR2MQ(self, roots_c, roots_r, roots_u):
-        imag_select = self.are_imag(roots_c)
-        roots_i = roots_c[imag_select].imag
-        roots_c = roots_c[~imag_select]
-
-        pos_select = roots_c.real > 0
-        roots_c_neg = roots_c[~pos_select]
-        roots_c_pos = roots_c[pos_select]
-        rPB = nearest_pairs(roots_c_pos, -roots_c_neg.conjugate())
-        roots_u2 = list(rPB.l1_remain) + [-r.conjugate() for r in rPB.l2_remain]
-        roots_c = []
-        for r1, r2 in rPB.r12_list:
-            if self.are_same(r1, r2):
-                # roots_c.append((r1 + r2) / 2)
-                # TODO, this seems to work better, not clear why..
-                roots_c.append(r1)
-            else:
-                roots_u2.append(r1)
-                roots_u2.append(-r2.conjugate())
-        roots_c = np.array(roots_c)
-        roots_u = np.concatenate([roots_u, roots_u2])
-
+        # this part only meaningfully runs if roots_r has been filled from
+        # a previous run of R2MR
+        roots_r = np.asarray(roots_r)
+        # now mirror over the real line
         select_zero = self.are_zero(roots_r)
         roots_r = roots_r[~select_zero]
         z = np.count_nonzero(select_zero)
+
+        select_neg = roots_r < 0
+        rPB = nearest_pairs(roots_r[select_neg], -roots_r[~select_neg])
+
+        # TODO, there is no lax_line_tol for the roots_r mirroring
+        roots_u = roots_u + list(rPB.l1_remain) + [r.conjugate() for r in rPB.l2_remain]
+
+        roots_r = []
+        for r1, r2 in rPB.r12_list:
+            if self.are_same(r1, r2):
+                roots_r.append(r1)
+            else:
+                roots_u.append(r1)
+                roots_u.append(-r2)
+
+        # now convert everything
+
+        # the c roots default to upper-right, so move them to upper-left
+        roots_c = -np.array(roots_c).conjugate()
+        roots_u = np.array(roots_u)
         return Bunch(
-            z=z,
             c=roots_c,
             r=roots_r,
-            i=roots_i,
+            i=1j * roots_i,
             u=roots_u,
+            z=z,
         )
+
 
     def classify_function(
             self,
@@ -570,13 +600,12 @@ class RootClassifiers:
         if hermitian:
             if time_symm:
                 def to_rootset(roots, rtype):
-                    b = self.NC2MR(roots)
+                    b = self.R2MR(roots)
                     if b.u:
                         raise RuntimeError(f"Unmatched {rtype}")
-                    b = self.MR2MQ(
-                        roots_c=b.c,
+                    b = self.R2MI(
+                        roots_u=b.c,
                         roots_r=b.r,
-                        roots_u=b.u
                     )
                     if b.u:
                         raise RuntimeError(f"Unmatched {rtype}")
@@ -590,7 +619,7 @@ class RootClassifiers:
                     )
             else:
                 def to_rootset(roots, rtype):
-                    b = self.NC2MR(roots)
+                    b = self.R2MR(roots)
                     if b.u:
                         raise RuntimeError(f"Unmatched {rtype}")
                     return tRootSet(
@@ -602,7 +631,7 @@ class RootClassifiers:
         else:
             if time_symm:
                 def to_rootset(roots, rtype):
-                    b = self.NC2MI(roots)
+                    b = self.R2MI(roots)
                     if b.u:
                         raise RuntimeError(f"Unmatched {rtype}")
                     return tRootSet(

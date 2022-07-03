@@ -299,10 +299,10 @@ def chain(SSs):
         statesN += A.shape[-1]
         if idx == 0:
             inputsN = B.shape[-1]
-            outputN = C.shape[-2]
         else:
-            assert(inputsN == B.shape[-1])
-            assert(outputN == C.shape[-2])
+            assert(outputN == B.shape[-1])
+        # make sure the current output is matched to the previous input
+        outputN = C.shape[-2]
         ss_seq.append(ssB)
     del ss
 

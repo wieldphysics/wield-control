@@ -11,3 +11,4 @@
 from .siso import SISO
 from .zpk import zpk, ZPK
 from .ss import ss, SISOStateSpace
+from .response import SISOResponse

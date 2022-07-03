@@ -8,6 +8,6 @@
 """
 """
 
-from .siso import SISO
-from .zpk import zpk, ZPK
-from .ss import ss, SISOStateSpace
+from .mimo import MIMO
+from .ss import ss, MIMOStateSpace, ssjoinsum
+from .response import MIMOResponse

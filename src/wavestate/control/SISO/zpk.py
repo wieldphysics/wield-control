@@ -26,7 +26,7 @@ class ZPK(siso.SISO):
 
     This class internally uses the s-domain in units of radial frequency and gain.
     """
-    fiducial_rtol = 1e-4
+    fiducial_rtol = 1e-8
 
     def __init__(
         self,
@@ -115,6 +115,8 @@ class ZPK(siso.SISO):
 
         if rtol is None:
             rtol = self.fiducial_rtol
+            if rtol is None:
+                rtol = self.__class__.fiducial_rtol
 
         if domain_w is None:
             # create a list of poiints at each resonance and zero, as well as 1 BW away
@@ -174,6 +176,19 @@ class ZPK(siso.SISO):
     def asZPK(self):
         return self
 
+    def flip_to_stable(self):
+        return self.__class__(
+            z=self.z.flip_to_stable(),
+            p=self.p.flip_to_stable(),
+            k=self.k,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+            fiducial=None,  # will have to rebuild the fiducial
+            fiducial_w=self.fiducial_w,
+            fiducial_rtol=self.fiducial_rtol,
+        )
+
     _SS = None
     @property
     def asSS(self):
@@ -214,6 +229,20 @@ class ZPK(siso.SISO):
         if s is not None:
             assert(domain is None)
             domain = np.asarray(s)
+
+        # return an empty response
+        # attempting to compute it on
+        # empty input can throw errors
+        if len(domain) == 0:
+            return response.SISOResponse(
+                tf=domain,
+                w=w,
+                f=f,
+                s=s,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
+                snr=None,
+            )
 
         h, lnG = self.p.response_lnG(domain, 1)
         h, lnG = self.z.response_lnG(domain, self.k/h, -lnG)
@@ -300,7 +329,35 @@ class ZPK(siso.SISO):
     def __truediv__(self, other):
         """
         """
-        if isinstance(other, numbers.Number):
+        if isinstance(other, siso.SISO):
+            other = other.asZPK
+            hermitian = self.hermitian and other.hermitian
+            time_symm = self.time_symm and other.time_symm
+            if len(self.fiducial_w) + len(other.fiducial_w) < self.N_MAX_FID:
+                slc = slice(None, None, 1)
+            else:
+                slc = slice(None, None, 2)
+            fid_other_self = other.response(w=self.fiducial_w[slc]).tf
+            fid_self_other = self.response(w=other.fiducial_w[slc]).tf
+            assert(self.dt == other.dt)
+            return self.__class__(
+                z=self.z * other.p,
+                p=self.p * other.z,
+                k=self.k / other.k,
+                hermitian=hermitian,
+                time_symm=time_symm,
+                dt=self.dt,
+                fiducial=np.concatenate([
+                    self.fiducial[slc] / fid_other_self,
+                    fid_self_other / other.fiducial[slc]
+                ]),
+                fiducial_w=np.concatenate([
+                    self.fiducial_w[slc],
+                    other.fiducial_w[slc]
+                ]),
+                fiducial_rtol=self.fiducial_rtol,
+            )
+        elif isinstance(other, numbers.Number):
             return self.__class__(
                 z=self.z,
                 p=self.p,
@@ -359,6 +416,59 @@ class ZPK(siso.SISO):
         else:
             return NotImplemented
 
+    def square_root(self, keep_i=True):
+        """
+        If the current filter is time_symm, then return the stable, minimum delay square root filter
+        """
+        assert(self.time_symm)
+        # just make a copy, but don't interpret the poles has having mirrors
+        if keep_i:
+            z = self.z.__class__(
+                c_plane=self.z.c_plane,
+                r_line=self.z.r_line,
+                i_line=self.z.i_line,
+                z_point=self.z.z_point,
+                hermitian=self.z.hermitian,
+                time_symm=False,
+            )
+            p = self.p.__class__(
+                c_plane=self.p.c_plane,
+                r_line=self.p.r_line,
+                i_line=self.p.i_line,
+                z_point=self.p.z_point,
+                hermitian=self.p.hermitian,
+                time_symm=False,
+            )
+        else:
+            z = self.z.__class__(
+                c_plane=self.z.c_plane,
+                r_line=self.z.r_line,
+                z_point=self.z.z_point,
+                hermitian=self.z.hermitian,
+                time_symm=False,
+            )
+            p = self.p.__class__(
+                c_plane=self.p.c_plane,
+                r_line=self.p.r_line,
+                z_point=self.p.z_point,
+                hermitian=self.p.hermitian,
+                time_symm=False,
+            )
+
+        # can't re-use the fiducial, so create a new one from
+        # the previous points
+        return self.__class__(
+            z=z,
+            p=p,
+            k=self.k**2,
+            hermitian=self.hermitian,
+            time_symm=False,
+            dt=self.dt,
+            fiducial=None,
+            fiducial_w=self.fiducial_w,
+            fiducial_rtol=self.fiducial_rtol,
+        )
+
 
 def zpk(
         *args,
@@ -371,11 +481,12 @@ def zpk(
         pc=None,
         pr=None,
         pi=None,
+        angular: bool = None,
         fiducial=None,
         fiducial_w=None,
         fiducial_f=None,
         fiducial_s=None,
-        fiducial_rtol=1e-6,
+        fiducial_rtol=None,
         hermitian=True,
         time_symm=False,
         convention='scipy',
@@ -408,6 +519,10 @@ def zpk(
     negative real part. Warnings will be issued if roots are outside the
     expected areas, given the symmetry, as this can indicate possible redundant
     root specification.
+
+    angular: indicates whether the roots z, p, zr, zc, .. are in angular or frequency units.
+    Note that this does not affect the interpretation of the gain. By default, it is determined
+    by the convention.
 
     """
     if dt is None:
@@ -456,41 +571,63 @@ def zpk(
     else:
         k_was_None = False
 
-    cut_rootset = classifier.classify_function(
+    classify_rootset = classifier.classify_function(
         tRootSet=tRootSet,
         hermitian=hermitian,
         time_symm=time_symm,
     )
     if z is not None:
         z = np.asarray(z)
-        zRS = cut_rootset(z, 'zeros')
+        zRS = classify_rootset(z, 'zeros')
+    else:
+        zRS = None
+
     if p is not None:
         p = np.asarray(p)
-        pRS = cut_rootset(p, 'poles')
+        pRS = classify_rootset(p, 'poles')
+    else:
+        pRS = None
 
     if zc is not None or zr is not None or zi is not None:
-        zRS = tRootSet(
+        zRS2 = tRootSet(
             c_plane=zc,
             r_line=zr,
             i_line=zi,
             hermitian=hermitian,
             time_symm=time_symm,
-        ) * zRS
+        )
+        if zRS is not None:
+            zRS = zRS * zRS2
+        else:
+            zRS = zRS2
 
     if pc is not None or pr is not None or pi is not None:
-        pRS = tRootSet(
+        pRS2 = tRootSet(
             c_plane=pc,
             r_line=pr,
             i_line=pi,
             hermitian=hermitian,
             time_symm=time_symm,
-        ) * pRS
+        )
+        if pRS is not None:
+            pRS = pRS * pRS2
+        else:
+            pRS = pRS2
 
     if convention == 'scipy':
         root_normalization = 1
         gain_normalization = 1
+        if angular is None:
+            angular = True
+    elif convention.lower() == 'iirrational':
+        root_normalization = 1
+        gain_normalization = (2*np.pi)**(len(pRS) - len(zRS))
+        if angular is None:
+            angular = False
     else:
         raise RuntimeError("Convention {} not recognized".format(convention))
+    if not angular:
+        root_normalization *= np.pi * 2
 
     ZPKnew = ZPK(
         z=root_normalization*zRS,
