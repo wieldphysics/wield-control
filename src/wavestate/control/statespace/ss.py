@@ -419,10 +419,8 @@ class RawStateSpace(object):
 
 
 class RawStateSpaceUser(object):
-    def __init__(
-        self, ss
-    ):
-        self.ss = ss 
+    def __init__(self, *, ss):
+        self.ss = ss
 
     @property
     def A(self):

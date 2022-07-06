@@ -27,9 +27,10 @@ class ZPK(siso.SISO):
     This class internally uses the s-domain in units of radial frequency and gain.
     """
     fiducial_rtol = 1e-8
+    _SS = None
 
     def __init__(
-        self,
+        self, *,
         z: SDomainRootSet,
         p: SDomainRootSet,
         k: numbers.Complex,
@@ -52,8 +53,8 @@ class ZPK(siso.SISO):
         assert(isinstance(z, SDomainRootSet))
         assert(isinstance(p, SDomainRootSet))
 
-        self.z = z
-        self.p = p
+        self.zeros = z
+        self.poles = p
         self.k = k
         self.hermitian = hermitian
         self.time_symm = time_symm
@@ -64,18 +65,18 @@ class ZPK(siso.SISO):
 
         if dt is None:
             if self.hermitian:
-                assert(self.z.mirror_real)
-                assert(self.p.mirror_real)
+                assert(self.zeros.mirror_real)
+                assert(self.poles.mirror_real)
             if self.time_symm:
-                assert(self.z.mirror_imag)
-                assert(self.p.mirror_imag)
+                assert(self.zeros.mirror_imag)
+                assert(self.poles.mirror_imag)
         else:
             if self.hermitian:
-                assert(self.z.mirror_real)
-                assert(self.p.mirror_real)
+                assert(self.zeros.mirror_real)
+                assert(self.poles.mirror_real)
             if self.time_symm:
-                assert(self.z.mirror_disc)
-                assert(self.p.mirror_disc)
+                assert(self.zeros.mirror_disc)
+                assert(self.poles.mirror_disc)
         self.test_response(
             s=fiducial_s,
             f=fiducial_f,
@@ -85,6 +86,29 @@ class ZPK(siso.SISO):
             update=True,
         )
         return
+
+    @property
+    def z(self):
+        """
+        return an array of all of the zeros
+        """
+        return self.zeros.all()
+
+    @property
+    def p(self):
+        """
+        return an array of all of the zeros
+        """
+        return self.poles.all()
+
+    def __str__(self):
+        zstr = str(self.zeros)
+        pstr = str(self.poles)
+        if '\n' in zstr or '\n' in pstr:
+            return "zpk(k={k},\n    z = {z},\n    p = {p})".format(k=self.k, z=zstr, p=pstr)
+        else:
+            return "zpk(z={z}, p={p}, k={k})".format(k=self.k, z=zstr, p=pstr)
+        return 
 
     def test_response(
         self,
@@ -121,12 +145,12 @@ class ZPK(siso.SISO):
         if domain_w is None:
             # create a list of poiints at each resonance and zero, as well as 1 BW away
             domain_w = [
-                self.z.r_line,
-                self.z.c_plane.imag,
-                abs(self.z.c_plane),
-                self.p.r_line,
-                self.p.c_plane.imag,
-                abs(self.p.c_plane),
+                self.zeros.r_line,
+                self.zeros.c_plane.imag,
+                abs(self.zeros.c_plane),
+                self.poles.r_line,
+                self.poles.c_plane.imag,
+                abs(self.poles.c_plane),
             ]
             # augment the list to include midpoints between all resonances
             domain_w = np.sort(np.concatenate(domain_w)).real
@@ -168,8 +192,8 @@ class ZPK(siso.SISO):
         """
         Represent self like a typical scipy zpk tuple. This throws away symmetry information
         """
-        yield tuple(self.z.astuple())
-        yield tuple(self.p.astuple())
+        yield tuple(self.zeros.astuple())
+        yield tuple(self.poles.astuple())
         yield self.k
 
     @property
@@ -178,8 +202,8 @@ class ZPK(siso.SISO):
 
     def flip_to_stable(self):
         return self.__class__(
-            z=self.z.flip_to_stable(),
-            p=self.p.flip_to_stable(),
+            z=self.zeros.flip_to_stable(),
+            p=self.poles.flip_to_stable(),
             k=self.k,
             hermitian=self.hermitian,
             time_symm=self.time_symm,
@@ -189,14 +213,13 @@ class ZPK(siso.SISO):
             fiducial_rtol=self.fiducial_rtol,
         )
 
-    _SS = None
     @property
     def asSS(self):
         if self._SS is not None:
             self._SS
         assert(self.hermitian)
-        z = self.z.drop_mirror_imag()
-        p = self.p.drop_mirror_imag()
+        z = self.zeros.drop_mirror_imag()
+        p = self.poles.drop_mirror_imag()
         # Currently only supports hermitian inputs
         ABCDE = zpk_algorithms.zpk_rc(
             Zc=z.c_plane,
@@ -244,8 +267,8 @@ class ZPK(siso.SISO):
                 snr=None,
             )
 
-        h, lnG = self.p.fresponse_lnG(domain, 1)
-        h, lnG = self.z.fresponse_lnG(domain, self.k/h, -lnG)
+        h, lnG = self.poles.fresponse_lnG(domain, 1)
+        h, lnG = self.zeros.fresponse_lnG(domain, self.k/h, -lnG)
 
         if with_lnG:
             return h, lnG
@@ -277,8 +300,8 @@ class ZPK(siso.SISO):
             fid_self_other = self.fresponse(w=other.fiducial_w[slc]).tf
             assert(self.dt == other.dt)
             return self.__class__(
-                z=self.z * other.z,
-                p=self.p * other.p,
+                z=self.zeros * other.zeros,
+                p=self.poles * other.poles,
                 k=self.k * other.k,
                 hermitian=hermitian,
                 time_symm=time_symm,
@@ -295,8 +318,8 @@ class ZPK(siso.SISO):
             )
         elif isinstance(other, numbers.Number):
             return self.__class__(
-                z=self.z,
-                p=self.p,
+                z=self.zeros,
+                p=self.poles,
                 k=self.k * other,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
@@ -313,8 +336,8 @@ class ZPK(siso.SISO):
         """
         if isinstance(other, numbers.Number):
             return self.__class__(
-                z=self.z,
-                p=self.p,
+                z=self.zeros,
+                p=self.poles,
                 k=other * self.k,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
@@ -341,8 +364,8 @@ class ZPK(siso.SISO):
             fid_self_other = self.fresponse(w=other.fiducial_w[slc]).tf
             assert(self.dt == other.dt)
             return self.__class__(
-                z=self.z * other.p,
-                p=self.p * other.z,
+                z=self.zeros * other.poles,
+                p=self.poles * other.zeros,
                 k=self.k / other.k,
                 hermitian=hermitian,
                 time_symm=time_symm,
@@ -359,8 +382,8 @@ class ZPK(siso.SISO):
             )
         elif isinstance(other, numbers.Number):
             return self.__class__(
-                z=self.z,
-                p=self.p,
+                z=self.zeros,
+                p=self.poles,
                 k=self.k / other,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
@@ -377,8 +400,8 @@ class ZPK(siso.SISO):
         """
         if isinstance(other, numbers.Number):
             return self.__class__(
-                z=self.p,
-                p=self.z,
+                z=self.poles,
+                p=self.zeros,
                 k=other / self.k,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
@@ -392,8 +415,8 @@ class ZPK(siso.SISO):
 
     def inv(self):
         return self.__class__(
-            z=self.p,
-            p=self.z,
+            z=self.poles,
+            p=self.zeros,
             k=1 / self.k,
             hermitian=self.hermitian,
             time_symm=self.time_symm,
@@ -423,35 +446,35 @@ class ZPK(siso.SISO):
         assert(self.time_symm)
         # just make a copy, but don't interpret the poles has having mirrors
         if keep_i:
-            z = self.z.__class__(
-                c_plane=self.z.c_plane,
-                r_line=self.z.r_line,
-                i_line=self.z.i_line,
-                z_point=self.z.z_point,
-                hermitian=self.z.hermitian,
+            z = self.zeros.__class__(
+                c_plane=self.zeros.c_plane,
+                r_line=self.zeros.r_line,
+                i_line=self.zeros.i_line,
+                z_point=self.zeros.z_point,
+                hermitian=self.zeros.hermitian,
                 time_symm=False,
             )
-            p = self.p.__class__(
-                c_plane=self.p.c_plane,
-                r_line=self.p.r_line,
-                i_line=self.p.i_line,
-                z_point=self.p.z_point,
-                hermitian=self.p.hermitian,
+            p = self.poles.__class__(
+                c_plane=self.poles.c_plane,
+                r_line=self.poles.r_line,
+                i_line=self.poles.i_line,
+                z_point=self.poles.z_point,
+                hermitian=self.poles.hermitian,
                 time_symm=False,
             )
         else:
-            z = self.z.__class__(
-                c_plane=self.z.c_plane,
-                r_line=self.z.r_line,
-                z_point=self.z.z_point,
-                hermitian=self.z.hermitian,
+            z = self.zeros.__class__(
+                c_plane=self.zeros.c_plane,
+                r_line=self.zeros.r_line,
+                z_point=self.zeros.z_point,
+                hermitian=self.zeros.hermitian,
                 time_symm=False,
             )
-            p = self.p.__class__(
-                c_plane=self.p.c_plane,
-                r_line=self.p.r_line,
-                z_point=self.p.z_point,
-                hermitian=self.p.hermitian,
+            p = self.poles.__class__(
+                c_plane=self.poles.c_plane,
+                r_line=self.poles.r_line,
+                z_point=self.poles.z_point,
+                hermitian=self.poles.hermitian,
                 time_symm=False,
             )
 

@@ -141,6 +141,9 @@ class SDomainRootSet(object):
                 for root in self.c_plane:
                     yield root
 
+    def all(self):
+        return np.array(list(self))
+
     def astuple(self):
         """
         Return self as a tuple of all roots
@@ -170,10 +173,21 @@ class SDomainRootSet(object):
                 length += len(self.c_plane)
         return length
 
-    def str_iter(self, divide_by=1, real_format_func=None):
+    def str_iter(self, divide_by=1, real_format_func=None, pos_format_func=None):
         if real_format_func is None:
             def real_format_func(val):
                 return "{}".format(val)
+
+            def real_format_func(val):
+                return "{: < #22.16g}".format(val)
+
+            if pos_format_func is None:
+                def pos_format_func(val):
+                    return "{: <#22.16g}".format(val)
+        else:
+
+            if pos_format_func is None:
+                pos_format_func = real_format_func
 
         for z in self.z_point:
             yield "0"
@@ -181,55 +195,55 @@ class SDomainRootSet(object):
         if self.mirror_real:
             if self.mirror_imag:
                 for root in self.r_line:
-                    yield "±{}".format(real_format_func(-root.real))
+                    yield "±{}".format(pos_format_func(-root.real).rstrip())
                 for root in self.i_line:
-                    yield "±{}j".format(real_format_func(root.imag))
+                    yield "±{}j".format(pos_format_func(root.imag).rstrip())
                 for root in self.c_plane:
-                    yield "±{}±{}j".format(
-                        real_format_func(-root.real),
-                        real_format_func(root.imag),
+                    yield "±{} ± {}j".format(
+                        pos_format_func(-root.real),
+                        pos_format_func(root.imag).rstrip(),
                     )
             else:
                 for root in self.r_line:
-                    yield "{}".format(real_format_func(root.real))
+                    yield "{}".format(real_format_func(root.real).rstrip())
                 for root in self.i_line:
-                    yield "±{}j".format(real_format_func(root.imag))
+                    yield "±{}j".format(pos_format_func(root.imag).rstrip())
                 for root in self.c_plane:
-                    yield "{}±{}j".format(
+                    yield "{} ± {}j".format(
                         real_format_func(root.real),
-                        real_format_func(root.imag),
+                        pos_format_func(root.imag).rstrip(),
                     )
         elif self.mirror_imag:
             for root in self.r_line:
-                yield "±{}".format(real_format_func(-root.real))
+                yield "±{}".format(pos_format_func(-root.real).rstrip())
             for root in self.i_line:
-                yield "{}j".format(real_format_func(root.imag))
+                yield "{}j".format(real_format_func(root.imag).rstrip())
             for root in self.c_plane:
                 if root.imag > 0:
-                    yield "±({}+{}j)".format(
-                        real_format_func(-root.real),
-                        real_format_func(root.imag),
+                    yield "±({} + {}j)".format(
+                        pos_format_func(-root.real),
+                        pos_format_func(root.imag).rstrip(),
                     )
                 else:
-                    yield "±({}-{}j)".format(
-                        real_format_func(-root.real),
-                        real_format_func(-root.imag),
+                    yield "±({} - {}j)".format(
+                        pos_format_func(-root.real),
+                        pos_format_func(-root.imag).rstrip(),
                     )
         else:
             for root in self.r_line:
-                yield "{}".format(real_format_func(root.real))
+                yield "{}".format(real_format_func(root.real).rstrip())
             for root in self.i_line:
-                yield "{}j".format(real_format_func(root.imag))
+                yield "{}j".format(real_format_func(root.imag).rstrip())
             for root in self.c_plane:
                 if root.imag > 0:
-                    yield "{}+{}j".format(
+                    yield "{} + {}j".format(
                         real_format_func(-root.real),
-                        real_format_func(root.imag),
+                        pos_format_func(root.imag).rstrip(),
                     )
                 else:
-                    yield "{}-{}j".format(
+                    yield "{} - {}j".format(
                         real_format_func(-root.real),
-                        real_format_func(-root.imag),
+                        pos_format_func(-root.imag).rstrip(),
                     )
 
     def drop_mirror_real(self):
@@ -364,11 +378,8 @@ class SDomainRootSet(object):
             divided_by=1,
             real_format_func=None,
     ):
-        strs = ["["]
-        for s in self.str_iter(divide_by=divided_by, real_format_func=real_format_func):
-            strs.append(s + ', ')
-        strs.append("]")
-        return ''.join(strs)
+        arr = np.array(list(self.str_iter(divide_by=divided_by, real_format_func=real_format_func)))
+        return np.array2string(arr, formatter={'numpystr': str}, separator=', ')
 
     def fresponse_lnG(self, X, h=1, lnG=0):
         """
