@@ -9,13 +9,13 @@
 Functions to create a SISO state space system from inputs.
 """
 import numbers
-import warnings
+# import warnings
 import numpy as np
 
 from . import siso
 
 
-class SISOResponse(siso.SISO):
+class SISOFResponse(siso.SISO):
     """
     Class to hold transfer function response of SISO systems
     """

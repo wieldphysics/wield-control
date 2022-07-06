@@ -77,7 +77,7 @@ def test_ZPK_delay_many(tpath_join):
     for idx_ord in range(1, 7):
         filt = bessel_delay_ZPK(delta_t, order=idx_ord)
 
-        xfer = filt.response(f=F_Hz).tf
+        xfer = filt.fresponse(f=F_Hz).tf
         # print("filt.z: ", filt.z, tuple(filt.z))
         # print("filt.p: ", filt.p, tuple(filt.p))
         w, zpk0 = scipy.signal.freqs_zpk(
@@ -117,18 +117,18 @@ def test_ZPK_delay_various(idx_ord, tpath_join):
 
     filt = bessel_delay_ZPK(delta_t, order=idx_ord)
 
-    xfer1 = filt.response(f=F_Hz).tf
+    xfer1 = filt.fresponse(f=F_Hz).tf
     axB.ax0.semilogx(F_Hz, abs(xfer1), label="Direct ZPK")
     axB.ax1.plot(F_Hz, np.angle(xfer1, deg=True))
 
-    xfer2 = (filt * filt).response(f=F_Hz).tf
+    xfer2 = (filt * filt).fresponse(f=F_Hz).tf
     axB.ax0.semilogx(F_Hz, abs(xfer2), label="ZPK self product")
     axB.ax1.plot(F_Hz, np.angle(xfer2, deg=True))
 
     filt_ss = filt.asSS * 4
     filt_ssi = 1/filt_ss
-    xfer3 = filt_ss.response(f=F_Hz).tf
-    xfer3b = filt_ssi.response(f=F_Hz).tf
+    xfer3 = filt_ss.fresponse(f=F_Hz).tf
+    xfer3b = filt_ssi.fresponse(f=F_Hz).tf
     axB.ax0.semilogx(F_Hz, abs(xfer3) / 4, label="ZPK2SS")
     axB.ax1.plot(F_Hz, np.angle(xfer3, deg=True))
     axB.ax0.semilogx(F_Hz, abs(1/xfer3b) / 4, label="ZPK2SS inv")
@@ -136,9 +136,9 @@ def test_ZPK_delay_various(idx_ord, tpath_join):
 
     filt_zpk = filt_ss.asZPK
     filt_zpki = filt_ssi.asZPK
-    xfer4 = filt_zpk.response(f=F_Hz).tf
-    xfer4b = (1/filt_zpk).response(f=F_Hz).tf
-    xfer4c = (filt_zpki).response(f=F_Hz).tf
+    xfer4 = filt_zpk.fresponse(f=F_Hz).tf
+    xfer4b = (1/filt_zpk).fresponse(f=F_Hz).tf
+    xfer4c = (filt_zpki).fresponse(f=F_Hz).tf
     axB.ax0.semilogx(F_Hz, abs(xfer4) / 4, label="SS2ZPK")
     axB.ax1.plot(F_Hz, np.angle(xfer3, deg=True))
     axB.ax0.semilogx(F_Hz, abs(1/xfer4b) / 4, label="SS2ZPK inv")
@@ -180,20 +180,20 @@ def test_ZPK_various(zpk, tpath_join):
     axB = mplfigB(Nrows=2)
     F_Hz = logspaced(0.01 / delta_t, 2 / delta_t, 1000)
 
-    filt = SISO.zpk(zpk)
+    filt = SISO.zpk(zpk, fiducial_rtol=1e-7)
 
-    xfer1 = filt.response(f=F_Hz).tf
+    xfer1 = filt.fresponse(f=F_Hz).tf
     axB.ax0.semilogx(F_Hz, abs(xfer1), label="Direct ZPK")
     axB.ax1.plot(F_Hz, np.angle(xfer1, deg=True))
 
-    xfer2 = (filt * filt).response(f=F_Hz).tf
+    xfer2 = (filt * filt).fresponse(f=F_Hz).tf
     axB.ax0.semilogx(F_Hz, abs(xfer2), label="ZPK self product")
     axB.ax1.plot(F_Hz, np.angle(xfer2, deg=True))
 
     filt_ss = filt.asSS * 4
     filt_ssi = 1/filt_ss
-    xfer3 = filt_ss.response(f=F_Hz).tf
-    xfer3b = filt_ssi.response(f=F_Hz).tf
+    xfer3 = filt_ss.fresponse(f=F_Hz).tf
+    xfer3b = filt_ssi.fresponse(f=F_Hz).tf
     axB.ax0.semilogx(F_Hz, abs(xfer3) / 4, label="ZPK2SS")
     axB.ax1.plot(F_Hz, np.angle(xfer3, deg=True))
     axB.ax0.semilogx(F_Hz, abs(1/xfer3b) / 4, label="ZPK2SS inv")
@@ -201,9 +201,9 @@ def test_ZPK_various(zpk, tpath_join):
 
     filt_zpk = filt_ss.asZPK
     filt_zpki = filt_ssi.asZPK
-    xfer4 = filt_zpk.response(f=F_Hz).tf
-    xfer4b = (1/filt_zpk).response(f=F_Hz).tf
-    xfer4c = (filt_zpki).response(f=F_Hz).tf
+    xfer4 = filt_zpk.fresponse(f=F_Hz).tf
+    xfer4b = (1/filt_zpk).fresponse(f=F_Hz).tf
+    xfer4c = (filt_zpki).fresponse(f=F_Hz).tf
     axB.ax0.semilogx(F_Hz, abs(xfer4) / 4, label="SS2ZPK")
     axB.ax1.plot(F_Hz, np.angle(xfer3, deg=True))
     axB.ax0.semilogx(F_Hz, abs(1/xfer4b) / 4, label="SS2ZPK inv")

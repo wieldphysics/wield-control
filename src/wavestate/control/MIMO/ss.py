@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/USSR/bin/env python
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: © 2022 California Institute of Technology.
@@ -15,14 +15,14 @@ from wavestate.bunch import Bunch
 
 from ..statespace.dense import xfer_algorithms
 from ..statespace.dense import ss_algorithms
-from ..statespace import ssprint
+from ..statespace.ss import RawStateSpace, RawStateSpaceUser
 
 from . import mimo
 from . import response
 from .. import SISO
 
 
-class MIMOStateSpace(mimo.MIMO):
+class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
     """
     State space class to represent MIMO Transfer functions using dense matrix representations
 
@@ -35,30 +35,12 @@ class MIMOStateSpace(mimo.MIMO):
     """
     def __init__(
         self,
-        A, B, C, D, E,
+        ss,
         inputs=None,
         outputs=None,
-        hermitian: bool = True,
-        time_symm: bool = False,
-        flags={},
-        dt=None,
         warn=True,
     ):
-        A = np.asarray(A)
-        B = np.asarray(B)
-        C = np.asarray(C)
-        D = np.asarray(D)
-        if E is not None:
-            E = np.asarray(E)
-
-        if hermitian:
-            assert(np.all(A.imag == 0))
-            assert(np.all(B.imag == 0))
-            assert(np.all(C.imag == 0))
-            assert(np.all(D.imag == 0))
-            if E is not None:
-
-                assert(np.all(E.imag == 0))
+        super().__init__(ss=ss)
 
         def idx_normalize(idx):
             if isinstance(idx, (tuple, list)):
@@ -89,20 +71,14 @@ class MIMOStateSpace(mimo.MIMO):
         else:
             outputs = {}
 
-        self.flags = flags
         self.inputs = inputs
         self.outputs = outputs
 
-        self.A = A
-        self.B = B
-        self.C = C
-        self.D = D
-        self.E = E
-        self.hermitian = hermitian
-        self.time_symm = time_symm
-        self.dt = dt
-
         def reverse(d, length, io):
+            """
+            short function logic to reverse the input or output array
+            while checking that indices do not overlap
+            """
             rev = {}
             lst = np.zeros(length, dtype=bool)
             for k, idx in d.items():
@@ -121,43 +97,6 @@ class MIMOStateSpace(mimo.MIMO):
         self.outputs_rev = reverse(outputs, self.C.shape[-2], "outputs")
         return
 
-    @property
-    def ABCDE(self):
-        if self.E is None:
-            E = np.eye(self.A.shape[-1])
-        else:
-            E = self.E
-        return self.A, self.B, self.C, self.D, E
-
-    @property
-    def ABCDe(self):
-        return self.A, self.B, self.C, self.D, self.E
-
-    @property
-    def ABCD(self):
-        if self.E is None:
-            raise RuntimeError("Cannot Drop E")
-        else:
-            assert(np.all(np.eye(self.E.shape[-1]) == self.E))
-            self.E = None
-        return self.A, self.B, self.C, self.D
-
-    def __iter__(self):
-        """
-        Represent self like a typical scipy zpk tuple. This throws away symmetry information
-        """
-        yield self.A
-        yield self.B
-        yield self.C
-        yield self.D
-        if self.E is not None:
-            yield self.E
-
-    def print_nonzero(self):
-        """
-        """
-        return ssprint.print_dense_nonzero(self)
-
     def siso(self, row, col):
         """
         convert a single output (row) and input (col) into a SISO
@@ -170,17 +109,9 @@ class MIMOStateSpace(mimo.MIMO):
         if isinstance(c, tuple):
             raise RuntimeError("Row name is a span and cannot be used to create a SISO system")
         ret = SISO.SISOStateSpace(
-            A=self.A,
-            B=self.B[..., :, c:c+1],
-            C=self.C[..., r:r+1, :],
-            D=self.D[..., r:r+1, c:c+1],
-            E=self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
+            self.ss[r:r+1, c:c+1],
         )
 
-        print("SHAPE2", self.D.shape, ret.D.shape)
         return ret
 
     def __getitem__(self, key):
@@ -242,28 +173,9 @@ class MIMOStateSpace(mimo.MIMO):
         raise NotImplementedError("TODO")
         return
 
-    def response(self, *, f=None, w=None, s=None):
-        domain = None
-        if f is not None:
-            domain = 2j * np.pi * np.asarray(f)
-        if w is not None:
-            assert(domain is None)
-            domain = 1j * np.asarray(w)
-        if s is not None:
-            assert(domain is None)
-            domain = np.asarray(s)
-
-        tf = xfer_algorithms.ss2response_mimo(
-            A=self.A,
-            B=self.B,
-            C=self.C,
-            D=self.D,
-            E=self.E,
-            s=domain,
-            idx_in=0,
-            idx_out=0,
-        )
-        return response.MIMOResponse(
+    def fresponse(self, *, f=None, w=None, s=None):
+        tf = xfer_algorithms.ss.fresponse_raw(f=f, s=s, w=w)
+        return response.MIMOFResponse(
             tf=tf,
             w=w,
             f=f,
@@ -282,19 +194,9 @@ class MIMOStateSpace(mimo.MIMO):
             # currently need to do some checking about the inputs
             # and the outputs
             return NotImplemented
-            hermitian = self.hermitian and other.hermitian
-            time_symm = self.time_symm and other.time_symm
-            assert(self.dt == other.dt)
-            ABCDE = ss_algorithms.chain([self.ABCDE, other.ABCDE])
+            ss = self.ABCDE @ other.ABCDE
             return self.__class__(
-                A=ABCDE.A,
-                B=ABCDE.B,
-                C=ABCDE.C,
-                D=ABCDE.D,
-                E=ABCDE.E,
-                hermitian=hermitian,
-                time_symm=time_symm,
-                dt=self.dt,
+                ss=ss
             )
         else:
             return NotImplemented
@@ -304,14 +206,7 @@ class MIMOStateSpace(mimo.MIMO):
         """
         if isinstance(other, numbers.Number):
             return self.__class__(
-                A=self.A,
-                B=self.B * other,
-                C=self.C,
-                D=self.D * other,
-                E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
+                ss=self.ss * other
             )
         else:
             return NotImplemented
@@ -321,14 +216,7 @@ class MIMOStateSpace(mimo.MIMO):
         """
         if isinstance(other, numbers.Number):
             return self.__class__(
-                A=self.A,
-                B=self.B,
-                C=other * self.C,
-                D=other * self.D,
-                E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
+                ss=other * self.ss
             )
         else:
             return NotImplemented
@@ -373,7 +261,6 @@ class MIMOStateSpace(mimo.MIMO):
         connections_rowcol is a list of row, col pairs
         gain is the connection gain to apply
         """
-
         fbD = np.zeros((self.D.shape[-1], self.D.shape[-2]))
 
         if isinstance(connections, (list, tuple, set)):
@@ -404,32 +291,16 @@ class MIMOStateSpace(mimo.MIMO):
                     v = gain
                 fbD[iidx, oidx] = v
 
-        # TODO, could prepare an LU decomposition for this
-        clD = np.linalg.solve(np.eye(self.D.shape[-1]) - fbD @ self.D, fbD)
-
-        if self.dt is not None:
-            raise NotImplementedError("feedback not yet implemented in discrete time")
-
-        A = self.A + self.B @ clD @ self.C
-        B = self.B + self.B @ clD @ self.D
-        C = self.C + self.D @ clD @ self.C
-        D = self.D + self.D @ clD @ self.D
+        ss = self.ss.feedbackD(D=fbD)
 
         return self.__class__(
-            A,
-            B,
-            C,
-            D,
-            self.E,
+            ss=ss,
             inputs=self.inputs,
             outputs=self.outputs,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
 
 
-def ss(
+def statespace(
     *args,
     inputs=None,
     outputs=None,
@@ -495,12 +366,14 @@ def ss(
                 inputs[k] = idx
 
     return MIMOStateSpace(
-        A, B, C, D, E,
+        ss=RawStateSpace(
+            A, B, C, D, E,
+            hermitian=hermitian,
+            time_symm=time_symm,
+            dt=dt,
+        ),
         inputs=inputs,
         outputs=outputs,
-        hermitian=hermitian,
-        time_symm=time_symm,
-        dt=dt,
     )
 
 
@@ -509,6 +382,7 @@ def ssjoinsum(*args):
     Join a list of MIMO state spaces into a single larger space. Common inputs
     will be connected and common outputs will be summed.
     """
+    # TODO preserve flags
     SSs = args
     inputs = {}
     outputs = {}
@@ -602,11 +476,13 @@ def ssjoinsum(*args):
                 D[..., oslc_to, islc_to] = ssB.D[..., oslc_fr, islc_fr]
 
     return MIMOStateSpace(
-        A, B, C, D, E,
+        ss=RawStateSpace(
+            A, B, C, D, E,
+            hermitian=np.all(ss.hermitian for ss in SSs),
+            time_symm=np.all(ss.time_symm for ss in SSs),
+            dt=SSs[0].dt,
+        ),
         inputs=inputs,
         outputs=outputs,
-        hermitian=np.all(ss.hermitian for ss in SSs),
-        time_symm=np.all(ss.time_symm for ss in SSs),
-        dt=SSs[0].dt,
     )
 

@@ -134,7 +134,7 @@ class ZPK(siso.SISO):
             rt_rtol = rtol**0.5
             domain_w += rt_rtol
 
-        self_response = self.response(w=domain_w).tf
+        self_response = self.fresponse(w=domain_w).tf
 
         if response is not None:
             if callable(response):
@@ -152,7 +152,7 @@ class ZPK(siso.SISO):
             if update and np.any(select_bad):
                 if np.all(select_bad):
                     domain_w = np.array([rt_rtol])
-                    self_response = self.response(w=domain_w).tf
+                    self_response = self.fresponse(w=domain_w).tf
                 else:
                     self_response = self_response[~select_bad]
                     domain_w = domain_w[~select_bad]
@@ -208,7 +208,7 @@ class ZPK(siso.SISO):
             orientation="upper"
         )
 
-        self._SS = ss.ss(
+        self._SS = ss.statespace(
             ABCDE,
             hermitian=self.hermitian,
             time_symm=self.time_symm,
@@ -219,7 +219,7 @@ class ZPK(siso.SISO):
         )
         return self._SS
 
-    def response(self, *, f=None, w=None, s=None, with_lnG=False):
+    def fresponse(self, *, f=None, w=None, s=None, with_lnG=False):
         domain = None
         if f is not None:
             domain = 2j * np.pi * np.asarray(f)
@@ -234,7 +234,7 @@ class ZPK(siso.SISO):
         # attempting to compute it on
         # empty input can throw errors
         if len(domain) == 0:
-            return response.SISOResponse(
+            return response.SISOFResponse(
                 tf=domain,
                 w=w,
                 f=f,
@@ -244,15 +244,15 @@ class ZPK(siso.SISO):
                 snr=None,
             )
 
-        h, lnG = self.p.response_lnG(domain, 1)
-        h, lnG = self.z.response_lnG(domain, self.k/h, -lnG)
+        h, lnG = self.p.fresponse_lnG(domain, 1)
+        h, lnG = self.z.fresponse_lnG(domain, self.k/h, -lnG)
 
         if with_lnG:
             return h, lnG
         else:
             tf = h * np.exp(lnG)
 
-        return response.SISOResponse(
+        return response.SISOFResponse(
             tf=tf,
             w=w,
             f=f,
@@ -273,8 +273,8 @@ class ZPK(siso.SISO):
                 slc = slice(None, None, 1)
             else:
                 slc = slice(None, None, 2)
-            fid_other_self = other.response(w=self.fiducial_w[slc]).tf
-            fid_self_other = self.response(w=other.fiducial_w[slc]).tf
+            fid_other_self = other.fresponse(w=self.fiducial_w[slc]).tf
+            fid_self_other = self.fresponse(w=other.fiducial_w[slc]).tf
             assert(self.dt == other.dt)
             return self.__class__(
                 z=self.z * other.z,
@@ -337,8 +337,8 @@ class ZPK(siso.SISO):
                 slc = slice(None, None, 1)
             else:
                 slc = slice(None, None, 2)
-            fid_other_self = other.response(w=self.fiducial_w[slc]).tf
-            fid_self_other = self.response(w=other.fiducial_w[slc]).tf
+            fid_other_self = other.fresponse(w=self.fiducial_w[slc]).tf
+            fid_self_other = self.fresponse(w=other.fiducial_w[slc]).tf
             assert(self.dt == other.dt)
             return self.__class__(
                 z=self.z * other.p,

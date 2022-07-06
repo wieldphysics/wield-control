@@ -14,8 +14,7 @@ import warnings
 
 from ..statespace.dense import xfer_algorithms
 from ..statespace.dense import zpk_algorithms
-from ..statespace.dense import ss_algorithms
-from ..statespace import ssprint
+from ..statespace.ss import RawStateSpaceUser, RawStateSpace
 
 from .. import MIMO
 from . import siso
@@ -27,50 +26,24 @@ class NumericalWarning(UserWarning):
     pass
 
 
-class SISOStateSpace(siso.SISO):
+class SISOStateSpace(RawStateSpaceUser, siso.SISO):
     fiducial_rtol = 1e-8
     """
     class to represent SISO Transfer functions using dense state space matrix representations.
     """
     def __init__(
         self,
-        A, B, C, D, E,
-        hermitian: bool = True,
-        time_symm: bool = False,
-        dt=None,
+        ss,
         fiducial_s=None,
         fiducial_f=None,
         fiducial_w=None,
         fiducial=None,
         fiducial_rtol=None,
-        flags={},
     ):
         """
         flags: this is a set of flags that indicate computed property flags for the state space. Examples of such properties are "schur_real_upper", "schur_complex_upper", "hessenburg_upper", "balanced", "stable"
         """
-        A = np.asarray(A)
-        B = np.asarray(B)
-        C = np.asarray(C)
-        D = np.asarray(D)
-        if E is not None:
-            E = np.asarray(E)
-
-        if hermitian:
-            assert(np.all(A.imag == 0))
-            assert(np.all(B.imag == 0))
-            assert(np.all(C.imag == 0))
-            assert(np.all(D.imag == 0))
-            if E is not None:
-                assert(np.all(E.imag == 0))
-
-        self.A = A
-        self.B = B
-        self.C = C
-        self.D = D
-        self.E = E
-        self.hermitian = hermitian
-        self.time_symm = time_symm
-        self.dt = dt
+        super().__init__(ss=ss)
 
         domain_w = None
         if fiducial_f is not None:
@@ -146,7 +119,7 @@ class SISOStateSpace(siso.SISO):
                 warnings.warn(f"StateSpace is large (>{self.N_MAX_FID} states), using reduced response fiducial auditing heuristics. TODO to make this smarter", NumericalWarning)
                 domain_w = np.asarray([rt_rtol])
 
-        self_response = self.response(w=domain_w).tf
+        self_response = self.fresponse(w=domain_w).tf
         if response is not None:
             if callable(response):
                 response = response(w=domain_w)
@@ -163,7 +136,7 @@ class SISOStateSpace(siso.SISO):
             if update and np.any(select_bad):
                 if np.all(select_bad):
                     domain_w = np.array([rt_rtol])
-                    self_response = self.response(w=domain_w).tf
+                    self_response = self.fresponse(w=domain_w).tf
                 else:
                     self_response = self_response[~select_bad]
                     domain_w = domain_w[~select_bad]
@@ -175,38 +148,6 @@ class SISOStateSpace(siso.SISO):
             self.fiducial_rtol = rtol
         return
 
-    @property
-    def ABCDE(self):
-        if self.E is None:
-            E = np.eye(self.A.shape[-1])
-        else:
-            E = self.E
-        return self.A, self.B, self.C, self.D, E
-
-    @property
-    def ABCDe(self):
-        return self.A, self.B, self.C, self.D, self.E
-
-    @property
-    def ABCD(self):
-        if self.E is None:
-            raise RuntimeError("Cannot Drop E")
-        else:
-            assert(np.all(np.eye(self.E.shape[-1]) == self.E))
-            self.E = None
-        return self.A, self.B, self.C, self.D
-
-    def __iter__(self):
-        """
-        Represent self like a typical scipy zpk tuple. This throws away symmetry information
-        """
-        yield self.A
-        yield self.B
-        yield self.C
-        yield self.D
-        if self.E is not None:
-            yield self.E
-
     _zp_tup = None
 
     @property
@@ -216,11 +157,11 @@ class SISOStateSpace(siso.SISO):
         """
         if self._zp_tup is None:
             z, p = zpk_algorithms.ss2zp(
-                A=self.A,
-                B=self.B,
-                C=self.C,
-                D=self.D,
-                E=self.E,
+                A=self.ss.A,
+                B=self.ss.B,
+                C=self.ss.C,
+                D=self.ss.D,
+                E=self.ss.E,
                 idx_in=0,
                 idx_out=0,
                 fmt="scipy",
@@ -239,8 +180,8 @@ class SISOStateSpace(siso.SISO):
         # as it is established from the fiducial data
         self._ZPK = zpk.zpk(
             z, p,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
+            hermitian=self.ss.hermitian,
+            time_symm=self.ss.time_symm,
             convention='scipy',
             fiducial=self.fiducial,
             fiducial_w=self.fiducial_w,
@@ -249,13 +190,8 @@ class SISOStateSpace(siso.SISO):
         return self._ZPK
 
     @property
-    def asSS(self):
+    def asSTATESPACE(self):
         return self
-
-    def print_nonzero(self):
-        """
-        """
-        return ssprint.print_dense_nonzero(self)
 
     def mimo(self, row, col):
         """
@@ -265,67 +201,24 @@ class SISOStateSpace(siso.SISO):
         col: name of the single input
         """
         return MIMO.MIMOStateSpace(
-            A=self.A, B=self.B, C=self.C, D=self.D, E=self.E,
+            ss=self.ss,
             inputs={col: 0},
             outputs={row: 0},
         )
 
-    def response(self, f=None, w=None, s=None):
-        domain = None
-        if f is not None:
-            domain = 2j * np.pi * np.asarray(f)
-        if w is not None:
-            assert(domain is None)
-            domain = 1j * np.asarray(w)
-        if s is not None:
-            assert(domain is None)
-            domain = np.asarray(s)
-
-        # return an empty response
-        # attempting to compute it on
-        # empty input can throw errors
-        if len(domain) == 0:
-            return response.SISOResponse(
-                tf=domain,
-                w=w,
-                f=f,
-                s=s,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                snr=None,
-            )
-
-        tf = xfer_algorithms.ss2response_siso(
-            A=self.A,
-            B=self.B,
-            C=self.C,
-            D=self.D,
-            E=self.E,
-            s=domain,
-            idx_in=0,
-            idx_out=0,
-        )
-        return response.SISOResponse(
+    def fresponse(self, f=None, w=None, s=None):
+        tf = self.ss.fresponse_raw(f=f, s=s, w=w)[..., 0, 0]
+        return response.SISOFResponse(
             tf=tf,
-            w=w,
-            f=f,
-            s=s,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
+            w=w, f=f, s=s,
+            hermitian=self.ss.hermitian,
+            time_symm=self.ss.time_symm,
             snr=None,
         )
 
     def inv(self):
-        ABCDE = ss_algorithms.inverse_DSS(*self.ABCDE)
         return self.__class__(
-            A=ABCDE.A,
-            B=ABCDE.B,
-            C=ABCDE.C,
-            D=ABCDE.D,
-            E=ABCDE.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
+            self.ss.inv(),
             fiducial=1/self.fiducial,
             fiducial_w=self.fiducial_w,
             fiducial_rtol=self.fiducial_rtol,
@@ -336,27 +229,16 @@ class SISOStateSpace(siso.SISO):
         """
         if isinstance(other, siso.SISO):
             other = other.asSS
-            hermitian = self.hermitian and other.hermitian
-            time_symm = self.time_symm and other.time_symm
-            assert(self.dt == other.dt)
-            ABCDE = ss_algorithms.chain([self.ABCDE, other.ABCDE])
 
             if len(self.fiducial_w) + len(other.fiducial_w) < self.N_MAX_FID:
                 slc = slice(None, None, 1)
             else:
                 slc = slice(None, None, 2)
-            fid_other_self = other.response(w=self.fiducial_w[slc]).tf
-            fid_self_other = self.response(w=other.fiducial_w[slc]).tf
-            assert(self.dt == other.dt)
+            fid_other_self = other.fresponse(w=self.fiducial_w[slc]).tf
+            fid_self_other = self.fresponse(w=other.fiducial_w[slc]).tf
+
             return self.__class__(
-                A=ABCDE.A,
-                B=ABCDE.B,
-                C=ABCDE.C,
-                D=ABCDE.D,
-                E=ABCDE.E,
-                hermitian=hermitian,
-                time_symm=time_symm,
-                dt=self.dt,
+                ss=self.ss @ other.ss,
                 fiducial=np.concatenate([
                     self.fiducial[slc] * fid_other_self,
                     fid_self_other * other.fiducial[slc]
@@ -369,14 +251,7 @@ class SISOStateSpace(siso.SISO):
             )
         elif isinstance(other, numbers.Number):
             return self.__class__(
-                A=self.A,
-                B=self.B * other,
-                C=self.C,
-                D=self.D * other,
-                E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
+                ss=self.ss * other,
                 fiducial=self.fiducial * other,
                 fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
@@ -389,14 +264,7 @@ class SISOStateSpace(siso.SISO):
         """
         if isinstance(other, numbers.Number):
             return self.__class__(
-                A=self.A,
-                B=self.B,
-                C=other * self.C,
-                D=other * self.D,
-                E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
+                ss=other * self.ss,
                 fiducial=other * self.fiducial,
                 fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
@@ -409,14 +277,7 @@ class SISOStateSpace(siso.SISO):
         """
         if isinstance(other, numbers.Number):
             return self.__class__(
-                A=self.A,
-                B=self.B,
-                C=self.C / other,
-                D=self.D / other,
-                E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
+                self.ss / other,
                 fiducial=self.fiducial / other,
                 fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
@@ -428,16 +289,8 @@ class SISOStateSpace(siso.SISO):
         """
         """
         if isinstance(other, numbers.Number):
-            ABCDE = ss_algorithms.inverse_DSS(*self.ABCDE)
             return self.__class__(
-                A=ABCDE.A,
-                B=ABCDE.B,
-                C=other * ABCDE.C,
-                D=other * ABCDE.D,
-                E=ABCDE.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
+                ss=other * self.ss.inv(),
                 fiducial=other / self.fiducial,
                 fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
@@ -464,31 +317,17 @@ class SISOStateSpace(siso.SISO):
         knownSS = False
         if isinstance(other, numbers.Number):
             # convert to statespace form
-            other = ss(other)
+            other = statespace(other)
             knownSS = True
 
         if knownSS or isinstance(other, siso.SISOStateSpace):
-            hermitian = self.hermitian and other.hermitian
-            time_symm = self.time_symm and other.time_symm
-
-            A, E = joinAE(self, other)
-
             self.__class__(
-                A=A,
-                B=np.block([
-                    [self.B],
-                    [other.B]
-                ]),
-                C=np.block([[self.C, other.C]]),
-                D=self.D + other.D,
-                E=E,
-                hermitian=hermitian,
-                time_symm=time_symm,
+                self.ss + other.ss,
             )
         elif isinstance(other, siso.SISO):
             other = other.asSS
             warnings.warn(
-                "Implicit conversion to statespace for math. Use filt.asSS or SISO.ss(filt) to make explicit and suppress this warning"
+                "Implicit conversion to statespace for math. Use filt.asSS or SISO.statespace(filt) to make explicit and suppress this warning"
             )
             # now recurse on this method
             return self + other
@@ -499,7 +338,7 @@ class SISOStateSpace(siso.SISO):
         """
         if isinstance(other, numbers.Number):
             # convert to statespace form
-            other = ss(other)
+            other = statespace(other)
             # use commutativity of addition
             return self + other
 
@@ -511,31 +350,17 @@ class SISOStateSpace(siso.SISO):
         knownSS = False
         if isinstance(other, numbers.Number):
             # convert to statespace form
-            other = ss(other)
+            other = statespace(other)
             knownSS = True
 
         if knownSS or isinstance(other, siso.SISOStateSpace):
-            hermitian = self.hermitian and other.hermitian
-            time_symm = self.time_symm and other.time_symm
-
-            A, E = joinAE(self, other)
-
             self.__class__(
-                A=A,
-                B=np.block([
-                    [self.B],
-                    [-other.B]
-                ]),
-                C=np.block([[self.C, other.C]]),
-                D=self.D - other.D,
-                E=E,
-                hermitian=hermitian,
-                time_symm=time_symm,
+                ss=self.ss - other.ss,
             )
         elif isinstance(other, siso.SISO):
             other = other.asSS
             warnings.warn(
-                "Implicit conversion to statespace for math. Use filt.asSS or SISO.ss(filt) to make explicit and suppress this warning"
+                "Implicit conversion to statespace for math. Use filt.asSS or SISO.statespace(filt) to make explicit and suppress this warning"
             )
             # now recurse on this method
             return self - other
@@ -547,38 +372,24 @@ class SISOStateSpace(siso.SISO):
         knownSS = False
         if isinstance(other, numbers.Number):
             # convert to statespace form
-            other = ss(other)
+            other = statespace(other)
             knownSS = True
 
         if knownSS or isinstance(other, siso.SISOStateSpace):
-            hermitian = self.hermitian and other.hermitian
-            time_symm = self.time_symm and other.time_symm
-
-            A, E = joinAE(self, other)
-
             self.__class__(
-                A=A,
-                B=np.block([
-                    [-self.B],
-                    [other.B]
-                ]),
-                C=np.block([[self.C, other.C]]),
-                D=other.D - self.D,
-                E=E,
-                hermitian=hermitian,
-                time_symm=time_symm,
+                ss=other.ss - self.ss,
             )
         elif isinstance(other, siso.SISO):
             other = other.asSS
             warnings.warn(
-                "Implicit conversion to statespace for math. Use filt.asSS or SISO.ss(filt) to make explicit and suppress this warning"
+                "Implicit conversion to statespace for math. Use filt.asSS or SISO.statespace(filt) to make explicit and suppress this warning"
             )
             # now recurse on this method
             return self - other
         return NotImplemented
 
 
-def ss(
+def statespace(
     *args,
     hermitian=True,
     time_symm=False,
@@ -624,46 +435,17 @@ def ss(
     else:
         raise RuntimeError("Unrecognized argument format")
     return SISOStateSpace(
-        A, B, C, D, E,
-        dt=dt,
-        flags=flags,
+        RawStateSpace(
+            A, B, C, D, E,
+            dt=dt,
+            flags=flags,
+            hermitian=hermitian,
+            time_symm=time_symm,
+        ),
         fiducial=fiducial,
         fiducial_s=fiducial_s,
         fiducial_f=fiducial_f,
         fiducial_w=fiducial_w,
         fiducial_rtol=fiducial_rtol,
-        hermitian=hermitian,
-        time_symm=time_symm,
     )
 
-
-def joinAE(s, o):
-    """
-    Perform a join on the A and E matrices for two statespaces.
-    This is used for the binary add and sub operations
-    """
-    blU = np.zeros((s.A.shape[-2], o.A.shape[-1]))
-    blL = np.zeros((o.A.shape[-2], s.A.shape[-1]))
-
-    if s.E is None and o.E is None:
-        E = None
-    else:
-        if s.E is None:
-            sE = np.eye(s.A.shape[-2])
-            oE = o.E
-        elif o.E is None:
-            sE = s.E
-            oE = np.eye(o.A.shape[-2])
-        else:
-            sE = s.E
-            oE = o.E
-        E = np.block([
-            [sE,  blU],
-            [blL, oE]
-        ]),
-
-    A = np.block([
-        [s.A,  blU],
-        [blL, o.A]
-    ])
-    return A, E

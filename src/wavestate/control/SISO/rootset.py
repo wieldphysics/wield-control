@@ -370,7 +370,7 @@ class SDomainRootSet(object):
         strs.append("]")
         return ''.join(strs)
 
-    def response_lnG(self, X, h=1, lnG=0):
+    def fresponse_lnG(self, X, h=1, lnG=0):
         """
         returns the value as if it were generated from a polynomial with last
         coefficient 1 given a coefficient representation and the X_scale.

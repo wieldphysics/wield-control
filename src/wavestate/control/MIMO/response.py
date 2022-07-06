@@ -15,7 +15,7 @@ from . import mimo
 from .. import SISO
 
 
-class MIMOResponse(mimo.MIMO):
+class MIMOFResponse(mimo.MIMO):
     """
     Class to hold transfer function response of MIMO systems
     """

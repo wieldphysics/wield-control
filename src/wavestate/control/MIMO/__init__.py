@@ -9,5 +9,5 @@
 """
 
 from .mimo import MIMO
-from .ss import ss, MIMOStateSpace, ssjoinsum
-from .response import MIMOResponse
+from .ss import statespace, MIMOStateSpace, ssjoinsum
+from .response import MIMOFResponse
