@@ -11,7 +11,8 @@
 import numpy as np
 
 from .roots_matching import nearest_pairs
-from . import rootset
+from . import srootset
+from . import zrootset
 
 
 def Q_rank_calc(z, p):
@@ -41,10 +42,10 @@ def order_reduce_zpk(
     Q_rank_cutoff_unstable=None,
     reduce_c=True,
     reduce_r=False,
-    classifier = rootset.default_root_classifier
+    classifier = srootset.default_root_classifier
 ):
     classify = classifier.classify_function(
-        rootset.SDomainRootSet,
+        srootset.SDomainRootSet,
         hermitian=True,
         time_symm=False,
     )

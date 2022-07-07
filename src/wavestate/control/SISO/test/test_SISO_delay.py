@@ -181,6 +181,7 @@ def test_ZPK_various(zpk, tpath_join):
     F_Hz = logspaced(0.01 / delta_t, 2 / delta_t, 1000)
 
     filt = SISO.zpk(zpk, fiducial_rtol=1e-7)
+    print(filt)
 
     xfer1 = filt.fresponse(f=F_Hz).tf
     axB.ax0.semilogx(F_Hz, abs(xfer1), label="Direct ZPK")

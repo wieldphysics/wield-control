@@ -14,6 +14,7 @@ import numpy as np
 from ..statespace.dense import xfer_algorithms
 from ..statespace.dense import ss_algorithms
 from ..statespace import ssprint
+from ..SISO import util
 
 
 class RawStateSpace(object):
@@ -114,24 +115,21 @@ class RawStateSpace(object):
         )
         return ret
 
-    def fresponse_raw(self, *, f=None, w=None, s=None):
-        domain = None
-        if f is not None:
-            domain = 2j * np.pi * np.asarray(f)
-        if w is not None:
-            assert(domain is None)
-            domain = 1j * np.asarray(w)
-        if s is not None:
-            assert(domain is None)
-            domain = np.asarray(s)
-
+    def fresponse_raw(self, *, f=None, w=None, s=None, z=None):
+        domain = util.build_sorz(
+            f=f,
+            w=w,
+            s=s,
+            z=z,
+            dt=self.dt,
+        )
         return xfer_algorithms.ss2response_mimo(
             A=self.A,
             B=self.B,
             C=self.C,
             D=self.D,
             E=self.E,
-            s=domain,
+            sorz=domain,
         )
 
     def feedbackD(self, D):

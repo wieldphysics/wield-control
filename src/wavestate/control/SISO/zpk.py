@@ -10,17 +10,19 @@ Functions to create a SISO state space system from inputs.
 """
 import numbers
 import numpy as np
+import warnings
 
 from ..statespace.dense import zpk_algorithms
 
-from . import rootset
-from .rootset import SDomainRootSet
+from . import srootset
+from . import zrootset
 from . import siso
 from . import ss
+from . import util
 from . import response
 
 
-class ZPK(siso.SISO):
+class ZPK(siso.SISOCommonBase):
     """
     ZPK class to represent SISO Transfer functions.
 
@@ -31,15 +33,12 @@ class ZPK(siso.SISO):
 
     def __init__(
         self, *,
-        z: SDomainRootSet,
-        p: SDomainRootSet,
+        z: srootset.SDomainRootSet,
+        p: srootset.SDomainRootSet,
         k: numbers.Complex,
         hermitian: bool = True,
         time_symm: bool = False,
         dt=None,
-        fiducial_s=None,
-        fiducial_f=None,
-        fiducial_w=None,
         fiducial=None,
         fiducial_rtol=None,
     ):
@@ -50,8 +49,12 @@ class ZPK(siso.SISO):
 
         response: transfer function responses mapped to the response_w values
         """
-        assert(isinstance(z, SDomainRootSet))
-        assert(isinstance(p, SDomainRootSet))
+        if dt is None:
+            assert(isinstance(z, srootset.SDomainRootSet))
+            assert(isinstance(p, srootset.SDomainRootSet))
+        else:
+            assert(isinstance(z, zrootset.ZDomainRootSet))
+            assert(isinstance(p, zrootset.ZDomainRootSet))
 
         self.zeros = z
         self.poles = p
@@ -59,7 +62,7 @@ class ZPK(siso.SISO):
         self.hermitian = hermitian
         self.time_symm = time_symm
         self.dt = dt
-        
+
         if self.hermitian:
             assert(k.imag == 0)
 
@@ -77,11 +80,8 @@ class ZPK(siso.SISO):
             if self.time_symm:
                 assert(self.zeros.mirror_disc)
                 assert(self.poles.mirror_disc)
-        self.test_response(
-            s=fiducial_s,
-            f=fiducial_f,
-            w=fiducial_w,
-            response=fiducial,
+        self.test_fresponse(
+            fiducial=fiducial,
             rtol=fiducial_rtol,
             update=True,
         )
@@ -108,85 +108,29 @@ class ZPK(siso.SISO):
             return "zpk(k={k},\n    z = {z},\n    p = {p})".format(k=self.k, z=zstr, p=pstr)
         else:
             return "zpk(z={z}, p={p}, k={k})".format(k=self.k, z=zstr, p=pstr)
-        return 
-
-    def test_response(
-        self,
-        s=None,
-        f=None,
-        w=None,
-        response=None,
-        rtol=None,
-        update=False,
-    ):
-        domain_w = None
-        if f is not None:
-            domain_w = 2 * np.pi * np.asarray(f)
-        if w is not None:
-            assert(domain_w is None)
-            domain_w = np.asarray(w)
-        if s is not None:
-            assert(domain_w is None)
-            domain_w = np.asarray(s) / 1j
-
-        if domain_w is not None and len(domain_w) == 0:
-            if update:
-                self.fiducial = domain_w
-                self.fiducial_w = domain_w
-                self.fiducial_rtol = rtol
-                return
-            return
-
-        if rtol is None:
-            rtol = self.fiducial_rtol
-            if rtol is None:
-                rtol = self.__class__.fiducial_rtol
-
-        if domain_w is None:
-            # create a list of poiints at each resonance and zero, as well as 1 BW away
-            domain_w = [
-                self.zeros.r_line,
-                self.zeros.c_plane.imag,
-                abs(self.zeros.c_plane),
-                self.poles.r_line,
-                self.poles.c_plane.imag,
-                abs(self.poles.c_plane),
-            ]
-            # augment the list to include midpoints between all resonances
-            domain_w = np.sort(np.concatenate(domain_w)).real
-            domain_w = np.concatenate([domain_w, (domain_w[0:-1] + domain_w[1:])/2])
-            rt_rtol = rtol**0.5
-            domain_w += rt_rtol
-
-        self_response = self.fresponse(w=domain_w).tf
-
-        if response is not None:
-            if callable(response):
-                response = response(w=domain_w)
-            np.testing.assert_allclose(
-                self_response,
-                response,
-                atol=0,
-                rtol=rtol,
-                equal_nan=False,
-            )
-        else:
-            # give it one chance to select better points
-            select_bad = (~np.isfinite(self_response)) | (self_response == 0)
-            if update and np.any(select_bad):
-                if np.all(select_bad):
-                    domain_w = np.array([rt_rtol])
-                    self_response = self.fresponse(w=domain_w).tf
-                else:
-                    self_response = self_response[~select_bad]
-                    domain_w = domain_w[~select_bad]
-            response = self_response
-
-        if update:
-            self.fiducial = response
-            self.fiducial_w = domain_w
-            self.fiducial_rtol = rtol
         return
+
+    def _fiducial_w_set(self, rtol):
+        # create a list of poiints at each resonance and zero, as well as 1 BW away
+        rt_rtol = rtol**0.5
+        domain_w = [
+            self.zeros.r_line,
+            self.zeros.c_plane.imag,
+            abs(self.zeros.c_plane),
+            self.poles.r_line,
+            self.poles.c_plane.imag,
+            abs(self.poles.c_plane),
+        ]
+
+        # augment the list to include midpoints between all resonances
+        domain_w = np.sort(np.concatenate(domain_w)).real + rt_rtol
+        # and midpoints
+        domain_w = np.concatenate([domain_w, (domain_w[0:-1] + domain_w[1:])/2])
+
+        if len(domain_w) > self.N_MAX_FID:
+            warnings.warn(f"StateSpace is large (>{self.N_MAX_FID} states), using reduced response fiducial auditing heuristics. TODO to make this smarter", util.NumericalWarning)
+            domain_w = np.asarray([rt_rtol])
+        return domain_w
 
     def __iter__(self):
         """
@@ -208,8 +152,7 @@ class ZPK(siso.SISO):
             hermitian=self.hermitian,
             time_symm=self.time_symm,
             dt=self.dt,
-            fiducial=None,  # will have to rebuild the fiducial
-            fiducial_w=self.fiducial_w,
+            fiducial=self.fiducial.like_empty(),  # will have to rebuild the fiducial
             fiducial_rtol=self.fiducial_rtol,
         )
 
@@ -236,22 +179,27 @@ class ZPK(siso.SISO):
             hermitian=self.hermitian,
             time_symm=self.time_symm,
             fiducial=self.fiducial,
-            fiducial_w=self.fiducial_w,
             fiducial_rtol=self.fiducial_rtol,
             flags={"schur_real_upper", "hessenburg_upper"},
         )
         return self._SS
 
-    def fresponse(self, *, f=None, w=None, s=None, with_lnG=False):
-        domain = None
-        if f is not None:
-            domain = 2j * np.pi * np.asarray(f)
-        if w is not None:
-            assert(domain is None)
-            domain = 1j * np.asarray(w)
-        if s is not None:
-            assert(domain is None)
-            domain = np.asarray(s)
+    def fresponse(
+            self,
+            *,
+            f=None,
+            w=None,
+            s=None,
+            z=None,
+            with_lnG=False
+    ):
+        domain = util.build_sorz(
+            f=f,
+            w=w,
+            s=s,
+            z=z,
+            dt=self.dt,
+        )
 
         # return an empty response
         # attempting to compute it on
@@ -292,12 +240,12 @@ class ZPK(siso.SISO):
             other = other.asZPK
             hermitian = self.hermitian and other.hermitian
             time_symm = self.time_symm and other.time_symm
-            if len(self.fiducial_w) + len(other.fiducial_w) < self.N_MAX_FID:
+            if len(self.fiducial) + len(other.fiducial) < self.N_MAX_FID:
                 slc = slice(None, None, 1)
             else:
                 slc = slice(None, None, 2)
-            fid_other_self = other.fresponse(w=self.fiducial_w[slc]).tf
-            fid_self_other = self.fresponse(w=other.fiducial_w[slc]).tf
+            fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
+            fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
             assert(self.dt == other.dt)
             return self.__class__(
                 z=self.zeros * other.zeros,
@@ -306,14 +254,7 @@ class ZPK(siso.SISO):
                 hermitian=hermitian,
                 time_symm=time_symm,
                 dt=self.dt,
-                fiducial=np.concatenate([
-                    self.fiducial[slc] * fid_other_self,
-                    fid_self_other * other.fiducial[slc]
-                ]),
-                fiducial_w=np.concatenate([
-                    self.fiducial_w[slc],
-                    other.fiducial_w[slc]
-                ]),
+                fiducial=(self.fiducial[slc] * fid_other_self).concatenate(fid_self_other * other.fiducial[slc]),
                 fiducial_rtol=self.fiducial_rtol,
             )
         elif isinstance(other, numbers.Number):
@@ -325,7 +266,6 @@ class ZPK(siso.SISO):
                 time_symm=self.time_symm,
                 dt=self.dt,
                 fiducial=self.fiducial * other,
-                fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
             )
         else:
@@ -343,7 +283,6 @@ class ZPK(siso.SISO):
                 time_symm=self.time_symm,
                 dt=self.dt,
                 fiducial=other * self.fiducial,
-                fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
             )
         else:
@@ -356,12 +295,12 @@ class ZPK(siso.SISO):
             other = other.asZPK
             hermitian = self.hermitian and other.hermitian
             time_symm = self.time_symm and other.time_symm
-            if len(self.fiducial_w) + len(other.fiducial_w) < self.N_MAX_FID:
+            if len(self.fiducial) + len(other.fiducial) < self.N_MAX_FID:
                 slc = slice(None, None, 1)
             else:
                 slc = slice(None, None, 2)
-            fid_other_self = other.fresponse(w=self.fiducial_w[slc]).tf
-            fid_self_other = self.fresponse(w=other.fiducial_w[slc]).tf
+            fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
+            fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
             assert(self.dt == other.dt)
             return self.__class__(
                 z=self.zeros * other.poles,
@@ -370,14 +309,7 @@ class ZPK(siso.SISO):
                 hermitian=hermitian,
                 time_symm=time_symm,
                 dt=self.dt,
-                fiducial=np.concatenate([
-                    self.fiducial[slc] / fid_other_self,
-                    fid_self_other / other.fiducial[slc]
-                ]),
-                fiducial_w=np.concatenate([
-                    self.fiducial_w[slc],
-                    other.fiducial_w[slc]
-                ]),
+                fiducial=(self.fiducial[slc] / fid_other_self).concatenate(fid_self_other / other.fiducial[slc]),
                 fiducial_rtol=self.fiducial_rtol,
             )
         elif isinstance(other, numbers.Number):
@@ -389,7 +321,6 @@ class ZPK(siso.SISO):
                 time_symm=self.time_symm,
                 dt=self.dt,
                 fiducial=self.fiducial / other,
-                fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
             )
         else:
@@ -407,7 +338,6 @@ class ZPK(siso.SISO):
                 time_symm=self.time_symm,
                 dt=self.dt,
                 fiducial=other / self.fiducial,
-                fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
             )
         else:
@@ -422,7 +352,6 @@ class ZPK(siso.SISO):
             time_symm=self.time_symm,
             dt=self.dt,
             fiducial=1/self.fiducial,
-            fiducial_w=self.fiducial_w,
             fiducial_rtol=self.fiducial_rtol,
         )
 
@@ -488,7 +417,6 @@ class ZPK(siso.SISO):
             time_symm=False,
             dt=self.dt,
             fiducial=None,
-            fiducial_w=self.fiducial_w,
             fiducial_rtol=self.fiducial_rtol,
         )
 
@@ -509,6 +437,7 @@ def zpk(
         fiducial_w=None,
         fiducial_f=None,
         fiducial_s=None,
+        fiducial_z=None,
         fiducial_rtol=None,
         hermitian=True,
         time_symm=False,
@@ -549,13 +478,13 @@ def zpk(
 
     """
     if dt is None:
-        tRootSet = SDomainRootSet
+        tRootSet = srootset.SDomainRootSet
+        if classifier is None:
+            classifier = srootset.default_root_classifier
     else:
-        raise NotImplementedError("Z Domain not yet implemented")
-        # tRootSet = ZDomainRootSet
-
-    if classifier is None:
-        classifier = rootset.default_root_classifier
+        tRootSet = zrootset.ZDomainRootSet
+        if classifier is None:
+            classifier = zrootset.default_root_classifier
 
     ZPKprev = None
     if len(args) == 0:
@@ -659,21 +588,27 @@ def zpk(
         dt=dt,
         hermitian=hermitian,
         time_symm=time_symm,
-        fiducial_w=(),
+        fiducial=None,
         fiducial_rtol=fiducial_rtol,
     )
     if ZPKprev:
         ZPKnew = ZPKprev * ZPKnew
 
+    fiducial = util.build_fiducial(
+        fiducial=fiducial,
+        fiducial_w=fiducial_w,
+        fiducial_f=fiducial_f,
+        fiducial_s=fiducial_s,
+        fiducial_z=fiducial_z,
+        dt=dt,
+    )
     if k_was_None:
-        ZPKnew.test_response(
-            s=fiducial_s,
-            f=fiducial_f,
-            w=fiducial_w,
+        ZPKnew.test_fresponse(
+            fiducial=fiducial.like_empty(),
             rtol=fiducial_rtol,
             update=True,
         )
-        norm_rel = fiducial / ZPKnew.fiducial
+        norm_rel = fiducial.tf / ZPKnew.fiducial.tf
         norm_med = np.nanmedian(abs(norm_rel))
         if np.isfinite(norm_med):
             ZPKnew = ZPKnew * norm_med
@@ -685,11 +620,8 @@ def zpk(
         else:
             assert(np.all(np.isfinite(ZPKnew.fiducial)))
     else:
-        ZPKnew.test_response(
-            response=fiducial,
-            s=fiducial_s,
-            f=fiducial_f,
-            w=fiducial_w,
+        ZPKnew.test_fresponse(
+            fiducial=fiducial,
             update=True,
         )
 

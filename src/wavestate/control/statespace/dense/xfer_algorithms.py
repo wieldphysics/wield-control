@@ -17,8 +17,8 @@ def ss2xfer(A, B, C, D, E=None, F_Hz=None, idx_in=None, idx_out=None):
     )
 
 
-def ss2response_siso(A, B, C, D, E=None, s=None, idx_in=None, idx_out=None):
-    s = np.asarray(s)
+def ss2response_siso(A, B, C, D, E=None, sorz=None, idx_in=None, idx_out=None):
+    sorz = np.asarray(sorz)
 
     if idx_in is None:
         if B.shape[1] == 1:
@@ -34,14 +34,14 @@ def ss2response_siso(A, B, C, D, E=None, s=None, idx_in=None, idx_out=None):
     B = B[:, idx_in: idx_in + 1]
     C = C[idx_out: idx_out + 1, :]
     D = D[idx_out: idx_out + 1, idx_in: idx_in + 1]
-    return ss2response_mimo(A, B, C, D, E, s=s)[..., 0, 0]
+    return ss2response_mimo(A, B, C, D, E, sorz=sorz)[..., 0, 0]
 
 
-def ss2response_mimo(A, B, C, D, E=None, s=None):
-    s = np.asarray(s)
+def ss2response_mimo(A, B, C, D, E=None, sorz=None):
+    sorz = np.asarray(sorz)
 
     if E is None:
-        S = np.eye(A.shape[0]).reshape(1, *A.shape) * s.reshape(-1, 1, 1)
+        S = np.eye(A.shape[0]).reshape(1, *A.shape) * sorz.reshape(-1, 1, 1)
         return (
             np.matmul(C, np.matmul(np.linalg.inv(S - A.reshape(1, *A.shape)), B)) + D
         )
@@ -50,7 +50,7 @@ def ss2response_mimo(A, B, C, D, E=None, s=None):
             np.matmul(
                 C,
                 np.matmul(
-                    np.linalg.inv(E * s.reshape(-1, 1, 1) - A.reshape(1, *A.shape)),
+                    np.linalg.inv(E * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape)),
                     B
                 ),
             ) + D

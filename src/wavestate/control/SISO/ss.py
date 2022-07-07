@@ -18,15 +18,12 @@ from ..statespace.ss import RawStateSpaceUser, RawStateSpace
 
 from .. import MIMO
 from . import siso
+from . import util
 from . import zpk
 from . import response
 
 
-class NumericalWarning(UserWarning):
-    pass
-
-
-class SISOStateSpace(RawStateSpaceUser, siso.SISO):
+class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
     fiducial_rtol = 1e-8
     """
     class to represent SISO Transfer functions using dense state space matrix representations.
@@ -34,9 +31,6 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISO):
     def __init__(
         self,
         ss,
-        fiducial_s=None,
-        fiducial_f=None,
-        fiducial_w=None,
         fiducial=None,
         fiducial_rtol=None,
     ):
@@ -45,108 +39,35 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISO):
         """
         super().__init__(ss=ss)
 
-        domain_w = None
-        if fiducial_f is not None:
-            domain_w = 2 * np.pi * np.asarray(fiducial_f)
-        if fiducial_w is not None:
-            assert(domain_w is None)
-            domain_w = np.asarray(fiducial_w)
-        if fiducial_s is not None:
-            assert(domain_w is None)
-            domain_w = np.asarray(fiducial_s) / 1j
-
-        self.test_response(
-            s=fiducial_s,
-            f=fiducial_f,
-            w=fiducial_w,
-            response=fiducial,
+        self.test_fresponse(
+            fiducial=fiducial,
             rtol=fiducial_rtol,
             update=True,
         )
         return
 
-    def test_response(
-        self,
-        s=None,
-        f=None,
-        w=None,
-        response=None,
-        rtol=None,
-        update=False,
-    ):
-        domain_w = None
-        if f is not None:
-            domain_w = 2 * np.pi * np.asarray(f)
-        if w is not None:
-            assert(domain_w is None)
-            domain_w = np.asarray(w)
-        if s is not None:
-            assert(domain_w is None)
-            domain_w = np.asarray(s) / 1j
+    def _fiducial_w_set(self, rtol):
+        # create a list of poiints at each resonance and zero, as well as 1 BW away
+        rt_rtol = rtol**0.5
+        if self.A.shape[-1] < self.N_MAX_FID:
+            z, p = self._zp
 
-        if domain_w is not None and len(domain_w) == 0:
-            if update:
-                self.fiducial = domain_w
-                self.fiducial_w = domain_w
-                self.fiducial_rtol = rtol
-                return
-            return
+            zr = z[abs(z.imag) < 1e-10]
+            zc = z[z.imag > 1e-10]
+            pr = p[abs(p.imag) < 1e-10]
+            pc = p[p.imag > 1e-10]
 
-        if rtol is None:
-            rtol = self.fiducial_rtol
-            if rtol is None:
-                rtol = self.__class__.fiducial_rtol
-
-        if domain_w is None:
-            # create a list of poiints at each resonance and zero, as well as 1 BW away
-            rt_rtol = rtol**0.5
-            if self.A.shape[-1] < self.N_MAX_FID:
-                z, p = self._zp
-
-                zr = z[abs(z.imag) < 1e-10]
-                zc = z[z.imag > 1e-10]
-                pr = p[abs(p.imag) < 1e-10]
-                pc = p[p.imag > 1e-10]
-
-                # augment the list to include midpoints between all resonances
-                domain_w = np.sort(np.concatenate([
-                    zr, zc.imag, abs(zc.imag) + abs(zc.real),
-                    pr, pc.imag, abs(pc.imag) + abs(pc.real),
-                ])).real + rt_rtol
-                # and midpoints
-                domain_w = np.concatenate([domain_w, (domain_w[0:-1] + domain_w[1:])/2])
-            else:
-                warnings.warn(f"StateSpace is large (>{self.N_MAX_FID} states), using reduced response fiducial auditing heuristics. TODO to make this smarter", NumericalWarning)
-                domain_w = np.asarray([rt_rtol])
-
-        self_response = self.fresponse(w=domain_w).tf
-        if response is not None:
-            if callable(response):
-                response = response(w=domain_w)
-            np.testing.assert_allclose(
-                self_response,
-                response,
-                atol=0,
-                rtol=rtol,
-                equal_nan=False,
-            )
+            # augment the list to include midpoints between all resonances
+            domain_w = np.sort(np.concatenate([
+                zr, zc.imag, abs(zc.imag) + abs(zc.real),
+                pr, pc.imag, abs(pc.imag) + abs(pc.real),
+            ])).real + rt_rtol
+            # and midpoints
+            domain_w = np.concatenate([domain_w, (domain_w[0:-1] + domain_w[1:])/2])
         else:
-            # give it one chance to select better points
-            select_bad = (~np.isfinite(self_response)) | (self_response == 0)
-            if update and np.any(select_bad):
-                if np.all(select_bad):
-                    domain_w = np.array([rt_rtol])
-                    self_response = self.fresponse(w=domain_w).tf
-                else:
-                    self_response = self_response[~select_bad]
-                    domain_w = domain_w[~select_bad]
-            response = self_response
-
-        if update:
-            self.fiducial = response
-            self.fiducial_w = domain_w
-            self.fiducial_rtol = rtol
-        return
+            warnings.warn(f"StateSpace is large (>{self.N_MAX_FID} states), using reduced response fiducial auditing heuristics. TODO to make this smarter", util.NumericalWarning)
+            domain_w = np.asarray([rt_rtol])
+        return domain_w
 
     _zp_tup = None
 
@@ -184,7 +105,6 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISO):
             time_symm=self.ss.time_symm,
             convention='scipy',
             fiducial=self.fiducial,
-            fiducial_w=self.fiducial_w,
             fiducial_rtol=self.fiducial_rtol,
         )
         return self._ZPK
@@ -206,13 +126,14 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISO):
             outputs={row: 0},
         )
 
-    def fresponse(self, f=None, w=None, s=None):
-        tf = self.ss.fresponse_raw(f=f, s=s, w=w)[..., 0, 0]
+    def fresponse(self, f=None, w=None, s=None, z=None):
+        tf = self.ss.fresponse_raw(f=f, w=w, s=s, z=z)[..., 0, 0]
         return response.SISOFResponse(
             tf=tf,
-            w=w, f=f, s=s,
+            w=w, f=f, s=s, z=z,
             hermitian=self.ss.hermitian,
             time_symm=self.ss.time_symm,
+            dt=self.dt,
             snr=None,
         )
 
@@ -220,7 +141,6 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISO):
         return self.__class__(
             self.ss.inv(),
             fiducial=1/self.fiducial,
-            fiducial_w=self.fiducial_w,
             fiducial_rtol=self.fiducial_rtol,
         )
 
@@ -230,30 +150,22 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISO):
         if isinstance(other, siso.SISO):
             other = other.asSS
 
-            if len(self.fiducial_w) + len(other.fiducial_w) < self.N_MAX_FID:
+            if len(self.fiducial) + len(other.fiducial) < self.N_MAX_FID:
                 slc = slice(None, None, 1)
             else:
                 slc = slice(None, None, 2)
-            fid_other_self = other.fresponse(w=self.fiducial_w[slc]).tf
-            fid_self_other = self.fresponse(w=other.fiducial_w[slc]).tf
+            fid_other_self = other.fresponse(**self.domain_kw(slc))
+            fid_self_other = self.fresponse(**other.domain_kw(slc))
 
             return self.__class__(
                 ss=self.ss @ other.ss,
-                fiducial=np.concatenate([
-                    self.fiducial[slc] * fid_other_self,
-                    fid_self_other * other.fiducial[slc]
-                ]),
-                fiducial_w=np.concatenate([
-                    self.fiducial_w[slc],
-                    other.fiducial_w[slc]
-                ]),
+                fiducial=(self.fiducial[slc] * fid_other_self).concatenate(fid_self_other * other.fiducial[slc]),
                 fiducial_rtol=self.fiducial_rtol,
             )
         elif isinstance(other, numbers.Number):
             return self.__class__(
                 ss=self.ss * other,
                 fiducial=self.fiducial * other,
-                fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
             )
         else:
@@ -266,7 +178,6 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISO):
             return self.__class__(
                 ss=other * self.ss,
                 fiducial=other * self.fiducial,
-                fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
             )
         else:
@@ -279,7 +190,6 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISO):
             return self.__class__(
                 self.ss / other,
                 fiducial=self.fiducial / other,
-                fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
             )
         else:
@@ -292,7 +202,6 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISO):
             return self.__class__(
                 ss=other * self.ss.inv(),
                 fiducial=other / self.fiducial,
-                fiducial_w=self.fiducial_w,
                 fiducial_rtol=self.fiducial_rtol,
             )
         else:
@@ -399,6 +308,7 @@ def statespace(
     fiducial_w=None,
     fiducial_f=None,
     fiducial_s=None,
+    fiducial_z=None,
     fiducial_rtol=None,
 ):
     """
@@ -434,8 +344,17 @@ def statespace(
         A, B, C, D, E = args
     else:
         raise RuntimeError("Unrecognized argument format")
+
+    fiducial = util.build_fiducial(
+        fiducial=fiducial,
+        fiducial_w=fiducial_w,
+        fiducial_f=fiducial_f,
+        fiducial_s=fiducial_s,
+        fiducial_z=fiducial_z,
+        dt=dt,
+    )
     return SISOStateSpace(
-        RawStateSpace(
+        ss=RawStateSpace(
             A, B, C, D, E,
             dt=dt,
             flags=flags,
@@ -443,9 +362,6 @@ def statespace(
             time_symm=time_symm,
         ),
         fiducial=fiducial,
-        fiducial_s=fiducial_s,
-        fiducial_f=fiducial_f,
-        fiducial_w=fiducial_w,
         fiducial_rtol=fiducial_rtol,
     )
 

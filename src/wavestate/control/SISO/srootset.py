@@ -52,11 +52,6 @@ class SDomainRootSet(object):
             time_symm = mirror_imag
             assert(mirror_imag is not None)
 
-        if z_point is None:
-            z_point = np.array([])
-        elif isinstance(z_point, numbers.Integral):
-            z_point = np.zeros(z_point)
-
         if r_line is None:
             r_line = np.array([])
         else:
@@ -76,7 +71,7 @@ class SDomainRootSet(object):
             assert(r_line is not None)
             c_plane = np.asarray(c_plane)
             assert(np.all(c_plane.imag > 0))
-        
+
         if mirror_imag:
             assert(i_line is not None)
             assert(np.all(c_plane.real < 0))
@@ -84,6 +79,11 @@ class SDomainRootSet(object):
                 assert(z_point is not None)
                 assert(np.all(i_line.imag > 0))
                 assert(np.all(r_line.real < 0))
+
+        if z_point is None:
+            z_point = np.array([])
+        elif isinstance(z_point, numbers.Integral):
+            z_point = np.zeros(z_point)
 
         self.c_plane = c_plane
         self.r_line = r_line
@@ -108,7 +108,7 @@ class SDomainRootSet(object):
                     yield -root
                 for root in self.i_line:
                     yield root
-                    yield -root
+                    yield root.conjugate()
                 for root in self.c_plane:
                     yield root
                     yield root.conjugate()
@@ -119,7 +119,7 @@ class SDomainRootSet(object):
                     yield root
                 for root in self.i_line:
                     yield root
-                    yield -root
+                    yield root.conjugate()
                 for root in self.c_plane:
                     yield root
                     yield root.conjugate()
@@ -176,13 +176,16 @@ class SDomainRootSet(object):
     def str_iter(self, divide_by=1, real_format_func=None, pos_format_func=None):
         if real_format_func is None:
             def real_format_func(val):
-                return "{}".format(val)
-
-            def real_format_func(val):
+                vstr = str(val)
+                if len(vstr) < 5:
+                    return vstr
                 return "{: < #22.16g}".format(val)
 
             if pos_format_func is None:
                 def pos_format_func(val):
+                    vstr = str(val)
+                    if len(vstr) < 5:
+                        return vstr
                     return "{: <#22.16g}".format(val)
         else:
 
@@ -577,7 +580,7 @@ class RootClassifiers:
         rPB = nearest_pairs(roots_r[select_neg], -roots_r[~select_neg])
 
         # TODO, there is no lax_line_tol for the roots_r mirroring
-        roots_u = roots_u + list(rPB.l1_remain) + [r.conjugate() for r in rPB.l2_remain]
+        roots_u = roots_u + list(rPB.l1_remain) + [-r for r in rPB.l2_remain]
 
         roots_r = []
         for r1, r2 in rPB.r12_list:
@@ -599,7 +602,6 @@ class RootClassifiers:
             u=roots_u,
             z=z,
         )
-
 
     def classify_function(
             self,

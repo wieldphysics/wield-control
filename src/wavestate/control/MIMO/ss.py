@@ -160,7 +160,6 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
             time_symm=self.time_symm,
             dt=self.dt,
         )
-        print("SHAPE", self.D.shape, ret.D.shape)
         return ret
 
     def rename(self, renames, which='both'):
