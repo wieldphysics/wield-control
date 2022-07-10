@@ -51,6 +51,10 @@ def ss2zp(
             idx_out = 0
         else:
             raise RuntimeError("Must specify idx_in if C indicates SIMO/MIMO system")
+
+    if A.shape[-2:] == (0, 0):
+        return np.asarray([]), np.asarray([])
+    
     B = B[:, idx_in: idx_in + 1]
     C = C[idx_out: idx_out + 1, :]
     D = D[idx_out: idx_out + 1, idx_in: idx_in + 1]

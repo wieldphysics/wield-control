@@ -38,6 +38,7 @@ class RawStateSpace(object):
         B = np.asarray(B)
         C = np.asarray(C)
         D = np.asarray(D)
+        assert(A.shape[-1] == A.shape[-2])
         if E is not None:
             E = np.asarray(E)
 
@@ -277,18 +278,7 @@ class RawStateSpace(object):
         """
         knownSS = False
         if isinstance(other, numbers.Number):
-            other = np.asarray(other)
-            assert(self.is_square())
-            other_D = np.eye(self.square_size()) * other
-            other = self.__class__(
-                A=np.array([[]]),
-                B=np.array([[]]),
-                C=np.array([[]]),
-                D=other_D,
-                hermitian=(other.imag == 0),
-                time_symm=True,
-                dt=self.dt
-            )
+            other = _number2D_like(self, other)
             # convert to statespace form
             knownSS = True
 
@@ -299,7 +289,7 @@ class RawStateSpace(object):
             A, E = joinAE(self, other)
             assert(self.dt == other.dt)
 
-            self.__class__(
+            return self.__class__(
                 A=A,
                 B=np.block([
                     [self.B],
@@ -318,18 +308,7 @@ class RawStateSpace(object):
         """
         """
         if isinstance(other, numbers.Number):
-            other = np.asarray(other)
-            assert(self.is_square())
-            other_D = np.eye(self.square_size()) * other
-            other = self.__class__(
-                A=np.array([[]]),
-                B=np.array([[]]),
-                C=np.array([[]]),
-                D=other_D,
-                hermitian=(other.imag == 0),
-                time_symm=True,
-                dt=self.dt
-            )
+            other = _number2D_like(self, other)
             # convert to statespace form
             return other + self
 
@@ -340,18 +319,7 @@ class RawStateSpace(object):
         """
         knownSS = False
         if isinstance(other, numbers.Number):
-            other = np.asarray(other)
-            assert(self.is_square())
-            other_D = np.eye(self.square_size()) * other
-            other = self.__class__(
-                A=np.array([[]]),
-                B=np.array([[]]),
-                C=np.array([[]]),
-                D=other_D,
-                hermitian=(other.imag == 0),
-                time_symm=True,
-                dt=self.dt
-            )
+            other = _number2D_like(self, other)
             # convert to statespace form
             knownSS = True
 
@@ -361,7 +329,7 @@ class RawStateSpace(object):
 
             A, E = joinAE(self, other)
 
-            self.__class__(
+            return self.__class__(
                 A=A,
                 B=np.block([
                     [self.B],
@@ -380,19 +348,8 @@ class RawStateSpace(object):
         """
         knownSS = False
         if isinstance(other, numbers.Number):
-            other = np.asarray(other)
-            assert(self.is_square())
-            other_D = np.eye(self.square_size()) * other
-            other = self.__class__(
-                A=np.array([[]]),
-                B=np.array([[]]),
-                C=np.array([[]]),
-                D=other_D,
-                hermitian=(other.imag == 0),
-                time_symm=True,
-                dt=self.dt
-            )
             # convert to statespace form
+            other = _number2D_like(self, other)
             knownSS = True
 
         if knownSS or isinstance(other, RawStateSpace):
@@ -401,7 +358,7 @@ class RawStateSpace(object):
 
             A, E = joinAE(self, other)
 
-            self.__class__(
+            return self.__class__(
                 A=A,
                 B=np.block([
                     [-self.B],
@@ -511,3 +468,19 @@ def joinAE(s, o):
     ])
     return A, E
 
+
+def _number2D_like(self, other):
+    other = np.asarray(other)
+    assert(self.is_square())
+    size = self.square_size()
+    other_D = np.eye(size) * other
+    other = self.__class__(
+        A=np.array([[]]).reshape(0, 0),
+        B=np.array([[]]).reshape(0, size),
+        C=np.array([[]]).reshape(size, 0),
+        D=other_D,
+        hermitian=(other.imag == 0),
+        time_symm=True,
+        dt=self.dt
+    )
+    return other

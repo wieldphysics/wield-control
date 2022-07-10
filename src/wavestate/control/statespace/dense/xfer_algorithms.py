@@ -40,6 +40,10 @@ def ss2response_siso(A, B, C, D, E=None, sorz=None, idx_in=None, idx_out=None):
 def ss2response_mimo(A, B, C, D, E=None, sorz=None):
     sorz = np.asarray(sorz)
 
+    if A.shape[-2:] == (0, 0):
+        print("BCAST", A.shape, D.shape)
+        return np.broadcast_to(D, sorz.shape + D.shape[-2:])
+
     if E is None:
         S = np.eye(A.shape[0]).reshape(1, *A.shape) * sorz.reshape(-1, 1, 1)
         return (

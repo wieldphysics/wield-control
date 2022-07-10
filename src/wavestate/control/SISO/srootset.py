@@ -174,17 +174,21 @@ class SDomainRootSet(object):
         return length
 
     def str_iter(self, divide_by=1, real_format_func=None, pos_format_func=None):
+        def div_map(val):
+            for v in val:
+                yield v / divide_by
+
         if real_format_func is None:
             def real_format_func(val):
                 vstr = str(val)
-                if len(vstr) < 5:
+                if len(vstr) < 8:
                     return vstr
                 return "{: < #22.16g}".format(val)
 
             if pos_format_func is None:
                 def pos_format_func(val):
                     vstr = str(val)
-                    if len(vstr) < 5:
+                    if len(vstr) < 8:
                         return vstr
                     return "{: <#22.16g}".format(val)
         else:
@@ -197,31 +201,31 @@ class SDomainRootSet(object):
 
         if self.mirror_real:
             if self.mirror_imag:
-                for root in self.r_line:
+                for root in div_map(self.r_line):
                     yield "±{}".format(pos_format_func(-root.real).rstrip())
-                for root in self.i_line:
+                for root in div_map(self.i_line):
                     yield "±{}j".format(pos_format_func(root.imag).rstrip())
-                for root in self.c_plane:
+                for root in div_map(self.c_plane):
                     yield "±{} ± {}j".format(
                         pos_format_func(-root.real),
                         pos_format_func(root.imag).rstrip(),
                     )
             else:
-                for root in self.r_line:
+                for root in div_map(self.r_line):
                     yield "{}".format(real_format_func(root.real).rstrip())
-                for root in self.i_line:
+                for root in div_map(self.i_line):
                     yield "±{}j".format(pos_format_func(root.imag).rstrip())
-                for root in self.c_plane:
+                for root in div_map(self.c_plane):
                     yield "{} ± {}j".format(
                         real_format_func(root.real),
                         pos_format_func(root.imag).rstrip(),
                     )
         elif self.mirror_imag:
-            for root in self.r_line:
+            for root in div_map(self.r_line):
                 yield "±{}".format(pos_format_func(-root.real).rstrip())
-            for root in self.i_line:
+            for root in div_map(self.i_line):
                 yield "{}j".format(real_format_func(root.imag).rstrip())
-            for root in self.c_plane:
+            for root in div_map(self.c_plane):
                 if root.imag > 0:
                     yield "±({} + {}j)".format(
                         pos_format_func(-root.real),
@@ -233,11 +237,11 @@ class SDomainRootSet(object):
                         pos_format_func(-root.imag).rstrip(),
                     )
         else:
-            for root in self.r_line:
+            for root in div_map(self.r_line):
                 yield "{}".format(real_format_func(root.real).rstrip())
-            for root in self.i_line:
+            for root in div_map(self.i_line):
                 yield "{}j".format(real_format_func(root.imag).rstrip())
-            for root in self.c_plane:
+            for root in div_map(self.c_plane):
                 if root.imag > 0:
                     yield "{} + {}j".format(
                         real_format_func(-root.real),
@@ -614,14 +618,14 @@ class RootClassifiers:
             if time_symm:
                 def to_rootset(roots, rtype):
                     b = self.R2MR(roots)
-                    if b.u:
-                        raise RuntimeError(f"Unmatched {rtype}")
+                    if len(b.u) > 0:
+                        raise RuntimeError(f"Unmatched {rtype} while assuming Hermitian filter: {b.u}")
                     b = self.R2MI(
                         roots_u=b.c,
                         roots_r=b.r,
                     )
-                    if b.u:
-                        raise RuntimeError(f"Unmatched {rtype}")
+                    if len(b.u) > 0:
+                        raise RuntimeError(f"Unmatched {rtype} while assuming Time symmetric filter: {b.u}")
                     return tRootSet(
                         c_plane=b.c,
                         r_line=b.r,
@@ -633,8 +637,8 @@ class RootClassifiers:
             else:
                 def to_rootset(roots, rtype):
                     b = self.R2MR(roots)
-                    if b.u:
-                        raise RuntimeError(f"Unmatched {rtype}")
+                    if len(b.u) > 0:
+                        raise RuntimeError(f"Unmatched {rtype} while assuming Hermitian filter: {b.u}")
                     return tRootSet(
                         c_plane=b.c,
                         r_line=b.r,
@@ -645,8 +649,8 @@ class RootClassifiers:
             if time_symm:
                 def to_rootset(roots, rtype):
                     b = self.R2MI(roots)
-                    if b.u:
-                        raise RuntimeError(f"Unmatched {rtype}")
+                    if len(b.u) > 0:
+                        raise RuntimeError(f"Unmatched {rtype} while assuming time symmetry (mirroring over imaginary line)")
                     return tRootSet(
                         c_plane=b.c,
                         i_line=b.i,

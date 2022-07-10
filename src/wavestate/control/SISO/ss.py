@@ -230,7 +230,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             knownSS = True
 
         if knownSS or isinstance(other, siso.SISOStateSpace):
-            self.__class__(
+            return self.__class__(
                 self.ss + other.ss,
             )
         elif isinstance(other, siso.SISO):
@@ -263,7 +263,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             knownSS = True
 
         if knownSS or isinstance(other, siso.SISOStateSpace):
-            self.__class__(
+            return self.__class__(
                 ss=self.ss - other.ss,
             )
         elif isinstance(other, siso.SISO):
@@ -285,7 +285,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             knownSS = True
 
         if knownSS or isinstance(other, siso.SISOStateSpace):
-            self.__class__(
+            return self.__class__(
                 ss=other.ss - self.ss,
             )
         elif isinstance(other, siso.SISO):
@@ -324,9 +324,9 @@ def statespace(
         elif isinstance(arg, (tuple, list)):
             A, B, C, D, E = arg
         elif isinstance(arg, numbers.Number):
-            A = np.asarray([[]])
-            B = np.asarray([[]])
-            C = np.asarray([[]])
+            A = np.asarray([[]]).reshape(0, 0)
+            B = np.asarray([[]]).reshape(0, 1)
+            C = np.asarray([[]]).reshape(1, 0)
             D = np.asarray([[arg]])
             E = None
             arg = np.asarray(arg)

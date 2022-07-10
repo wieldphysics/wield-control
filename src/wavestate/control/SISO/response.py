@@ -393,10 +393,10 @@ class SISOFResponse(siso.SISO):
         """
         if deg:
             min = max - 360
-            return (np.angle(self.tf, deg=deg) + min) % 360 - min
+            return (np.angle(self.tf, deg=deg) - min) % 360 + min
         else:
             min = max - (2 * np.pi)
-            return (np.angle(self.tf, deg=deg) + min) % (2 * np.pi) - min
+            return (np.angle(self.tf, deg=deg) + min) % (2 * np.pi) + min
 
     def domain_angle_cut(self, max=90, arg='f', deg=True):
         """
@@ -420,7 +420,7 @@ class SISOFResponse(siso.SISO):
         ang = self.angle(max=max, deg=deg)
 
         snip = abs(ang[1:] - ang[:-1]) > disc_dist
-        argsnip = np.argwhere(snip)
+        argsnip = np.argwhere(snip)[:, 0]
 
         domain_cuts = []
         angle_cuts = []

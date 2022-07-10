@@ -222,6 +222,32 @@ def test_ZPK_various(zpk, tpath_join):
     np.testing.assert_almost_equal(xfer4, 1/xfer4b)
     np.testing.assert_almost_equal(xfer4, 1/xfer4c)
 
+def test_ZPK_delay_math(tpath_join):
+    """
+    Test the conversions to and from ZPK representation and statespace representation
+    using a delay filter
+    """
+    length_m = 3995
+    delta_t = length_m / c_m_s
+    delta_t = 1
+    axB = mplfigB(Nrows=1)
+    F_Hz = logspaced(0.01 / delta_t, 2 / delta_t, 1000)
+
+    filt = bessel_delay_ZPK(delta_t, order=50)
+
+    fr = filt.fresponse(f=F_Hz)
+    axB.ax0.semilogx(*fr.fplot_mag, label="SS2ZPK")
+    #axB.ax1.semilogx(fr.fplot_deg135, label="SS2ZPK")
+
+    fr2 = (1 / (filt.asSS)).fresponse(f=F_Hz)
+    #
+    fr2 = (1 / (1 - .9 * filt.asSS)).fresponse(f=F_Hz)
+    axB.ax0.semilogx(*fr2.fplot_mag, label="SS2ZPK")
+    #axB.ax1.semilogx(fr2.fplot_deg, label="SS2ZPK")
+
+    axB.ax0.legend()
+    axB.save(tpath_join("test_ZPK.pdf"))
+
 
 @pytest.mark.parametrize('idx_ord', [4, 40, 100])
 def test_SS_delay_print(idx_ord, tpath_join):

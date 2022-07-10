@@ -111,26 +111,48 @@ class ZPK(siso.SISOCommonBase):
         return
 
     def _fiducial_w_set(self, rtol):
-        # create a list of poiints at each resonance and zero, as well as 1 BW away
-        rt_rtol = rtol**0.5
-        domain_w = [
-            self.zeros.r_line,
-            self.zeros.c_plane.imag,
-            abs(self.zeros.c_plane),
-            self.poles.r_line,
-            self.poles.c_plane.imag,
-            abs(self.poles.c_plane),
-        ]
+        if self.dt is None:
+            # create a list of points at each resonance and zero, as well as 1 BW away
+            rt_rtol = rtol**0.5
+            domain_w = [
+                self.zeros.r_line,
+                self.zeros.c_plane.imag,
+                abs(self.zeros.c_plane),
+                self.poles.r_line,
+                self.poles.c_plane.imag,
+                abs(self.poles.c_plane),
+            ]
 
-        # augment the list to include midpoints between all resonances
-        domain_w = np.sort(np.concatenate(domain_w)).real + rt_rtol
-        # and midpoints
-        domain_w = np.concatenate([domain_w, (domain_w[0:-1] + domain_w[1:])/2])
+            # augment the list to include midpoints between all resonances
+            domain_w = np.sort(np.concatenate(domain_w)).real + rt_rtol
+            # and midpoints
+            domain_w = np.concatenate([domain_w, (domain_w[0:-1] + domain_w[1:])/2])
 
-        if len(domain_w) > self.N_MAX_FID:
-            warnings.warn(f"StateSpace is large (>{self.N_MAX_FID} states), using reduced response fiducial auditing heuristics. TODO to make this smarter", util.NumericalWarning)
-            domain_w = np.asarray([rt_rtol])
-        return domain_w
+            if len(domain_w) > self.N_MAX_FID:
+                warnings.warn(f"StateSpace is large (>{self.N_MAX_FID} states), using reduced response fiducial auditing heuristics. TODO to make this smarter", util.NumericalWarning)
+                domain_w = np.asarray([rt_rtol])
+            return domain_w
+        else:
+            # create a list of points at each resonance and zero, as well as 1 BW away
+            rt_rtol = rtol**0.5
+            domain_w = [
+                np.angle(self.zeros.disc_line, deg=False) / self.dt,
+                np.angle(self.zeros.cplx_plane, deg=False) / self.dt,
+                np.pi * (1 - self.zeros.real_line[self.zeros.real_line > 0]) / self.dt,
+                np.angle(self.poles.disc_line, deg=False) / self.dt,
+                np.angle(self.poles.cplx_plane, deg=False) / self.dt,
+                np.pi * (1 - self.poles.real_line[self.poles.real_line > 0]) / self.dt,
+            ]
+
+            # augment the list to include midpoints between all resonances
+            domain_w = np.sort(np.concatenate(domain_w)).real + rt_rtol
+            # and midpoints
+            domain_w = np.concatenate([domain_w, (domain_w[0:-1] + domain_w[1:])/2])
+
+            if len(domain_w) > self.N_MAX_FID:
+                warnings.warn(f"StateSpace is large (>{self.N_MAX_FID} states), using reduced response fiducial auditing heuristics. TODO to make this smarter", util.NumericalWarning)
+                domain_w = np.asarray([rt_rtol])
+            return domain_w
 
     def __iter__(self):
         """
@@ -566,32 +588,53 @@ def zpk(
         else:
             pRS = pRS2
 
-    if convention == 'scipy':
-        root_normalization = 1
-        gain_normalization = 1
-        if angular is None:
-            angular = True
-    elif convention.lower() == 'iirrational':
-        root_normalization = 1
-        gain_normalization = (2*np.pi)**(len(pRS) - len(zRS))
-        if angular is None:
-            angular = False
-    else:
-        raise RuntimeError("Convention {} not recognized".format(convention))
-    if not angular:
-        root_normalization *= np.pi * 2
+    if dt is None:
+        if convention == 'scipy':
+            root_normalization = 1
+            gain_normalization = 1
+            if angular is None:
+                angular = True
+        elif convention.lower() == 'iirrational':
+            root_normalization = 1
+            gain_normalization = (2*np.pi)**(len(pRS) - len(zRS))
+            if angular is None:
+                angular = False
+        else:
+            raise RuntimeError("Convention {} not recognized".format(convention))
 
-    ZPKnew = ZPK(
-        z=root_normalization*zRS,
-        p=root_normalization*pRS,
-        k=gain_normalization*k,
-        dt=dt,
-        hermitian=hermitian,
-        time_symm=time_symm,
-        fiducial=None,
-        fiducial_rtol=fiducial_rtol,
-    )
+        if not angular:
+            root_normalization *= np.pi * 2
+
+        ZPKnew = ZPK(
+            z=root_normalization*zRS,
+            p=root_normalization*pRS,
+            k=gain_normalization*k,
+            dt=dt,
+            hermitian=hermitian,
+            time_symm=time_symm,
+            fiducial=None,
+            fiducial_rtol=fiducial_rtol,
+        )
+    else:
+        assert(angular is None)
+        if convention == 'scipy':
+            gain_normalization = 1
+        else:
+            raise RuntimeError("Convention {} not recognized".format(convention))
+
+        ZPKnew = ZPK(
+            z=zRS,
+            p=pRS,
+            k=gain_normalization*k,
+            dt=dt,
+            hermitian=hermitian,
+            time_symm=time_symm,
+            fiducial=None,
+            fiducial_rtol=fiducial_rtol,
+        )
+
     if ZPKprev:
+        #TODO check that ZPKprev has the same dt sample rate
         ZPKnew = ZPKprev * ZPKnew
 
     fiducial = util.build_fiducial(

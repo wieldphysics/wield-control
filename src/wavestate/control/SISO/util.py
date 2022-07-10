@@ -8,6 +8,7 @@
 """
 """
 import numpy as np
+import warnings
 from . import response
 
 
@@ -79,10 +80,14 @@ def build_sorz(
         assert(z is None)
     else:
         if f is not None:
-            sorz = 2j * np.pi * np.asarray(f)
+            if np.max(f) > 1/dt/2:
+                warnings.warn(f"frequency response evaluated above the f_Nyquist {1/dt/2}. Expect aliasing.")
+            sorz = np.exp(2j * np.pi * np.asarray(f) * dt)
         if w is not None:
+            if np.max(w)/(2 * np.pi) > 1/dt/2:
+                warnings.warn(f"frequency response evaluated above the f_Nyquist {1/dt/2}. Expect aliasing.")
             assert(sorz is None)
-            sorz = 1j * np.asarray(w)
+            sorz = np.exp(1j * np.asarray(w) * dt)
         if z is not None:
             assert(sorz is None)
             sorz = np.asarray(z)
