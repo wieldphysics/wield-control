@@ -9,7 +9,7 @@
 Functions for designing and synthesizing SISO filters
 """
 import scipy.signal
-from . import zpk
+from .zpk import zpk
 
 
 def delay_thiran_raw(delay_s, order=1):
@@ -31,7 +31,7 @@ def delay_thiran_raw(delay_s, order=1):
     else:
         k = -1
 
-    return zpk.zpk(
+    return zpk(
         -roots.conjugate(),
         roots,
         k

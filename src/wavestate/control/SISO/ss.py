@@ -110,7 +110,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
         return self._ZPK
 
     @property
-    def asSTATESPACE(self):
+    def asSS(self):
         return self
 
     def mimo(self, row, col):
@@ -154,8 +154,8 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
                 slc = slice(None, None, 1)
             else:
                 slc = slice(None, None, 2)
-            fid_other_self = other.fresponse(**self.domain_kw(slc))
-            fid_self_other = self.fresponse(**other.domain_kw(slc))
+            fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
+            fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
 
             return self.__class__(
                 ss=self.ss @ other.ss,
@@ -229,7 +229,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             other = statespace(other)
             knownSS = True
 
-        if knownSS or isinstance(other, siso.SISOStateSpace):
+        if knownSS or isinstance(other, SISOStateSpace):
             return self.__class__(
                 self.ss + other.ss,
             )
@@ -262,7 +262,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             other = statespace(other)
             knownSS = True
 
-        if knownSS or isinstance(other, siso.SISOStateSpace):
+        if knownSS or isinstance(other, SISOStateSpace):
             return self.__class__(
                 ss=self.ss - other.ss,
             )
@@ -284,7 +284,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             other = statespace(other)
             knownSS = True
 
-        if knownSS or isinstance(other, siso.SISOStateSpace):
+        if knownSS or isinstance(other, SISOStateSpace):
             return self.__class__(
                 ss=other.ss - self.ss,
             )
@@ -300,6 +300,11 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
 
 def statespace(
     *args,
+    A=None,
+    B=None,
+    C=None,
+    D=None,
+    E=None,
     hermitian=True,
     time_symm=False,
     dt=None,
@@ -315,12 +320,30 @@ def statespace(
     Form a SISO LTI system from statespace matrices.
 
     """
-    if len(args) == 1:
+    def all_none():
+        return (
+            (A is None)
+            & (B is None)
+            & (C is None)
+            & (D is None)
+            & (E is None)
+        )
+    if len(args) == 0:
+        pass
+        # must include the A=,B=,... arguments
+    elif len(args) == 1:
         arg = args[0]
         if isinstance(arg, siso.SISO):
             arg = arg.asSS
         if isinstance(arg, SISOStateSpace):
-            return arg
+            # TODO, check that some of the other arguments don't override it
+            if all_none:
+                return arg
+            A = A if A is not None else arg.A
+            B = B if B is not None else arg.B
+            C = C if C is not None else arg.C
+            D = D if D is not None else arg.D
+            E = E if E is not None else arg.E
         elif isinstance(arg, (tuple, list)):
             A, B, C, D, E = arg
         elif isinstance(arg, numbers.Number):

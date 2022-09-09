@@ -10,7 +10,10 @@
 This adds the automatic fixtures needed with the pytest.ini
 """
 
-import wavestate.pytest
+from wavestate.pytest import (
+    pytest_addoption,
+    pytest_configure,
+)
 from wavestate.pytest.fixtures import (  # noqa
     tpath,
     closefigs,

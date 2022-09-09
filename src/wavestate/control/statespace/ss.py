@@ -169,7 +169,8 @@ class RawStateSpace(object):
         if isinstance(other, RawStateSpace):
             # currently need to do some checking about the inputs
             # and the outputs
-            return NotImplemented
+            #return NotImplemented
+
             hermitian = self.hermitian and other.hermitian
             time_symm = self.time_symm and other.time_symm
             assert(self.dt == other.dt)
