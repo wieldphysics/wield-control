@@ -455,4 +455,15 @@ def match_SOS_pairs(
             Np += 1
     assert Nz == Nz_tot
     assert Np == Np_tot
+
+    def sorter(zzpp):
+        (z1, z2, p1, p2) = zzpp
+        lst = []
+        for r in zzpp:
+            if r is not None:
+                lst.append(abs(r.imag))
+        if lst:
+            return np.average(lst)
+        return 0
+    zzpp_list.sort(key=sorter)
     return zzpp_list
