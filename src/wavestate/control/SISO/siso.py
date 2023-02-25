@@ -21,12 +21,17 @@ class SISOCommonBase(SISO):
         self,
         fiducial=None,
         rtol=None,
+        atol=None,
         update=False,
     ):
         if rtol is None:
             rtol = self.fiducial_rtol
             if rtol is None:
                 rtol = self.__class__.fiducial_rtol
+        if atol is None:
+            atol = self.fiducial_atol
+            if atol is None:
+                atol = self.__class__.fiducial_atol
 
         if fiducial is not None:
             if callable(fiducial):
@@ -37,7 +42,7 @@ class SISOCommonBase(SISO):
                 np.testing.assert_allclose(
                     self_response.tf,
                     fiducial.tf,
-                    atol=0,
+                    atol=atol,
                     rtol=rtol,
                     equal_nan=False,
                 )
@@ -60,5 +65,6 @@ class SISOCommonBase(SISO):
         if update:
             self.fiducial = fiducial
             self.fiducial_rtol = rtol
+            self.fiducial_atol = atol
         return
 

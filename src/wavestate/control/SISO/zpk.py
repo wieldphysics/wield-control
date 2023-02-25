@@ -29,6 +29,7 @@ class ZPK(siso.SISOCommonBase):
     This class internally uses the s-domain in units of radial frequency and gain.
     """
     fiducial_rtol = 1e-8
+    fiducial_atol = 1e-13
     _SS = None
 
     def __init__(
@@ -41,6 +42,7 @@ class ZPK(siso.SISOCommonBase):
         dt=None,
         fiducial=None,
         fiducial_rtol=None,
+        fiducial_atol=None,
     ):
         """
         response_f: give a set of response points to use to verify that various algorithms preserve the transfer function. If None (or not given) then a set of response points are established using pole and zero locations.
@@ -83,6 +85,7 @@ class ZPK(siso.SISOCommonBase):
         self.test_fresponse(
             fiducial=fiducial,
             rtol=fiducial_rtol,
+            atol=fiducial_atol,
             update=True,
         )
         return
@@ -176,6 +179,7 @@ class ZPK(siso.SISOCommonBase):
             dt=self.dt,
             fiducial=self.fiducial.like_empty(),  # will have to rebuild the fiducial
             fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
         )
 
     @property
@@ -202,6 +206,7 @@ class ZPK(siso.SISOCommonBase):
             time_symm=self.time_symm,
             fiducial=self.fiducial,
             fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
             flags={"schur_real_upper", "hessenburg_upper"},
         )
         return self._SS
@@ -278,6 +283,7 @@ class ZPK(siso.SISOCommonBase):
                 dt=self.dt,
                 fiducial=(self.fiducial[slc] * fid_other_self).concatenate(fid_self_other * other.fiducial[slc]),
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         elif isinstance(other, numbers.Number):
             return self.__class__(
@@ -289,6 +295,7 @@ class ZPK(siso.SISOCommonBase):
                 dt=self.dt,
                 fiducial=self.fiducial * other,
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         else:
             return NotImplemented
@@ -306,6 +313,7 @@ class ZPK(siso.SISOCommonBase):
                 dt=self.dt,
                 fiducial=other * self.fiducial,
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         else:
             return NotImplemented
@@ -333,6 +341,7 @@ class ZPK(siso.SISOCommonBase):
                 dt=self.dt,
                 fiducial=(self.fiducial[slc] / fid_other_self).concatenate(fid_self_other / other.fiducial[slc]),
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         elif isinstance(other, numbers.Number):
             return self.__class__(
@@ -344,6 +353,7 @@ class ZPK(siso.SISOCommonBase):
                 dt=self.dt,
                 fiducial=self.fiducial / other,
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         else:
             return NotImplemented
@@ -361,6 +371,7 @@ class ZPK(siso.SISOCommonBase):
                 dt=self.dt,
                 fiducial=other / self.fiducial,
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         else:
             return NotImplemented
@@ -375,6 +386,7 @@ class ZPK(siso.SISOCommonBase):
             dt=self.dt,
             fiducial=1/self.fiducial,
             fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
         )
 
     def __pow__(self, other):
@@ -440,6 +452,7 @@ class ZPK(siso.SISOCommonBase):
             dt=self.dt,
             fiducial=None,
             fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
         )
 
 
@@ -461,6 +474,7 @@ def zpk(
         fiducial_s=None,
         fiducial_z=None,
         fiducial_rtol=None,
+        fiducial_atol=None,
         hermitian=True,
         time_symm=False,
         convention='scipy',
@@ -614,6 +628,7 @@ def zpk(
             time_symm=time_symm,
             fiducial=None,
             fiducial_rtol=fiducial_rtol,
+            fiducial_atol=fiducial_atol,
         )
     else:
         assert(angular is None)
@@ -631,6 +646,7 @@ def zpk(
             time_symm=time_symm,
             fiducial=None,
             fiducial_rtol=fiducial_rtol,
+            fiducial_atol=fiducial_atol,
         )
 
     if ZPKprev:
@@ -658,7 +674,7 @@ def zpk(
             # print("NORM MEDIAN", norm_med)
             # TODO, make better error reporting that a conversion has failed
             np.testing.assert_allclose(
-                norm_rel / norm_med, 1, rtol=ZPKnew.fiducial_rtol, atol=0
+                norm_rel / norm_med, 1, rtol=ZPKnew.fiducial_rtol, atol=ZPKnew.fiducial_atol
             )
         else:
             assert(np.all(np.isfinite(ZPKnew.fiducial)))

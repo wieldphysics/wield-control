@@ -7,6 +7,7 @@
 # with details inline in source files, comments, and docstrings.
 """
 """
+import warnings
 import numpy as np
 import scipy.linalg
 import itertools
@@ -33,7 +34,14 @@ def residuals(xfer, fit, w, rtype):
         raise RuntimeError("Unrecognized residuals type")
 
 
-def tf_bary_interp(F_Hz, zvals, fvals, wvals):
+def tf_bary_interp(
+    F_Hz,
+    zvals,
+    fvals,
+    wvals,
+    all_real=False,
+    all_pos=False,
+):
     sF_Hz = 1j * F_Hz
     w_idx = 0
     N = 0
@@ -53,11 +61,22 @@ def tf_bary_interp(F_Hz, zvals, fvals, wvals):
                 N = N + f * bary_Dw
                 D = D + bary_Dw
             else:
-                w_r = wvals[w_idx]
-                w_i = wvals[w_idx + 1]
-                w_idx += 2
-                bary_D = 1 / (sF_Hz - z)
-                bary_Dc = 1 / (sF_Hz - z.conjugate())
+                if not all_real:
+                    w_r = wvals[w_idx]
+                    w_i = wvals[w_idx + 1]
+                    w_idx += 2
+                else:
+                    w_r = wvals[w_idx]
+                    w_i = 0
+                    w_idx += 1
+
+                if not all_pos:
+                    bary_D = 1 / (sF_Hz - z)
+                    bary_Dc = 1 / (sF_Hz - z.conjugate())
+                else:
+                    bary_D = 1 / (sF_Hz - z)**2
+                    bary_Dc = 1 / (sF_Hz - z.conjugate())**2
+
                 for idx in np.argwhere(~np.isfinite(bary_D))[:, 0]:
                     idx_f_repl.append((idx, f))
                 for idx in np.argwhere(~np.isfinite(bary_Dc))[:, 0]:
@@ -123,15 +142,103 @@ def tf_bary_zpk(
         # gain_n = 2*np.sum(wvals[0::2]*fvals.real + wvals[1::2]*fvals.imag)
         offs = 0
     # TODO, use numpy tricks for diag/offdiag filling instead this for-loop
-    for idx, f in enumerate(zvals[offs:]):
-        Ep[offs + 1 + 2 * idx, offs + 1 + 2 * idx] = f.real
-        Ep[offs + 2 + 2 * idx, offs + 2 + 2 * idx] = f.real
-        Ep[offs + 1 + 2 * idx, offs + 2 + 2 * idx] = f.imag
-        Ep[offs + 2 + 2 * idx, offs + 1 + 2 * idx] = -f.imag
-        Ez[offs + 1 + 2 * idx, offs + 1 + 2 * idx] = f.real
-        Ez[offs + 2 + 2 * idx, offs + 2 + 2 * idx] = f.real
-        Ez[offs + 1 + 2 * idx, offs + 2 + 2 * idx] = f.imag
-        Ez[offs + 2 + 2 * idx, offs + 1 + 2 * idx] = -f.imag
+    for idx, z in enumerate(zvals[offs:]):
+        Ep[offs + 1 + 2 * idx, offs + 1 + 2 * idx] = z.real
+        Ep[offs + 2 + 2 * idx, offs + 2 + 2 * idx] = z.real
+        Ep[offs + 1 + 2 * idx, offs + 2 + 2 * idx] = z.imag
+        Ep[offs + 2 + 2 * idx, offs + 1 + 2 * idx] = -z.imag
+        Ez[offs + 1 + 2 * idx, offs + 1 + 2 * idx] = z.real
+        Ez[offs + 2 + 2 * idx, offs + 2 + 2 * idx] = z.real
+        Ez[offs + 1 + 2 * idx, offs + 2 + 2 * idx] = z.imag
+        Ez[offs + 2 + 2 * idx, offs + 1 + 2 * idx] = -z.imag
+    poles = scipy.linalg.eig(Ep, B, left=False, right=False)
+    poles = poles[np.isfinite(poles)]
+    zeros = scipy.linalg.eig(Ez, B, left=False, right=False)
+    zeros = zeros[np.isfinite(zeros)]
+
+    zeros, poles = order_reduce_zp(zeros, poles, Q_rank_cutoff=minreal_cutoff)
+
+    TFvals_rel = []
+    for f, z in zip(fvals, zvals):
+        Gz = z - zeros
+        Gp = z - poles
+        TF = np.prod([gz / gp for gz, gp in itertools.zip_longest(Gz, Gp, fillvalue=1)])
+        TFvals_rel.append(f / TF)
+    TFvals_rel = np.asarray(TFvals_rel)
+    # print(TFvals_rel)
+    gain = np.median(TFvals_rel.real)
+    # this may also get computed using the gain_n/gain_d above, but that fails
+    # when poles or zeros are dropped since one of gain_n or gain_d will be
+    # numerically 0 in that case
+
+    return zeros, poles, gain
+
+
+def tf_bary_zpk_real(
+    zvals,
+    fvals,
+    wvals,
+    minreal_cutoff=1e-2,
+):
+    """
+    This version is for the all-real computation, which has half as many weights
+    """
+    # evaluate poles and zeros in arrowhead form
+    # these are modified for the symmetry conditions to be a real matrix
+
+    # if zero is present, it must be the first element
+    assert not np.any(zvals[1:] == 0)
+
+    # len(zvals) must be p_order
+    # len(wvals) must be order
+
+    if zvals[0] == 0:
+        p_order = 2*len(wvals) - 1
+    else:
+        p_order = 2*len(wvals)
+
+    B = np.eye(p_order + 1)
+    B[0, 0] = 0
+
+    Ep = np.zeros((p_order + 1, p_order + 1))
+    Ep[1:, 0] = 1
+    Ez = np.zeros((p_order + 1, p_order + 1))
+    Ez[1:, 0] = 1
+
+    if zvals[0] == 0:
+        Ep[0, 1] = wvals[0]
+        Ep[0, 2::2] = wvals[1:]
+        Ep[0, 3::2] = wvals[1:]
+        # gain_d = wvals[0] + 2*np.sum(wvals[1::2])
+
+        Ez[0, 1] = (wvals[0] * fvals[0]).real
+        c = (wvals[1:]) + (wvals[1:]) * 1j
+        cx = c * fvals[1:]
+        Ez[0, 2::2] = cx.real
+        Ez[0, 3::2] = cx.imag
+        # gain_n = (wvals[0] * fvals[0].real) + 2*np.sum(wvals[1::2]*fvals[1:].real + wvals[2::2]*fvals[1:].imag)
+        offs = 1
+    else:
+        Ep[0, 1::2] = wvals
+        Ep[0, 2::2] = wvals
+        # gain_d = 2*np.sum(wvals[0::2])
+
+        c = (wvals[0:]) + (wvals[0:]) * 1j
+        cx = c * fvals[0:]
+        Ez[0, 1::2] = cx.real
+        Ez[0, 2::2] = cx.imag
+        offs = 0
+
+    # TODO, use numpy tricks for diag/offdiag filling instead this for-loop
+    for idx, z in enumerate(zvals[offs:]):
+        Ep[offs + 1 + 2 * idx, offs + 1 + 2 * idx] = z.real
+        Ep[offs + 2 + 2 * idx, offs + 2 + 2 * idx] = z.real
+        Ep[offs + 1 + 2 * idx, offs + 2 + 2 * idx] = z.imag
+        Ep[offs + 2 + 2 * idx, offs + 1 + 2 * idx] = -z.imag
+        Ez[offs + 1 + 2 * idx, offs + 1 + 2 * idx] = z.real
+        Ez[offs + 2 + 2 * idx, offs + 2 + 2 * idx] = z.real
+        Ez[offs + 1 + 2 * idx, offs + 2 + 2 * idx] = z.imag
+        Ez[offs + 2 + 2 * idx, offs + 1 + 2 * idx] = -z.imag
     poles = scipy.linalg.eig(Ep, B, left=False, right=False)
     poles = poles[np.isfinite(poles)]
     zeros = scipy.linalg.eig(Ez, B, left=False, right=False)
@@ -168,9 +275,13 @@ def tfAAA(
     nrel=10,
     rtype="log",
     lf_eager=True,
-    supports=(),
+    supports=None,
     minreal_cutoff=None,
+    all_real=False,
+    all_pos=False,
 ):
+    """
+    """
     if exact:
         if res_tol is None:
             res_tol = 1e-12
@@ -179,7 +290,7 @@ def tfAAA(
         if nconv is None:
             nconv = 1
         if minreal_cutoff is None:
-            minreal_cutoff = (1e-3,)
+            minreal_cutoff = 1e-3
     else:
         if res_tol is None:
             res_tol = 0
@@ -188,7 +299,7 @@ def tfAAA(
         if nconv is None:
             nconv = 2
         if minreal_cutoff is None:
-            minreal_cutoff = (1e-3,)
+            minreal_cutoff = 1e-3
 
     F_Hz = np.asarray(F_Hz)
     xfer = np.asarray(xfer)
@@ -202,11 +313,13 @@ def tfAAA(
     sF_Hz = 1j * F_Hz
 
     fit_list = []
+
     # these are the matrices and data related to the fit
     fvals = []
     zvals = []
     Vn_list = []
     Vd_list = []
+
     # and the domain and data
     xfer_drop = xfer.copy()
     sF_Hz_drop = sF_Hz.copy()
@@ -221,9 +334,9 @@ def tfAAA(
 
     def add_point(idx):
         z = sF_Hz_drop[idx].copy()
+        zvals.append(z)
         f = xfer_drop[idx].copy()
         fvals.append(f)
-        zvals.append(z)
 
         _drop_inplace(idx, sF_Hz_drop)
         _drop_inplace(idx, xfer_drop)
@@ -251,11 +364,24 @@ def tfAAA(
             bary_Dc = 1 / (sF_Hz_drop - z.conjugate())
 
             # this is the TF-symmetric version with real weights
-            Vn_list.append(f * bary_D + f.conjugate() * bary_Dc)
-            Vd_list.append(bary_D + bary_Dc)
-            Vn_list.append(-1j * (f * bary_D - f.conjugate() * bary_Dc))
-            Vd_list.append(-1j * (bary_D - bary_Dc))
-        # print(z, f, bary_D)
+
+            if not all_pos:
+                if not all_real:
+                    # first add the real weights
+                    Vn_list.append(f * bary_D + f.conjugate() * bary_Dc)
+                    Vd_list.append(bary_D + bary_Dc)
+
+                    # now add the imaginary weights
+                    Vn_list.append(-1j * (f * bary_D - f.conjugate() * bary_Dc))
+                    Vd_list.append(-1j * (bary_D - bary_Dc))
+                else:
+                    # first add the real weights
+                    Vn_list.append(f * bary_D + f.conjugate() * bary_Dc)
+                    Vd_list.append(bary_D + bary_Dc)
+            else:
+                # first add the real weights
+                Vn_list.append(f * bary_D**2 + f.conjugate() * bary_Dc**2)
+                Vd_list.append(bary_D**2 + bary_Dc**2)
         return
 
     if exact:
@@ -270,15 +396,16 @@ def tfAAA(
             res_max = 0 * abs(res)
             for b in [4, 8, 16, 32, 64]:
                 ravg = (rSup[b:] - rSup[:-b]) / b ** 0.5
-                res_max[b // 2 : -b // 2] = np.maximum(
-                    abs(ravg), res_max[b // 2 : -b // 2]
+                res_max[b // 2: -b // 2] = np.maximum(
+                    abs(ravg), res_max[b // 2: -b // 2]
                 )
             return res_max
 
     # adds the lowest frequency point to ensure good DC fitting
-    if supports:
+    if supports is not None and len(supports) > 0:
         for f in supports:
             idx = np.searchsorted((sF_Hz_drop / 1j).real, f)
+            # print("ADD PT: ", idx, f, (sF_Hz_drop[idx] / 1j).real)
             add_point(idx)
         skip_add = True
     else:
@@ -296,49 +423,77 @@ def tfAAA(
 
     wvals = []
     while True:
-        if len(wvals) > degree_max:
-            break
+        if all_real:
+            # this doesn't account for the 0Hz support
+            if len(wvals)*2 > degree_max:
+                break
+        else:
+            # this doesn't account for the 0Hz support
+            if len(wvals) > degree_max:
+                break
 
         if res is not None:
             idx_max = np.argmax(res_max_heuristic(res))
+            if idx_max == 0 and sF_Hz_drop[idx_max] == 0:
+                warnings.warn("Wants to add 0Hz point, but that must be done first. Run with <>")
+                idx_max += 1
             add_point(idx_max)
 
         Vn = np.asarray(Vn_list).T
         Vd = np.asarray(Vd_list).T
 
+        rescale = 1e6
         for _i in range(nconv):
             Na = np.mean(abs(N_drop) ** 2) ** 0.5 / nrel
             Hd1 = Vd * xfer_drop.reshape(-1, 1)
             Hn1 = Vn
-            Hs1 = (Hd1 - Hn1) * (w_drop / (abs(N_drop) + Na)).reshape(-1, 1)
+            Hs1 = (Hd1 - Hn1) * (w_drop / (abs(N_drop) + Na)).reshape(-1, 1) * rescale
 
             Da = np.mean(abs(D_drop) ** 2) ** 0.5 / nrel
             Hd2 = Vd
             Hn2 = Vn * (1 / xfer_drop).reshape(-1, 1)
-            Hs2 = (Hd2 - Hn2) * (w_drop / (abs(D_drop) + Da)).reshape(-1, 1)
+            Hs2 = (Hd2 - Hn2) * (w_drop / (abs(D_drop) + Da)).reshape(-1, 1) * rescale
 
-            Hblock = [
-                [Hs1.real],
-                [Hs1.imag],
-                [Hs2.real],
-                [Hs2.imag],
-            ]
+            if not all_pos:
+                if not all_real:
+                    Hblock = [
+                        [Hs1.real],
+                        [Hs1.imag],
+                        [Hs2.real],
+                        [Hs2.imag],
+                    ]
+                else:
+                    # the barycentric numerator and denominator are both
+                    # pure imaginary in the all_real scenario
+                    Hblock = [
+                        [Hs1.imag],
+                        [Hs2.imag],
+                    ]
+            else:
+                #TODO, should this not have the real parts
+                Hblock = [
+                    [Hs1.real],
+                    [Hs1.imag],
+                    [Hs2.real],
+                    [Hs2.imag],
+                ]
 
             SX1 = np.block(Hblock)
             u, s, v = np.linalg.svd(SX1)
             wvals = v[-1, :].conjugate()
+            srel = s[-1] / s[0]
 
-            N_drop = Vn @ wvals
-            D_drop = Vd @ wvals
+        N_drop = Vn @ wvals
+        D_drop = Vd @ wvals
 
-            fit_drop = N_drop / D_drop
+        fit_drop = N_drop / D_drop
 
         srel = s[-1] / s[0]
 
         res = residuals(xfer=xfer_drop, fit=fit_drop, w=w_res_drop, rtype=rtype)
-        res_asq = res.real ** 2 + res.imag ** 2
-        res_rms = np.mean(res_asq) ** 0.5
-        res_max = np.max(res_asq) ** 0.5
+        res_asq = res.real**2 + res.imag**2
+        res_rms = np.mean(res_asq)**0.5
+        res_max = np.max(res_asq)**0.5
 
         fit_list.append(
             dict(
@@ -366,6 +521,8 @@ def tfAAA(
             # p_order doesn't directly correspond to wvals, but this is OK since
             # only the ones matched to zvals and fvals are used
             wvals=wvals,
+            all_real=all_real,
+            all_pos=all_pos,
         )
 
     results = rtAAAResults(
@@ -374,6 +531,8 @@ def tfAAA(
         fit_list=fit_list,
         debug=Structish(locals()),
         minreal_cutoff=minreal_cutoff,
+        all_real=all_real,
+        all_pos=all_pos,
     )
     return results
 
@@ -385,6 +544,8 @@ class rtAAAResults(object):
         fvals_full,
         fit_list,
         minreal_cutoff=1e-2,
+        all_real=False,
+        all_pos=False,
         debug=None,
     ):
         self.zvals_full = np.asarray(zvals_full)
@@ -398,6 +559,8 @@ class rtAAAResults(object):
         self.zvals = self.zvals_full[: self.p_order]
         self.fvals = self.fvals_full[: self.p_order]
         self.minreal_cutoff = minreal_cutoff
+        self.all_real = all_real
+        self.all_pos = all_pos
         self.zpks_by_fit_idx = dict()
         if debug is not None:
             self.debug = debug
@@ -430,17 +593,29 @@ class rtAAAResults(object):
             zvals=self.zvals,
             fvals=self.fvals,
             wvals=self.wvals,
+            all_real=self.all_real,
+            all_pos=self.all_pos,
         )
 
     def _zpk_compute(self):
         zpk = self.zpks_by_fit_idx.get(self.fit_idx, None)
         if zpk is None:
-            zpk = tf_bary_zpk(
-                fvals=self.fvals,
-                zvals=self.zvals,
-                wvals=self.wvals,
-                minreal_cutoff=self.minreal_cutoff,
-            )
+            if self.all_pos:
+                raise NotImplementedError("Currently no arrowhead form statespace implemented for all-positive")
+            if not self.all_real:
+                zpk = tf_bary_zpk(
+                    fvals=self.fvals,
+                    zvals=self.zvals,
+                    wvals=self.wvals,
+                    minreal_cutoff=self.minreal_cutoff,
+                )
+            else:
+                zpk = tf_bary_zpk_real(
+                    fvals=self.fvals,
+                    zvals=self.zvals,
+                    wvals=self.wvals,
+                    minreal_cutoff=self.minreal_cutoff,
+                )
             self.zpks_by_fit_idx[self.fit_idx] = zpk
         return zpk
 

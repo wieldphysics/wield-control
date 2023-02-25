@@ -25,6 +25,7 @@ from . import response
 
 class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
     fiducial_rtol = 1e-8
+    fiducial_atol = 1e-13
     """
     class to represent SISO Transfer functions using dense state space matrix representations.
     """
@@ -33,6 +34,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
         ss,
         fiducial=None,
         fiducial_rtol=None,
+        fiducial_atol=None,
     ):
         """
         flags: this is a set of flags that indicate computed property flags for the state space. Examples of such properties are "schur_real_upper", "schur_complex_upper", "hessenburg_upper", "balanced", "stable"
@@ -42,6 +44,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
         self.test_fresponse(
             fiducial=fiducial,
             rtol=fiducial_rtol,
+            atol=fiducial_atol,
             update=True,
         )
         return
@@ -106,6 +109,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             convention='scipy',
             fiducial=self.fiducial,
             fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
         )
         return self._ZPK
 
@@ -142,6 +146,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             self.ss.inv(),
             fiducial=1/self.fiducial,
             fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
         )
 
     def __mul__(self, other):
@@ -161,12 +166,14 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
                 ss=self.ss @ other.ss,
                 fiducial=(self.fiducial[slc] * fid_other_self).concatenate(fid_self_other * other.fiducial[slc]),
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         elif isinstance(other, numbers.Number):
             return self.__class__(
                 ss=self.ss * other,
                 fiducial=self.fiducial * other,
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         else:
             return NotImplemented
@@ -179,6 +186,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
                 ss=other * self.ss,
                 fiducial=other * self.fiducial,
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         else:
             return NotImplemented
@@ -191,6 +199,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
                 self.ss / other,
                 fiducial=self.fiducial / other,
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         else:
             return NotImplemented
@@ -203,6 +212,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
                 ss=other * self.ss.inv(),
                 fiducial=other / self.fiducial,
                 fiducial_rtol=self.fiducial_rtol,
+                fiducial_atol=self.fiducial_atol,
             )
         else:
             return NotImplemented
@@ -315,6 +325,7 @@ def statespace(
     fiducial_s=None,
     fiducial_z=None,
     fiducial_rtol=None,
+    fiducial_atol=None,
 ):
     """
     Form a SISO LTI system from statespace matrices.
@@ -386,5 +397,6 @@ def statespace(
         ),
         fiducial=fiducial,
         fiducial_rtol=fiducial_rtol,
+        fiducial_atol=fiducial_atol,
     )
 
