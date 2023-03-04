@@ -286,6 +286,18 @@ class SISOFResponse(siso.SISO):
                 return len(z)
 
     @property
+    def mag(self):
+        return abs(self.tf)
+
+    @property
+    def deg(self):
+        return np.angle(self.tf, deg=False)
+
+    @property
+    def rad(self):
+        return np.angle(self.tf, deg=False)
+
+    @property
     def tf_mag(self):
         return abs(self.tf)
 

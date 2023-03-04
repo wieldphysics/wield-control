@@ -365,7 +365,7 @@ def zpkdict_cascade(
     for idx in range(min(len(Zpoly), len(Ppoly))):
         zp = Zpoly[idx]
         pp = Ppoly[idx]
-        rescale = (zp[0] * pp[0])**0.5
+        rescale = abs(zp[0] * pp[0])**0.5
         if abs(rescale) < 1e-6:
             rescale = None
         ABCDE = poly2ss(zp, pp, rescale_do=rescale)

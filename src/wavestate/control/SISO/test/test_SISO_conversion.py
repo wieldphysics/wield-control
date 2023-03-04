@@ -54,7 +54,7 @@ def test_conversion(tpath_join):
     using a delay filter
     """
     axB = mplfigB(Nrows=2, Ncols=2)
-    F_Hz = logspaced(.01, 100, 1000)
+    F_Hz = logspaced(.000001, 100, 1000)
 
     F_p = [-0.001 - 10j, -0.001 + 10j, -10]
     F_z = [0, 0, 0]
