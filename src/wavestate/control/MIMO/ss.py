@@ -173,7 +173,7 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         return
 
     def fresponse(self, *, f=None, w=None, s=None):
-        tf = xfer_algorithms.ss.fresponse_raw(f=f, s=s, w=w)
+        tf = self.ss.fresponse_raw(f=f, s=s, w=w)
         return response.MIMOFResponse(
             tf=tf,
             w=w,
