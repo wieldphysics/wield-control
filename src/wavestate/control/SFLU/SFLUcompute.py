@@ -67,7 +67,8 @@ class SFLUCompute:
         return
 
     def CLG_inv(self, E):
-        return np.linalg.inv(self.eye - E)
+        # return np.linalg.inv(self.eye - E)
+        return np.linalg.inv(np.eye(E.shape[-1]) - E)
 
     def typemap_to_default(self, v):
         """
@@ -159,7 +160,12 @@ class SFLUCompute:
                 # (arg,) = op.args
                 # size = self.nodesizes.get(arg, self.defaultsize)
                 # I = np.eye(size)
-                Espace[op.targ] = self.eye
+                for ek, ev in Espace.items():
+                    if ek.r == op.args[0]:
+                        rdim = ev.shape[-2]  # row dimension of incoming edge
+                        break
+                Espace[op.targ] = np.eye(rdim)
+                # Espace[op.targ] = self.eye
 
             elif op.op == "E_mul2":
                 arg1, arg2 = op.args
