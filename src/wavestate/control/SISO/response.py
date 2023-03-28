@@ -250,9 +250,6 @@ class SISOFResponse(siso.SISO):
             **kw
         )
 
-    def __call__(self, row, col):
-        return self.mimo(row, col)
-
     def domain_kw(self, key=None):
         """
         Return a dict with one of the domain keys.
