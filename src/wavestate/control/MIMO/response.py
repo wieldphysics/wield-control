@@ -111,7 +111,8 @@ class MIMOFResponse(mimo.MIMO):
         """
         r = self.outputs[row]
         c = self.inputs[col]
-        return SISO.SISOFResponse(
+
+        return SISO.response.SISOFResponse(
             tf=self.tf_sm[..., r, c],
             **self.__init_kw()
         )
