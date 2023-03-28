@@ -12,6 +12,7 @@ import numbers
 import numpy as np
 
 from . import mimo
+from . import util
 from .. import SISO
 
 
@@ -50,6 +51,7 @@ class MIMOFResponse(mimo.MIMO):
             assert(domain is None)
             domain = s
             self.__dict__['s'] = s
+
         assert(domain is not None)
         shape = domain.shape
 
@@ -109,50 +111,38 @@ class MIMOFResponse(mimo.MIMO):
         """
         r = self.outputs[row]
         c = self.inputs[col]
-        return SISO.SISOResponse(
+        return SISO.SISOFResponse(
             tf=self.tf_sm[..., r, c],
             **self.__init_kw()
         )
 
+    def __call__(self, row, col):
+        return self.siso(row, col)
+
+    def raw_tf(self, row, col):
+        rlst, outputs, rlisted = util.apply_io_map(row, self.outputs)
+        clst, inputs, clisted = util.apply_io_map(col, self.inputs)
+
+        if len(rlst) < len(clst):
+            tf_red = self.tf[..., rlst, :][..., clst]
+        else:
+            tf_red = self.tf[..., clst][..., rlst, :]
+
+        return tf_red
+
     def __getitem__(self, key):
         row, col = key
 
-        def apply_map(group, length):
-            if isinstance(row, slice):
-                # make the klst just be using the slice
-                klst = range(length)[row]
-            elif isinstance(row, (list, tuple, set)):
-                klst = []
-                for k in row:
-                    if isinstance(row, str):
-                        k_i = self.outputs[k]
-                    else:
-                        k_i = k
-                    klst.append(k_i)
-            else:
-                # will be a single index
-                if isinstance(row, str):
-                    klst = [self.outputs[k]]
-                else:
-                    klst = [k]
-            return klst
+        rlst, outputs, _ = util.apply_io_map(row, self.outputs)
+        clst, inputs, _ = util.apply_io_map(col, self.inputs)
 
-        r = apply_map(row, self.C.shape[-2])
-        c = apply_map(col, self.B.shape[-1])
-
-        def map_into(rev, lst):
-            d = {}
-            for idx, k in enumerate(lst):
-                kset = rev[lst]
-                for v in kset:
-                    d[v] = idx
-            return d
-
-        inputs = map_into(rev=self.inputs_rev, lst=c)
-        outputs = map_into(rev=self.outputs_rev, lst=r)
+        if len(rlst) < len(clst):
+            tf_red = self.tf_sm[..., rlst, :][..., clst]
+        else:
+            tf_red = self.tf_sm[..., clst][..., rlst, :]
 
         return self.__class__(
-            tf=self.tf[..., r, c],
+            tf=tf_red,
             inputs=inputs,
             outputs=outputs,
             **self.__init_kw()
@@ -273,7 +263,7 @@ class MIMOFResponse(mimo.MIMO):
     def __add__(self, other):
         """
         """
-        if isinstance(other, MIMOResponse):
+        if isinstance(other, MIMOFResponse):
             self.check_domain(other)
             self.__class__(
                 tf=self.tf_sm + other.tf_sm,

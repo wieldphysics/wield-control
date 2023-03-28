@@ -25,8 +25,8 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 )
 
 
-from wavestate.control.statespace import dense
-from wavestate.control.statespace.dense import zpk_algorithms, xfer_algorithms, ss_algorithms
+from wavestate.control.algorithms.statespace import dense
+from wavestate.control.algorithms.statespace.dense import zpk_algorithms, xfer_algorithms, ss_algorithms
 
 import scipy.signal
 

@@ -12,8 +12,8 @@ import numbers
 import numpy as np
 import warnings
 
-from ..statespace.dense import xfer_algorithms
-from ..statespace.dense import zpk_algorithms
+# from ..algorithms.statespace.dense import xfer_algorithms
+from ..algorithms.statespace.dense import zpk_algorithms
 from ..statespace.ss import RawStateSpaceUser, RawStateSpace
 
 from .. import MIMO
@@ -129,6 +129,9 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             inputs={col: 0},
             outputs={row: 0},
         )
+
+    def __call__(self, row, col):
+        return self.mimo(row, col)
 
     def fresponse(self, f=None, w=None, s=None, z=None):
         tf = self.ss.fresponse_raw(f=f, w=w, s=s, z=z)[..., 0, 0]

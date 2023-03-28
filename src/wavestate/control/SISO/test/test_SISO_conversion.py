@@ -47,7 +47,6 @@ def bode(xfer, axm, axp, *, deg=True, **kw):
     return
 
 
-
 def test_conversion(tpath_join):
     """
     Test the conversions to and from ZPK representation and statespace representation

@@ -1,4 +1,5 @@
 #!/USSR/bin/env python
+
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: © 2022 California Institute of Technology.
@@ -7,18 +8,17 @@
 # with details inline in source files, comments, and docstrings.
 """
 """
+from collections.abc import Mapping
 import numbers
 import numpy as np
-import warnings
 
 from wavestate.bunch import Bunch
 
-from ..statespace.dense import xfer_algorithms
-from ..statespace.dense import ss_algorithms
 from ..statespace.ss import RawStateSpace, RawStateSpaceUser
 
 from . import mimo
 from . import response
+from . import util
 from .. import SISO
 
 
@@ -30,8 +30,7 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
     inputs and outputs can either be a list of names or a dictionary of names to indices.
 
-    inout can be specified instead of inputs and outputs and it must be a dictionary with both
-    inputs and outputs. If specified, each key must contain ".in" or ".out" as the last characters.
+    inputs and outputs can contain overlapping indices
     """
     def __init__(
         self,
@@ -40,62 +39,42 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         outputs=None,
         warn=True,
     ):
-        super().__init__(ss=ss)
+        inputs, in_secondaries = util.io_normalize(inputs, ss.Ninputs)
+        outputs, out_secondaries = util.io_normalize(outputs, ss.Noutputs)
 
-        def idx_normalize(idx):
-            if isinstance(idx, (tuple, list)):
-                st, sp = idx
-                return (st, sp)
-            if isinstance(idx, slice):
-                assert(idx.span is None)
-                return (idx.start, idx.stop)
-            return idx
+        if in_secondaries:
+            raise NotImplementedError()
 
-        if inputs is not None:
-            if isinstance(inputs, (list, tuple)):
-                # convert to a dictionary
-                inputs = {k: i for i, k in enumerate(inputs)}
-            else:
-                # normalize
-                inputs = {k: idx_normalize(v) for k, v in inputs.items()}
-        else:
-            inputs = {}
+        if out_secondaries:
+            raise NotImplementedError()
 
-        if outputs is not None:
-            if isinstance(outputs, (list, tuple)):
-                # convert to a dictionary
-                outputs = {k: i for i, k in enumerate(outputs)}
-            else:
-                # normalize
-                outputs = {k: idx_normalize(v) for k, v in outputs.items()}
-        else:
-            outputs = {}
+        self.inputs_rev = util.reverse_io_map(
+            inputs,
+            ss.Ninputs,
+            "inputs",
+            warn=warn
+        )
+        self.outputs_rev = util.reverse_io_map(
+            outputs,
+            ss.Noutputs,
+            "outputs",
+            warn=warn
+        )
 
         self.inputs = inputs
         self.outputs = outputs
+        super().__init__(ss=ss)
 
-        def reverse(d, length, io):
-            """
-            short function logic to reverse the input or output array
-            while checking that indices do not overlap
-            """
-            rev = {}
-            lst = np.zeros(length, dtype=bool)
-            for k, idx in d.items():
-                if isinstance(idx, tuple):
-                    st, sp = idx
-                else:
-                    prev = rev.setdefault(idx, k)
-                    if lst[idx]:
-                        raise RuntimeError("Overlapping indices")
-                    lst[idx] = True
-            if warn and not np.all(lst):
-                warnings.warn("state space has under specified {}".format(io))
-            return rev
-
-        self.inputs_rev = reverse(inputs, self.B.shape[-1], "inputs")
-        self.outputs_rev = reverse(outputs, self.C.shape[-2], "outputs")
         return
+
+    def secondaries(inputs=None, outputs=None):
+        """
+        Return a new system with additional inputs and outputs created from the names of the originals
+
+        Properly implementing should use a topological sort on inputs and outputs to check for cycles
+        and ensure that the index dependency is resolvable
+        """
+        raise NotImplementedError()
 
     def siso(self, row, col):
         """
@@ -107,73 +86,94 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
             raise RuntimeError("Row name is a span and cannot be used to create a SISO system")
         c = self.inputs[col]
         if isinstance(c, tuple):
-            raise RuntimeError("Row name is a span and cannot be used to create a SISO system")
+            raise RuntimeError("Col name is a span and cannot be used to create a SISO system")
         ret = SISO.SISOStateSpace(
             self.ss[r:r+1, c:c+1],
         )
-
         return ret
+
+    def __call__(self, row, col):
+        return self.siso(row, col)
 
     def __getitem__(self, key):
         row, col = key
 
-        def apply_map(group, length, dmap):
-            d = {}
-            if isinstance(group, slice):
-                raise RuntimeError("Slices are not supported on MIMOStateSpace")
-            elif isinstance(group, (list, tuple, set)):
-                pass
-            else:
-                # normalize to use a list
-                group = [group]
-
-            klst = []
-            for k in group:
-                if isinstance(k, str):
-                    idx = dmap[k]
-                    if isinstance(idx, tuple):
-                        st = len(klst)
-                        klst.extend(range(idx[0], idx[1]))
-                        sp = len(klst)
-                        d[k] = (st, sp)
-                    else:
-                        d[k] = len(klst)
-                        klst.append(idx)
-                else:
-                    name = self.inputs_rev[k]
-                    d[name] = len(klst)
-                    klst.append(k)
-            return klst, d
-
-        r, outputs = apply_map(row, self.C.shape[-2], self.outputs)
-        c, inputs = apply_map(col, self.B.shape[-1], self.inputs)
+        rlst, outputs, _ = util.apply_io_map(row, self.outputs)
+        clst, inputs, _ = util.apply_io_map(col, self.inputs)
 
         ret = self.__class__(
-            A=self.A,
-            B=self.B[..., :, c],
-            C=self.C[..., r, :],
-            D=self.D[..., r, :][..., :, c],  # annoying way that multiple list indices are grouped by numpy
-            E=self.E,
+            ss=self.ss[rlst, clst],
             inputs=inputs,
             outputs=outputs,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
         return ret
 
+    def namespace(self, ns):
+        """
+        prepend a namespace to all inputs and outputs and return the new system
+        """
+        inputs2 = {ns + k: v for k, v in self.inputs.items()}
+        outputs2 = {ns + k: v for k, v in self.outputs.items()}
+        return self.__class__(
+            ss=self.ss,
+            inputs=inputs2,
+            outputs=outputs2,
+            warn=False,
+        )
+
     def rename(self, renames, which='both'):
         """
-        Rename inputs and outputs of the statespace
+        Rename inputs and outputs of the statespace and return the new systems
 
-        which: can be inputs, outputs, or both (the default).
-
+        renames: dictionary mapping from:to name pairs or a function(from) -> to
+        which: can be "inputs", "outputs", or "both" (the default).
         """
-        raise NotImplementedError("TODO")
-        return
+        assert(which in ['both', 'inputs', 'outputs'])
+        if isinstance(renames, Mapping):
+            inputs2 = dict(self.inputs)
+            if which == 'both' or which == 'inputs':
+                for k, v in renames.items():
+                    inputs2[v] = inputs2[k]
+                    del inputs2[k]
+
+            outputs2 = dict(self.outputs)
+            if which == 'both' or which == 'outputs':
+                for k, v in renames.items():
+                    outputs2[v] = outputs2[k]
+                    del outputs2[k]
+
+        elif callable(renames):
+            inputs2 = dict()
+            if which == 'both' or which == 'inputs':
+                for k, v in self.inputs.items():
+                    inputs2[callable(k)] = v
+            else:
+                inputs2 = self.inputs
+
+            outputs2 = dict()
+            if which == 'both' or which == 'outputs':
+                for k, v in self.outputs.items():
+                    outputs2[callable(k)] = v
+            else:
+                outputs2 = self.outputs
+        else:
+            raise RuntimeError("Don't recognize renames type. Should be either a mapping or a callable")
+
+        return self.__class__(
+            ss=self.ss,
+            inputs=inputs2,
+            outputs=outputs2,
+            warn=False,
+        )
+
+    def rename_inputs(self, renames):
+        return self.rename(renames=renames, which='inputs')
+
+    def rename_outputs(self, renames):
+        return self.rename(renames=renames, which='outputs')
 
     def fresponse(self, *, f=None, w=None, s=None):
-        tf = xfer_algorithms.ss.fresponse_raw(f=f, s=s, w=w)
+        tf = self.ss.fresponse_raw(f=f, s=s, w=w)
         return response.MIMOFResponse(
             tf=tf,
             w=w,
@@ -185,40 +185,6 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
             time_symm=self.time_symm,
             snr=None,
         )
-
-    def __matmul__(self, other):
-        """
-        """
-        if isinstance(other, mimo.MIMOStateSpace):
-            # currently need to do some checking about the inputs
-            # and the outputs
-            return NotImplemented
-            ss = self.ABCDE @ other.ABCDE
-            return self.__class__(
-                ss=ss
-            )
-        else:
-            return NotImplemented
-
-    def __mul__(self, other):
-        """
-        """
-        if isinstance(other, numbers.Number):
-            return self.__class__(
-                ss=self.ss * other
-            )
-        else:
-            return NotImplemented
-
-    def __rmul__(self, other):
-        """
-        """
-        if isinstance(other, numbers.Number):
-            return self.__class__(
-                ss=other * self.ss
-            )
-        else:
-            return NotImplemented
 
     def in2out(self, inputs=None):
         raise NotImplementedError()
@@ -235,7 +201,7 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
     def constraint(self, outputs=None, matrix=None):
         """
-        Adds an output constraint to the system.
+        Adds an output constraint to the system and returns the altered system
 
         outputs: this is a list of outputs which establishes an order
         matrix: this is a matrix for the list of outputs which adds the system constraint
@@ -245,7 +211,7 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
     def constraints(self, output_matrix=[]):
         """
-        Adds multiple output constraints to the system.
+        Adds multiple output constraints to the system and returns the altered system
 
         output_matrix is a list of output, matrix pairs. This function is
         equivalent to calling constraint many times with the list, but is faster
@@ -253,12 +219,23 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         """
         raise NotImplementedError()
 
-    def feedback(self, connections=None, gain=1):
+    def series_connect(self, *, input_connections=None, output_connections=None, gain=1):
         """
-        Feedback linkage for a single statespace
+        Like feedback but extends inputs and outputs through gain or gain systems in series
 
-        connections_rowcol is a list of row, col pairs
-        gain is the connection gain to apply
+        the gain terms can be SISO systems, StateSpaceRaw, D, ABCD, or ABCDE blocks
+        """
+        raise NotImplementedError()
+
+    def feedback_connect(self, *, connections=None, gain=1):
+        """
+        Feedback linkage for a single statespace.
+
+        connections is a list of row, col pairs or row,col,gain tuples
+
+        gain is the connection gain to apply. It can be a scalar or a matrix
+
+        TODO: allow gain to be a SISO response, StateSpaceRaw, D, ABCD, or ABCDE blocks
         """
         fbD = np.zeros((self.D.shape[-1], self.D.shape[-2]))
 
@@ -273,16 +250,30 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
                 ridx = self.outputs[oname]
                 # note that the usual row and col conventions
                 # are reversed in fbB since it is a feedback matrix
+                is_matrix = False
                 if isinstance(cidx, tuple):
-                    assert(isinstance(ridx, tuple))
+                    is_matrix = True
+                if isinstance(ridx, tuple):
+                    is_matrix = True
+                if is_matrix:
+                    # promote to span if not already
+                    if not isinstance(cidx, tuple):
+                        cidx = (cidx, cidx+1)
+                    if not isinstance(ridx, tuple):
+                        ridx = (ridx, ridx+1)
                     cidxA, cidxB = cidx
                     ridxA, ridxB = ridx
-                    assert(cidxB - cidxA == ridxB - ridxA)
-                    fbD[..., cidxA:cidxB, ridxA:ridxB] = np.eye(cidxB - cidxA) * val
+                    if isinstance(val, numbers.Number):
+                        # must be the same size if using a scalar gain!
+                        assert(cidxB - cidxA == ridxB - ridxA)
+                        fbD[..., cidxA:cidxB, ridxA:ridxB] = np.eye(cidxB - cidxA) * val
+                    else:
+                        # assuming val is a matrix gain
+                        fbD[..., cidxA:cidxB, ridxA:ridxB] = val
                 else:
                     fbD[..., cidx, ridx] = val
 
-        elif isinstance(connections, dict):
+        elif isinstance(connections, Mapping):
             for (iname, oname), v in connections.items():
                 iidx = self.inputs[iname]
                 oidx = self.outputs[oname]
@@ -317,7 +308,13 @@ def statespace(
         if isinstance(arg, MIMOStateSpace):
             return arg
         elif isinstance(arg, (tuple, list)):
-            A, B, C, D, E = arg
+            if len(arg) == 4:
+                A, B, C, D = arg
+                E = None
+            elif len(arg) == 5:
+                A, B, C, D, E = arg
+            else:
+                raise RuntimeError("Unrecognized argument format")
     elif len(args) == 4:
         A, B, C, D = args
         E = None

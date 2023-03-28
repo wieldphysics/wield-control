@@ -12,8 +12,6 @@ import numbers
 import numpy as np
 import itertools
 
-from .srootset import SDomainRootSet
-from .zrootset import ZDomainRootSet
 from . import zpk
 
 import copy

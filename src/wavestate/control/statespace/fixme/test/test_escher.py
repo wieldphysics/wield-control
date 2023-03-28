@@ -16,8 +16,8 @@ import pytest
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from wavestate.control.statespace import dense
-from wavestate.control.statespace.dense import reduce_algorithms
+from wavestate.control.algorithms.statespace import dense
+from wavestate.control.algorithms.statespace.dense import reduce_algorithms
 
 import IFO_model
 

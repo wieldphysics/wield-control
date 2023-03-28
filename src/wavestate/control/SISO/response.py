@@ -12,6 +12,8 @@ import numbers
 # import warnings
 import numpy as np
 
+from .. import MIMO
+
 from . import siso
 
 
@@ -209,6 +211,47 @@ class SISOFResponse(siso.SISO):
             kw['snr'] = None
 
         return self.__class__(**kw)
+
+    def mimo(self, row, col):
+        """
+        Convert this statespace system into a MIMO type with a single named input and output
+
+        row: name of the single output
+        col: name of the single input
+        """
+
+        kw = dict(
+            dt=self.dt,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+        )
+        f = self.__dict__.get('f', None)
+        if f is not None:
+            kw['f'] = f
+        else:
+            w = self.__dict__.get('w', None)
+            if w is not None:
+                kw['w'] = w
+            else:
+                if self.dt is None:
+                    kw['s'] = self.__dict__['s']
+                else:
+                    kw['z'] = self.__dict__['z']
+
+        if self.snr_sm is not None:
+            kw['snr'] = self.snr_sm.reshape(self.snr_sm.shape + (1, 1))
+        else:
+            kw['snr'] = None
+
+        return MIMO.MIMOFResponse(
+            tf=self.tf_sm.reshape(self.tf_sm.shape + (1, 1)),
+            inputs={col: 0},
+            outputs={row: 0},
+            **kw
+        )
+
+    def __call__(self, row, col):
+        return self.mimo(row, col)
 
     def domain_kw(self, key=None):
         """

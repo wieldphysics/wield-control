@@ -15,9 +15,9 @@ import itertools
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from wavestate.control.statespace import dense
-from wavestate.control.statespace import ACE
-from wavestate.control.statespace.dense.xfer_algorithms import ss2xfer
+from wavestate.control.algorithms.statespace import dense
+from wavestate.control.ACE import ACE
+from wavestate.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 
 from wavestate.AAA import AAA
 

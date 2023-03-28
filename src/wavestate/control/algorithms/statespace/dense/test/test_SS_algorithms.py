@@ -25,8 +25,7 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from wavestate.control.TFmath import statespace
-import wavestate.control.statespace.dense as SS
+import wavestate.control.algorithms.statespace.dense as SS
 from os import path
 
 pytestmark = pytest.mark.xfail(reason="Need to revisit these")
@@ -79,7 +78,7 @@ def test_ABCDE(tpath):
     axB.ax0.loglog(
         F_Hz,
         abs(
-            statespace.ss2xfer(
+            SS.xfer_algorithms.ss2xfer(
                 A,
                 B,
                 C,
@@ -89,7 +88,7 @@ def test_ABCDE(tpath):
             )
         ),
     )
-    ratio = h / statespace.ss2xfer(
+    ratio = h / SS.xfer_algorithms.ss2xfer(
         A,
         B,
         C,
@@ -121,7 +120,7 @@ def test_2x2_ABCDE_c2r(plot, tpath):
     E = np.array([[1j, 0], [0, 1j]])
     A2, B2, C2, D2, E2 = SS.DSS_c2r(A, B, C, D, E, with_imag=True)
     # TODO make this an actual test
-    h1 = statespace.ss2xfer(
+    h1 = SS.xfer_algorithms.ss2xfer(
         A,
         B,
         C,
@@ -129,7 +128,7 @@ def test_2x2_ABCDE_c2r(plot, tpath):
         E=E,
         F_Hz=F_Hz,
     )
-    h2 = statespace.ss2xfer(
+    h2 = SS.xfer_algorithms.ss2xfer(
         A2,
         B2,
         C2,

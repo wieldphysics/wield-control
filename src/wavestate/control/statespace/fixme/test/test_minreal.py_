@@ -16,7 +16,7 @@ import wavestate.control
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from wavestate.control.statespace import dense
+from wavestate.control.algorithms.statespace import dense
 
 import scipy.linalg
 import IFO_model

@@ -11,10 +11,10 @@ import numbers
 import numpy as np
 # import warnings
 
-from ..statespace.dense import xfer_algorithms
-from ..statespace.dense import ss_algorithms
+from ..algorithms.statespace.dense import xfer_algorithms
+from ..algorithms.statespace.dense import zpk_algorithms
+from ..algorithms.statespace.dense import ss_algorithms
 from ..statespace import ssprint
-from ..SISO import util
 
 
 class RawStateSpace(object):
@@ -76,6 +76,18 @@ class RawStateSpace(object):
         return self.A, self.B, self.C, self.D, self.E
 
     @property
+    def Ninputs(self):
+        return self.B.shape[-1]
+
+    @property
+    def Noutputs(self):
+        return self.C.shape[-2]
+
+    @property
+    def Nstates(self):
+        return self.A.shape[-1]
+
+    @property
     def ABCD(self):
         if self.E is None:
             raise RuntimeError("Cannot Drop E")
@@ -86,7 +98,7 @@ class RawStateSpace(object):
 
     def __iter__(self):
         """
-        Represent self like a typical scipy zpk tuple. This throws away symmetry information
+        Represent self like a typical scipy ABCD tuple. This throws away symmetry information
         """
         yield self.A
         yield self.B
@@ -100,7 +112,33 @@ class RawStateSpace(object):
         """
         return ssprint.print_dense_nonzero(self)
 
+    _p_vals = None
+
+    @property
+    def _p(self):
+        """
+        Create a raw z, p tuple from the direct calculation
+        """
+        # TODO, not sure this should be included
+        if self._p_vals is None:
+            p = zpk_algorithms.ss2p(
+                A=self.A,
+                B=self.B,
+                C=self.C,
+                D=self.D,
+                E=self.E,
+                fmt="scipy",
+                allow_MIMO=True,
+            )
+            self._p_vals = p
+        return self._p_vals
+
     def __getitem__(self, key):
+        """
+        key must be a tuple of a list of row and column elements.
+
+        It can also be tuple of slices
+        """
         row, col = key
 
         ret = self.__class__(
@@ -117,6 +155,8 @@ class RawStateSpace(object):
         return ret
 
     def fresponse_raw(self, *, f=None, w=None, s=None, z=None):
+        # TODO fix this import
+        from ..SISO import util
         domain = util.build_sorz(
             f=f,
             w=w,

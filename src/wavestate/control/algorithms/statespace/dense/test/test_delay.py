@@ -24,7 +24,7 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from wavestate.control.statespace.dense import delay_algorithms, xfer_algorithms
+from wavestate.control.algorithms.statespace.dense import delay_algorithms, xfer_algorithms
 
 import scipy.signal
 

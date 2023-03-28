@@ -12,10 +12,9 @@ import numbers
 import numpy as np
 import warnings
 
-from ..statespace.dense import zpk_algorithms
+from ..algorithms.statespace.dense import zpk_algorithms
 
-from . import srootset
-from . import zrootset
+from ..algorithms.zpk import srootset, zrootset
 from . import siso
 from . import ss
 from . import util

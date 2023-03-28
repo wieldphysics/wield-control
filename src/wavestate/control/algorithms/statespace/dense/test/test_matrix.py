@@ -23,7 +23,7 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 
 from wavestate.utilities.np import logspaced
 from wavestate.utilities.mpl import mplfigB
-from wavestate.control.statespace.dense import matrix_algorithms
+from wavestate.control.algorithms.statespace.dense import matrix_algorithms
 
 import numpy.testing
 

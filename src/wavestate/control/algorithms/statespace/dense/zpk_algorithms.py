@@ -15,7 +15,7 @@ import collections
 
 from . import xfer_algorithms
 
-from ...SISO import order_reduce
+from ...zpk import order_reduce
 
 from numpy.polynomial.chebyshev import (
     chebfromroots,
@@ -29,6 +29,53 @@ TupleABCDE = collections.namedtuple("ABCDE", ('A', 'B', 'C', 'D', 'E'))
 pi2 = np.pi * 2
 
 
+def ss2p(
+    A,
+    B,
+    C,
+    D,
+    E=None,
+    idx_in=None,
+    idx_out=None,
+    Q_rank_cutoff=1e-15,
+    Q_rank_cutoff_unstable=None,
+    fmt="scipy",
+    allow_MIMO=False,
+):
+    if not allow_MIMO:
+        if idx_in is None:
+            if B.shape[1] == 1:
+                idx_in = 0
+            else:
+                raise RuntimeError("Must specify idx_in if B indicates MISO/MIMO system")
+        if idx_out is None:
+            if C.shape[0] == 1:
+                idx_out = 0
+            else:
+                raise RuntimeError("Must specify idx_in if C indicates SIMO/MIMO system")
+
+        if A.shape[-2:] == (0, 0):
+            return np.asarray([]), np.asarray([])
+
+        B = B[:, idx_in: idx_in + 1]
+        C = C[idx_out: idx_out + 1, :]
+        D = D[idx_out: idx_out + 1, idx_in: idx_in + 1]
+
+    if E is None:
+        p = scipy.linalg.eig(A, left=False, right=False)
+    else:
+        p = scipy.linalg.eig(A, E, left=False, right=False)
+        p = np.asarray([_ for _ in p if np.isfinite(_.real)])
+
+    if fmt == "IIRrational":
+        p = np.asarray(p) / (2 * np.pi)
+    elif fmt == "scipy":
+        pass
+    else:
+        raise RuntimeError("Unrecognized fmt parameter")
+    return p
+
+
 def ss2zp(
     A,
     B,
@@ -40,24 +87,26 @@ def ss2zp(
     Q_rank_cutoff=1e-15,
     Q_rank_cutoff_unstable=None,
     fmt="scipy",
+    allow_MIMO=False,
 ):
-    if idx_in is None:
-        if B.shape[1] == 1:
-            idx_in = 0
-        else:
-            raise RuntimeError("Must specify idx_in if B indicates MISO/MIMO system")
-    if idx_out is None:
-        if C.shape[0] == 1:
-            idx_out = 0
-        else:
-            raise RuntimeError("Must specify idx_in if C indicates SIMO/MIMO system")
+    if not allow_MIMO:
+        if idx_in is None:
+            if B.shape[1] == 1:
+                idx_in = 0
+            else:
+                raise RuntimeError("Must specify idx_in if B indicates MISO/MIMO system")
+        if idx_out is None:
+            if C.shape[0] == 1:
+                idx_out = 0
+            else:
+                raise RuntimeError("Must specify idx_in if C indicates SIMO/MIMO system")
 
-    if A.shape[-2:] == (0, 0):
-        return np.asarray([]), np.asarray([])
-    
-    B = B[:, idx_in: idx_in + 1]
-    C = C[idx_out: idx_out + 1, :]
-    D = D[idx_out: idx_out + 1, idx_in: idx_in + 1]
+        if A.shape[-2:] == (0, 0):
+            return np.asarray([]), np.asarray([])
+
+        B = B[:, idx_in: idx_in + 1]
+        C = C[idx_out: idx_out + 1, :]
+        D = D[idx_out: idx_out + 1, idx_in: idx_in + 1]
 
     if E is None:
         p = scipy.linalg.eig(A, left=False, right=False)
