@@ -130,9 +130,6 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             outputs={row: 0},
         )
 
-    def __call__(self, row, col):
-        return self.mimo(row, col)
-
     def fresponse(self, f=None, w=None, s=None, z=None):
         tf = self.ss.fresponse_raw(f=f, w=w, s=s, z=z)[..., 0, 0]
         return response.SISOFResponse(

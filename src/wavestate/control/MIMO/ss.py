@@ -92,9 +92,6 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         )
         return ret
 
-    def __call__(self, row, col):
-        return self.siso(row, col)
-
     def __getitem__(self, key):
         row, col = key
 
