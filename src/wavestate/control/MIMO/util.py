@@ -10,6 +10,7 @@
 import numbers
 import numpy as np
 import warnings
+from copy import deepcopy
 
 
 def io_idx_normalize(idx, Nmax):
@@ -39,6 +40,8 @@ def io_normalize(io_arg, Nmax):
         if isinstance(io_arg, (list, tuple)):
             # convert to a dictionary
             io_arg = {k: i for i, k in enumerate(io_arg)}
+        elif isinstance(io_arg, dict):
+            io_arg = deepcopy(io_arg)
         else:
             io_arg2 = {}
             while io_arg:
