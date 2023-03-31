@@ -117,12 +117,9 @@ class MIMOFResponse(mimo.MIMO):
             **self.__init_kw()
         )
 
-    def __call__(self, row, col):
-        return self.siso(row, col)
-
     def raw_tf(self, row, col):
-        rlst, outputs, rlisted = util.apply_io_map(row, self.outputs)
-        clst, inputs, clisted = util.apply_io_map(col, self.inputs)
+        rlst, outputs, olst, rlistified = util.apply_io_map(row, self.outputs)
+        clst, inputs, ilst, clistified = util.apply_io_map(col, self.inputs)
 
         if len(rlst) < len(clst):
             tf_red = self.tf[..., rlst, :][..., clst]
@@ -132,22 +129,41 @@ class MIMOFResponse(mimo.MIMO):
         return tf_red
 
     def __getitem__(self, key):
+        """
+        key should be a
+        ss[[output_list_row, ...], [input_list_col, ...]] which will return another MIMO object
+
+        ss[output_chn, input_chn] which will return a SISO object losing channel information
+        """
         row, col = key
 
-        rlst, outputs, _ = util.apply_io_map(row, self.outputs)
-        clst, inputs, _ = util.apply_io_map(col, self.inputs)
+        rlst, outputs, olst, rlistified = util.apply_io_map(row, self.outputs)
+        clst, inputs, ilst, clistified = util.apply_io_map(col, self.inputs)
 
-        if len(rlst) < len(clst):
-            tf_red = self.tf_sm[..., rlst, :][..., clst]
+        if rlistified:
+            if not clistified:
+                raise RuntimeError("Both the row and col must either be given as a single element (SISO), or as a collection (MIMO)")
+            r, = rlst
+            c, = clst
+            return SISO.response.SISOFResponse(
+                tf=self.tf_sm[..., r, c],
+                **self.__init_kw()
+            )
         else:
-            tf_red = self.tf_sm[..., clst][..., rlst, :]
+            if clistified:
+                raise RuntimeError("Both the row and col must either be given as a single element (SISO), or as a collection (MIMO)")
 
-        return self.__class__(
-            tf=tf_red,
-            inputs=inputs,
-            outputs=outputs,
-            **self.__init_kw()
-        )
+            if len(rlst) < len(clst):
+                tf_red = self.tf_sm[..., rlst, :][..., clst]
+            else:
+                tf_red = self.tf_sm[..., clst][..., rlst, :]
+
+            return self.__class__(
+                tf=tf_red,
+                inputs=inputs,
+                outputs=outputs,
+                **self.__init_kw()
+            )
 
     def rename(self, renames, which='both'):
         """

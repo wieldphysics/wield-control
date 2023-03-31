@@ -10,6 +10,7 @@
 import numbers
 import numpy as np
 import warnings
+from collections import Mapping
 from copy import deepcopy
 
 
@@ -40,7 +41,7 @@ def io_normalize(io_arg, Nmax):
         if isinstance(io_arg, (list, tuple)):
             # convert to a dictionary
             io_arg = {k: i for i, k in enumerate(io_arg)}
-        elif isinstance(io_arg, dict):
+        elif isinstance(io_arg, Mapping):
             io_arg = deepcopy(io_arg)
         else:
             io_arg2 = {}
@@ -71,7 +72,8 @@ def io_normalize(io_arg, Nmax):
 
 
 def apply_io_map(group, dmap):
-    d = {}
+    """
+    """
     listified = False
     if isinstance(group, slice):
         raise RuntimeError("Slices are not supported on MIMOStateSpace")
@@ -82,9 +84,12 @@ def apply_io_map(group, dmap):
         group = [group]
         listified = True
 
+    d = {}
+    dlst = []
     klst = []
     for k in group:
         idx = dmap[k]
+        dlst.append(k)
         if isinstance(idx, tuple):
             st = len(klst)
             klst.extend(range(idx[0], idx[1]))
@@ -93,7 +98,7 @@ def apply_io_map(group, dmap):
         else:
             d[k] = len(klst)
             klst.append(idx)
-    return klst, d, listified
+    return klst, d, dlst, listified
 
 
 def reverse_io_map(d, length, io, warn):

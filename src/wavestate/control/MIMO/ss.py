@@ -40,6 +40,7 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         outputs=None,
         warn=True,
     ):
+        # TODO, secondaries should perhaps only be done using a secondary call, not here
         inputs, in_secondaries = util.io_normalize(inputs, ss.Ninputs)
         outputs, out_secondaries = util.io_normalize(outputs, ss.Noutputs)
 
@@ -48,6 +49,32 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
         if out_secondaries:
             raise NotImplementedError()
+
+        rlst, outputs, olst, rlistified = util.apply_io_map(list(outputs), outputs)
+        clst, inputs, ilst, clistified = util.apply_io_map(list(inputs), inputs)
+
+        ilength = len(clst)
+        idissect = Bunch(
+            name='inputs',
+            length=ilength,
+            idx_start=0,
+            idx_end=ilength,
+            channels=ilst,
+        )
+
+        olength = len(rlst)
+        odissect = Bunch(
+            name='outputs',
+            length=olength,
+            idx_start=0,
+            idx_end=olength,
+            channels=olst,
+        )
+
+        # go ahead and reduce and reorder the statespace
+        ss2 = ss[rlst, clst]
+        output_dissections = [odissect]
+        input_dissections = [idissect]
 
         self.inputs_rev = util.reverse_io_map(
             inputs,
@@ -64,11 +91,10 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
         self.inputs = inputs
         self.outputs = outputs
-        super().__init__(ss=ss)
+        super().__init__(ss=ss2)
 
-        self.input_dissections = []
-        self.output_dissections = []
-        self.dissections = {}
+        self.input_dissections = input_dissections
+        self.output_dissections = output_dissections
         return
 
     @classmethod
@@ -93,15 +119,26 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         This constructor assumes that the dissections are complete
         """
         self = cls.__new__(cls)
-        super(self).__init__(ss=ss)
+        super(MIMOStateSpace, self).__init__(ss=ss)
 
         self.inputs = inputs
         self.outputs = outputs
 
+        self.inputs_rev = util.reverse_io_map(
+            inputs,
+            ss.Ninputs,
+            "inputs",
+            warn=False,
+        )
+        self.outputs_rev = util.reverse_io_map(
+            outputs,
+            ss.Noutputs,
+            "outputs",
+            warn=False,
+        )
+
         self.input_dissections = input_dissections
         self.output_dissections = output_dissections
-
-        self.dissections = {}
         return self
 
     def secondaries(inputs=None, outputs=None):
@@ -110,13 +147,6 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
         Properly implementing should use a topological sort on inputs and outputs to check for cycles
         and ensure that the index dependency is resolvable
-        """
-        raise NotImplementedError()
-
-    def dissect(self, inputs, outputs):
-        """
-        inputs = [(name='dissection', channels_list=[]), ..., 'remaining']
-        outputs = [(name='dissection', channels_list=[]), ..., 'remaining']
         """
         raise NotImplementedError()
 
@@ -131,32 +161,142 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         c = self.inputs[col]
         if isinstance(c, tuple):
             raise RuntimeError("Col name is a span and cannot be used to create a SISO system")
-        ret = SISO.SISOStateSpace(
+        return SISO.SISOStateSpace(
             self.ss[r:r+1, c:c+1],
         )
-        return ret
 
     def __getitem__(self, key):
+        """
+        key should be a
+        ss[[output_list_row, ...], [input_list_col, ...]] which will return another MIMO object
+
+        ss[output_chn, input_chn] which will return a SISO object losing channel information
+
+        drops dissection information if it existed
+        """
         row, col = key
 
-        rlst, outputs, _ = util.apply_io_map(row, self.outputs)
-        clst, inputs, _ = util.apply_io_map(col, self.inputs)
+        rlst, outputs, olst, rlistified = util.apply_io_map(row, self.outputs)
+        clst, inputs, ilst, clistified = util.apply_io_map(col, self.inputs)
 
-        # inputs_length = 
-        # Bunch(
-        #     name='inputs',
-        #     length=inputs_length,
-        #     idx_start=0,
-        #     idx_end=inputs_length,
-        #     channels=list(self.inputs.keys()),
-        # )
+        ilength = len(clst)
+        idissect = Bunch(
+            name='inputs',
+            length=ilength,
+            idx_start=0,
+            idx_end=ilength,
+            channels=ilst,
+        )
 
-        ret = self.__class__(
-            ss=self.ss[rlst, clst],
+        olength = len(rlst)
+        odissect = Bunch(
+            name='outputs',
+            length=olength,
+            idx_start=0,
+            idx_end=olength,
+            channels=olst,
+        )
+
+        if rlistified:
+            if not clistified:
+                raise RuntimeError("Both the row and col must either be given as a single element (SISO), or as a collection (MIMO)")
+            r, = rlst
+            c, = clst
+            return SISO.SISOStateSpace(
+                self.ss[r:r+1, c:c+1],
+            )
+        else:
+            if clistified:
+                raise RuntimeError("Both the row and col must either be given as a single element (SISO), or as a collection (MIMO)")
+            return self.__build__(
+                ss=self.ss[rlst, clst],
+                inputs=inputs,
+                outputs=outputs,
+                output_dissections=[odissect],
+                input_dissections=[idissect],
+            )
+
+    def dissect(
+            self,
+            *,
+            ilists,
+            inames,
+            olists,
+            onames,
+    ):
+        """
+        This implements the dissection interface to break the statespace into
+        blocks. This is useful for a number of advanced control synthesis and
+        analysis routines that depend on categories of input and output blocks
+        """
+
+        ichannels = []
+        iset = set()
+        for ilst in ilists:
+            assert(iset.isdisjoint(ilst))
+            iset.update(ilst)
+
+            ichannels.extend(ilst)
+
+        ochannels = []
+        oset = set()
+        for olst in olists:
+            assert(oset.isdisjoint(olst))
+            oset.update(olst)
+
+            ochannels.extend(olst)
+
+        rlst, outputs, olst, rlistified = util.apply_io_map(ochannels, self.outputs)
+        clst, inputs, ilst, clistified = util.apply_io_map(ochannels, self.inputs)
+        ss = self.ss[rlst, clst]
+
+        input_dissections = []
+        for ilst, iname in zip(ilists, inames):
+            idx_st = inputs[ilst[0]]
+            if isinstance(idx_st, tuple):
+                idx_st = idx_st[0]
+            idx_ed = inputs[ilst[-1]]
+            if isinstance(idx_ed, tuple):
+                idx_ed = idx_st[1]
+            else:
+                idx_ed += 1
+            ilength = idx_ed - idx_st
+            idissect = Bunch(
+                name=iname,
+                length=ilength,
+                idx_start=idx_st,
+                idx_end=idx_ed,
+                channels=ilst,
+            )
+            input_dissections.append(idissect)
+
+        output_dissections = []
+        for olst, oname in zip(olists, onames):
+            idx_st = outputs[olst[0]]
+            if isinstance(idx_st, tuple):
+                idx_st = idx_st[0]
+            idx_ed = outputs[ilst[-1]]
+            if isinstance(idx_ed, tuple):
+                idx_ed = idx_st[1]
+            else:
+                idx_ed += 1
+            olength = idx_ed - idx_st
+            odissect = Bunch(
+                name=oname,
+                length=olength,
+                idx_start=idx_st,
+                idx_end=idx_ed,
+                channels=olst,
+            )
+            output_dissections.append(odissect)
+
+        return self.__build__(
+            ss=ss,
             inputs=inputs,
             outputs=outputs,
+            output_dissections=output_dissections,
+            input_dissections=input_dissections,
         )
-        return ret
 
     def namespace(self, ns):
         """
@@ -164,11 +304,25 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         """
         inputs2 = {ns + k: v for k, v in self.inputs.items()}
         outputs2 = {ns + k: v for k, v in self.outputs.items()}
-        return self.__class__(
+
+        input_dissections = []
+        for idB in self.input_dissections:
+            idB2 = deepcopy(idB)
+            idB2.channels = [ns + k for k in idB.channels]
+            input_dissections.append(idB2)
+
+        output_dissections = []
+        for odB in self.input_dissections:
+            odB2 = deepcopy(odB)
+            odB2.channels = [ns + k for k in odB.channels]
+            output_dissections.append(odB2)
+
+        return self.__build__(
             ss=self.ss,
             inputs=inputs2,
             outputs=outputs2,
-            warn=False,
+            input_dissections=input_dissections,
+            output_dissections=output_dissections,
         )
 
     def rename(self, renames, which='both'):
@@ -185,35 +339,63 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
                 for k, v in renames.items():
                     inputs2[v] = inputs2[k]
                     del inputs2[k]
+                input_dissections = []
+                for idB in self.input_dissections:
+                    idB2 = deepcopy(idB)
+                    idB2.channels = [renames.get(k, k) for k in idB.channels]
+                    input_dissections.append(idB2)
+            else:
+                input_dissections = deepcopy(self.input_dissections)
 
             outputs2 = dict(self.outputs)
             if which == 'both' or which == 'outputs':
                 for k, v in renames.items():
                     outputs2[v] = outputs2[k]
                     del outputs2[k]
+                output_dissections = []
+                for odB in self.input_dissections:
+                    odB2 = deepcopy(odB)
+                    odB2.channels = [renames.get(k, k) for k in odB.channels]
+                    output_dissections.append(odB2)
+            else:
+                output_dissections = deepcopy(self.output_dissections)
+
 
         elif callable(renames):
             inputs2 = dict()
             if which == 'both' or which == 'inputs':
                 for k, v in self.inputs.items():
-                    inputs2[callable(k)] = v
+                    inputs2[renames(k)] = v
+                input_dissections = []
+                for idB in self.input_dissections:
+                    idB2 = deepcopy(idB)
+                    idB2.channels = [renames(k) for k in idB.channels]
+                    input_dissections.append(idB2)
             else:
                 inputs2 = self.inputs
+                input_dissections = deepcopy(self.input_dissections)
 
             outputs2 = dict()
             if which == 'both' or which == 'outputs':
                 for k, v in self.outputs.items():
-                    outputs2[callable(k)] = v
+                    outputs2[renames(k)] = v
+                output_dissections = []
+                for odB in self.input_dissections:
+                    odB2 = deepcopy(odB)
+                    odB2.channels = [renames(k) for k in odB.channels]
+                    output_dissections.append(odB2)
             else:
                 outputs2 = self.outputs
+                output_dissections = deepcopy(self.output_dissections)
         else:
             raise RuntimeError("Don't recognize renames type. Should be either a mapping or a callable")
 
-        return self.__class__(
+        return self.__build__(
             ss=self.ss,
             inputs=inputs2,
             outputs=outputs2,
-            warn=False,
+            input_dissections=input_dissections,
+            output_dissections=output_dissections,
         )
 
     def rename_inputs(self, renames):
@@ -333,10 +515,12 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
         ss = self.ss.feedbackD(D=fbD)
 
-        return self.__class__(
+        return self.__build__(
             ss=ss,
             inputs=deepcopy(self.inputs),
             outputs=deepcopy(self.outputs),
+            input_dissections=deepcopy(self.input_dissections),
+            output_dissections=deepcopy(self.output_dissections),
         )
 
 
