@@ -65,7 +65,43 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         self.outputs = outputs
         super().__init__(ss=ss)
 
+        self.input_dissections = []
+        self.output_dissections = []
+        self.dissections = {}
         return
+
+    @classmethod
+    def __build__(
+            cls,
+            ss=None,
+            inputs=None,
+            outputs=None,
+            input_dissections=None,
+            output_dissections=None
+    ):
+        """
+        The raw constructor. Performs minimal computations and few consistency checks
+
+        input_dissections and output_dissections must be a list of Bunches. Each bunch must include
+        dB.name : name of the dissection
+        dB.length : length of channels
+        dB.idx_start : start index of the inputs/outputs
+        dB.idx_end : end index of the inputs/outputs (must be idx_start + length)
+        dB.channel_list = [] # a list of channels in the dissection
+
+        This constructor assumes that the dissections are complete
+        """
+        self = cls.__new__(cls)
+        super(self).__init__(ss=ss)
+
+        self.inputs = inputs
+        self.outputs = outputs
+
+        self.input_dissections = input_dissections
+        self.output_dissections = output_dissections
+
+        self.dissections = {}
+        return self
 
     def secondaries(inputs=None, outputs=None):
         """
@@ -73,6 +109,13 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
         Properly implementing should use a topological sort on inputs and outputs to check for cycles
         and ensure that the index dependency is resolvable
+        """
+        raise NotImplementedError()
+
+    def dissect(self, inputs, outputs):
+        """
+        inputs = [(name='dissection', channels_list=[]), ..., 'remaining']
+        outputs = [(name='dissection', channels_list=[]), ..., 'remaining']
         """
         raise NotImplementedError()
 
@@ -97,6 +140,15 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
         rlst, outputs, _ = util.apply_io_map(row, self.outputs)
         clst, inputs, _ = util.apply_io_map(col, self.inputs)
+
+        # inputs_length = 
+        # Bunch(
+        #     name='inputs',
+        #     length=inputs_length,
+        #     idx_start=0,
+        #     idx_end=inputs_length,
+        #     channels=list(self.inputs.keys()),
+        # )
 
         ret = self.__class__(
             ss=self.ss[rlst, clst],
