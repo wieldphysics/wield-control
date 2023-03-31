@@ -11,6 +11,7 @@
 from collections.abc import Mapping
 import numbers
 import numpy as np
+from copy import deepcopy
 
 from wavestate.bunch import Bunch
 
@@ -282,8 +283,8 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
 
         return self.__class__(
             ss=ss,
-            inputs=self.inputs,
-            outputs=self.outputs,
+            inputs=deepcopy(self.inputs),
+            outputs=deepcopy(self.outputs),
         )
 
 
