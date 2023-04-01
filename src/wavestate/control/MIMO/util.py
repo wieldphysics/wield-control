@@ -10,8 +10,12 @@
 import numbers
 import numpy as np
 import warnings
-from collections import Mapping
 from copy import deepcopy
+
+try:
+    from collections import Mapping
+except ImportError:
+    from collections.abc import Mapping
 
 
 def io_idx_normalize(idx, Nmax):
