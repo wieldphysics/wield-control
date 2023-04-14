@@ -1,0 +1,26 @@
+% A simple library for signal flow diagrams
+% based on the pgf/tikz package of Till Tantau
+%
+% Author: Dr. Lee McCuller
+% Version: 0.5
+% Date: 2019/01/05
+\NeedsTeXFormat{LaTeX2e}
+\RequirePackage[usenames, dvipsnames]{xcolor}
+\RequirePackage{tikz}
+\ProvidesPackage{signalflow}
+              [20019/02/04 v0.5 Signal flow diagrams]
+
+%
+% Libraries for signal flow diagrams.
+%
+\usetikzlibrary{arrows}
+\usetikzlibrary{scopes}
+\usetikzlibrary{decorations.markings}
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{bending}
+
+\usetikzlibrary{signalflowstyles}
+
+\def\epin#1{
+  {[current point is local] (earrow.center) edge[help lines,] (elabel#1)}
+}  
