@@ -11,12 +11,12 @@
 import numpy as np
 import pytest
 import copy
-from wavestate import declarative
-import wavestate.control
+from wield import declarative
+import wield.control
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
-from wavestate.control.algorithms.statespace import dense
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+from wield.control.algorithms.statespace import dense
 
 import scipy.linalg
 import IFO_model
