@@ -68,3 +68,6 @@ class SISOCommonBase(SISO):
             self.fiducial_atol = atol
         return
 
+    def normalize(self, gain=1,w=None,s=None,f=None):
+        r = self.fresponse(w=w, f=f, s=s)
+        return self * (gain / r.mag)
