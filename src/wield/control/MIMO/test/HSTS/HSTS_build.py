@@ -15,7 +15,7 @@ from . import readFilter
 from gwpy.timeseries import TimeSeries
 from gwpy.time import tconvert
 
-from wavestate.bunch import Bunch
+from wield.bunch import Bunch
 import pickle
 import os
 

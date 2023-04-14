@@ -11,14 +11,14 @@ State Space System
 
 import numpy as np
 import copy
-from wavestate import declarative
+from wield import declarative
 from collections import defaultdict, Mapping
 import functools
 from numbers import Number
 
-from wavestate.control.algorithms.statespace import dense
-from wavestate.control.algorithms.statespace.dense.zpk_algorithms import zpk_cascade
-from wavestate.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
+from wield.control.algorithms.statespace import dense
+from wield.control.algorithms.statespace.dense.zpk_algorithms import zpk_cascade
+from wield.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 
 from . import ACE
 

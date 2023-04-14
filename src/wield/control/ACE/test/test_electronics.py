@@ -12,13 +12,13 @@ import numpy as np
 import scipy
 import scipy.signal
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
-from wavestate.control.ACE import ACE
-from wavestate.control.ACE import ace_electrical
-from wavestate.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+from wield.control.ACE import ACE
+from wield.control.ACE import ace_electrical
+from wield.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,

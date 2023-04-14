@@ -11,17 +11,17 @@
 import numpy as np
 import pytest
 import copy
-from wavestate import declarative
-import wavestate.control
+from wield import declarative
+import wield.control
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
-from wavestate.control.statespace import dense, StateSpaceDense
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+from wield.control.statespace import dense, StateSpaceDense
 
 import IFO_model
 import IFO_model_noM
 
-from wavestate.pytest.fixtures import (
+from wield.pytest.fixtures import (
     tpath_join,
     dprint,
 )
@@ -277,7 +277,7 @@ def test_save(test_trigger, tpath_join, plot):
     print("Inputs: ", sys1.inputs.idx2name)
     print("Output: ", sys1.output.idx2name)
     print("Output[n]: ", sys1.output.idx2name.index("Msrm+A-oP"))
-    wavestate.control.save(
+    wield.control.save(
         tpath_join("system.mat"),
         dict(
             A=sys1.A,

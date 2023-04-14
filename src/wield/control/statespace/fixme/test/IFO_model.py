@@ -10,11 +10,11 @@
 
 import numpy as np
 import copy
-from wavestate import declarative
+from wield import declarative
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
-from wavestate.control.statespace import dense, StateSpaceDense
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+from wield.control.statespace import dense, StateSpaceDense
 
 
 c_m_s = 299792458
@@ -305,7 +305,7 @@ def build_model(
                 ("zero", ["FMetm+M-f"]),
             ],
         )
-    return wavestate.bunch.Bunch(locals())
+    return wield.bunch.Bunch(locals())
 
 
 states_delays_o = [

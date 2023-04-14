@@ -10,7 +10,7 @@
 
 import numpy as np
 import scipy
-from wavestate.bunch import Bunch
+from wield.bunch import Bunch
 import scipy.signal
 import copy
 

@@ -11,19 +11,19 @@ State Space System
 
 import numpy as np
 import copy
-from wavestate import declarative
+from wield import declarative
 from collections import defaultdict, Mapping
 import functools
 from numbers import Number
 
-from wavestate.control.algorithms.statespace import dense
-from wavestate.control.statespace import ACE
-from wavestate.control.algorithms.statespace.dense.zpk_algorithms import zpk_cascade
-from wavestate.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
+from wield.control.algorithms.statespace import dense
+from wield.control.statespace import ACE
+from wield.control.algorithms.statespace.dense.zpk_algorithms import zpk_cascade
+from wield.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 
-from wavestate.quantum import qop
+from wield.quantum import qop
 
-from wavestate.bunch import FrozenBunch
+from wield.bunch import FrozenBunch
 
 c_m_s = 299792458
 

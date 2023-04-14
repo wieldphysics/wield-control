@@ -13,7 +13,7 @@ import scipy
 import scipy.signal
 import pytest
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,
@@ -23,9 +23,9 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 )
 
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
-import wavestate.control.algorithms.statespace.dense as SS
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+import wield.control.algorithms.statespace.dense as SS
 from os import path
 
 pytestmark = pytest.mark.xfail(reason="Need to revisit these")

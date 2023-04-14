@@ -10,7 +10,7 @@
 import numpy as np
 import copy
 from collections import defaultdict
-from wavestate.bunch import Bunch
+from wield.bunch import Bunch
 
 try:
     import sympy as sp

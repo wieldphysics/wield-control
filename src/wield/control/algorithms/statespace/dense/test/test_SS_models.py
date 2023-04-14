@@ -11,11 +11,11 @@ import numpy as np
 import scipy
 import scipy.signal
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
 
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,
@@ -25,8 +25,8 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 )
 
 
-from wavestate.control.algorithms.statespace import dense
-from wavestate.control.algorithms.statespace.dense import zpk_algorithms, xfer_algorithms, ss_algorithms
+from wield.control.algorithms.statespace import dense
+from wield.control.algorithms.statespace.dense import zpk_algorithms, xfer_algorithms, ss_algorithms
 
 import scipy.signal
 

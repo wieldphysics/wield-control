@@ -12,15 +12,15 @@ import numpy as np
 # import matplotlib.pyplot as plt
 # import matplotlib.animation as animation
 # import sympy
-from wavestate.utilities.mpl import mplfigB
-from wavestate.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+from wield.utilities.np import logspaced
 
-from wavestate.control.SFLU import SFLU
+from wield.control.SFLU import SFLU
 
 from quantum_lib import mats_planewave as ilib
 
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,

@@ -8,7 +8,7 @@
 """
 """
 
-from wavestate import declarative
+from wield import declarative
 import numpy as np
 
 import slycot
@@ -29,7 +29,7 @@ def rescale_slycot(A, B, C, D, E):
         job="A",
     )
     s_norm, A, B, C, scale = out
-    return wavestate.bunch.Bunch(
+    return wield.bunch.Bunch(
         ABCDE=(A, B, C, D, E),
         s_norm=s_norm,
         scale=scale,

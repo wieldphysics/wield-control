@@ -13,9 +13,9 @@ import numpy as np
 import copy
 import numbers
 
-from wavestate.bunch import Bunch
+from wield.bunch import Bunch
 from collections import defaultdict, Mapping
-from wavestate.utilities.np import broadcast_shapes
+from wield.utilities.np import broadcast_shapes
 
 from .tupleize import tupleize
 

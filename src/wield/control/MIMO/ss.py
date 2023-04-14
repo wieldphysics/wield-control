@@ -13,7 +13,7 @@ import numbers
 import numpy as np
 from copy import deepcopy
 
-from wavestate.bunch import Bunch
+from wield.bunch import Bunch
 
 from ..statespace.ss import RawStateSpace, RawStateSpaceUser
 

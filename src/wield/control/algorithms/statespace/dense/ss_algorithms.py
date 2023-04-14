@@ -13,7 +13,7 @@ import numpy as np
 import scipy
 import scipy.signal
 import scipy.linalg
-from wavestate.bunch import Bunch
+from wield.bunch import Bunch
 
 from .eig_algorithms import eigspaces_right_real
 from . import matrix_algorithms

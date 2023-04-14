@@ -12,7 +12,7 @@
 """
 
 import numpy as np
-from wavestate.bunch import Bunch as Struct
+from wield.bunch import Bunch as Struct
 
 
 def Minv(M):

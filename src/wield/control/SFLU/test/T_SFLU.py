@@ -11,13 +11,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sympy
-from wavestate.utilities.mpl import mplfigB
-import wavestate.control
+from wield.utilities.mpl import mplfigB
+import wield.control
 import re
 
-from wavestate.control.SFLU import SFLU
+from wield.control.SFLU import SFLU
 
-from wavestate.pytest import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tpath_join,
     dprint,
     plot,

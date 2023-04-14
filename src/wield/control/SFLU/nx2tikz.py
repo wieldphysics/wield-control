@@ -15,7 +15,7 @@ import tempfile
 import os
 from networkx import is_directed
 
-from wavestate.utilities.strings import padding_remove
+from wield.utilities.strings import padding_remove
 
 
 def dumps_tikz(g, scale='0.5em'):
