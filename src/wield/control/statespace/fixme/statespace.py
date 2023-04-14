@@ -8,7 +8,7 @@
 """
 """
 
-from wavestate.bunch import Bunch
+from wield.bunch import Bunch
 import numpy as np
 import copy
 import itertools
@@ -18,7 +18,7 @@ from . import ss_algorithms
 from . import reduce_algorithms
 from . import shuffle_algorithms
 
-from wavestate.pytest.fixtures import (
+from wield.pytest.fixtures import (
     tpath_join,
     dprint,
 )

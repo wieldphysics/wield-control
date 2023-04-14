@@ -13,15 +13,15 @@ import scipy
 import scipy.signal
 import itertools
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
-from wavestate.control.algorithms.statespace import dense
-from wavestate.control.ACE import ACE
-from wavestate.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+from wield.control.algorithms.statespace import dense
+from wield.control.ACE import ACE
+from wield.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 
-from wavestate.AAA import AAA
+from wield.AAA import AAA
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,

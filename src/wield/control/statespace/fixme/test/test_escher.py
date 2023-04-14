@@ -10,14 +10,14 @@
 
 import numpy as np
 import copy
-from wavestate import declarative
-import wavestate.control
+from wield import declarative
+import wield.control
 import pytest
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
-from wavestate.control.algorithms.statespace import dense
-from wavestate.control.algorithms.statespace.dense import reduce_algorithms
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+from wield.control.algorithms.statespace import dense
+from wield.control.algorithms.statespace.dense import reduce_algorithms
 
 import IFO_model
 

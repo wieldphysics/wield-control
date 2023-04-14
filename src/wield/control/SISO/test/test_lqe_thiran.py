@@ -13,12 +13,12 @@ import scipy
 import scipy.signal
 import itertools
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
-from wavestate.control.SISO import design
-from wavestate.control import SISO
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+from wield.control.SISO import design
+from wield.control import SISO
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,

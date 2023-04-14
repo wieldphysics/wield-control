@@ -11,9 +11,9 @@
 import scipy
 import scipy.signal
 
-from wavestate.control.ACE import ACE
+from wield.control.ACE import ACE
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,

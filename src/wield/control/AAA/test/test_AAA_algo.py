@@ -9,11 +9,11 @@
 import numpy as np
 import pytest
 
-from wavestate.iirrational.representations import asZPKTF
-from wavestate.utilities.mpl import mplfigB
+from wield.iirrational.representations import asZPKTF
+from wield.utilities.mpl import mplfigB
 
 
-from wavestate.pytest import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tpath_join,
     plot,
     dprint,

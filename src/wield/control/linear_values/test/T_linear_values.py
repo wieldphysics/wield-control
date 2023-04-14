@@ -8,9 +8,9 @@
 """
 """
 import numpy as np
-import wavestate.control.linear_values as lv
+import wield.control.linear_values as lv
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,

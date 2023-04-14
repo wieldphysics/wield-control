@@ -12,7 +12,7 @@
 import numpy as np
 import enum
 
-from wavestate.utilities.np import matrix_stack, vector_stack, broadcast_shapes
+from wield.utilities.np import matrix_stack, vector_stack, broadcast_shapes
 
 ZERO = np.asarray(0)
 IDENT = np.asarray(1)

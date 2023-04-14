@@ -13,7 +13,7 @@ import scipy
 import scipy.signal
 
 import pytest
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,
@@ -23,11 +23,11 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 )
 
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
 
-from wavestate.control import SISO
-from wavestate.control.SISO import zpk_d2c_c2d
+from wield.control import SISO
+from wield.control.SISO import zpk_d2c_c2d
 
 
 def FBNSsimpSS(gain=1, lo_ord=4):

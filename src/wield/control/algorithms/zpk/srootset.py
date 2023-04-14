@@ -10,7 +10,7 @@
 
 import sys
 import numbers
-from wavestate.bunch import Bunch
+from wield.bunch import Bunch
 from .roots_matching import nearest_pairs
 
 import numpy as np

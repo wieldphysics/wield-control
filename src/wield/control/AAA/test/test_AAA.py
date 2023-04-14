@@ -10,14 +10,14 @@ import pytest
 import numpy as np
 import scipy.signal
 
-from wavestate.iirrational.representations import asZPKTF
-from wavestate.iirrational.testing import IIRrational_data
+from wield.iirrational.representations import asZPKTF
+from wield.iirrational.testing import IIRrational_data
 
-from wavestate.utilities.mpl import mplfigB
+from wield.utilities.mpl import mplfigB
 
-from wavestate.AAA import tfAAA
+from wield.AAA import tfAAA
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     plot,
     dprint,

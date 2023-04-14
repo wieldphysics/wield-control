@@ -1,5 +1,5 @@
 """
-Examples demonstrating the use of wavestate.control objects to calculate
+Examples demonstrating the use of wield.control objects to calculate
 Sidles-Sigg instabilities in a number of ways.
 
 First, starting with the state space model of the free torsional spring and
@@ -20,12 +20,12 @@ feedback in this example is.
 Provided by Kevin Kuns
 """
 import numpy as np
-from wavestate.control import SISO, MIMO
-from wavestate.AAA import tfAAA
-from wavestate.pytest import tpath_join, dprint, capture
-from wavestate.bunch import Bunch
+from wield.control import SISO, MIMO
+from wield.AAA import tfAAA
+from wield.pytest import tpath_join, dprint, capture
+from wield.bunch import Bunch
 import scipy.constants as scc
-from wavestate.control.plotting import plotTF
+from wield.control.plotting import plotTF
 
 
 def test_hard_soft_modes(tpath_join, dprint, capture):

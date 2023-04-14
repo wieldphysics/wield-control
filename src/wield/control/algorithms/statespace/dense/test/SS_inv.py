@@ -7,11 +7,11 @@
 # with details inline in source files, comments, and docstrings.
 """
 """
-from wavestate.utilities.mpl import *
-from wavestate.utilities.ipynb.sympy import *
-from wavestate.control.TFmath import order_reduce
+from wield.utilities.mpl import *
+from wield.utilities.ipynb.sympy import *
+from wield.control.TFmath import order_reduce
 import numpy as np
-import wavestate.control
+import wield.control
 import scipy
 from scipy import signal
 from os import path

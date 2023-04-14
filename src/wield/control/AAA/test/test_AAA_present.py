@@ -10,13 +10,13 @@ import numpy as np
 import scipy.signal
 import pytest
 
-from wavestate.iirrational.representations import asZPKTF
-from wavestate.AAA import tfAAA
+from wield.iirrational.representations import asZPKTF
+from wield.AAA import tfAAA
 
-from wavestate.utilities.mpl import mplfigB, generate_stacked_plot_ax, asavefig, logspaced
+from wield.utilities.mpl import mplfigB, generate_stacked_plot_ax, asavefig, logspaced
 
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     plot,
     dprint,
@@ -24,7 +24,7 @@ from wavestate.pytest.fixtures import (  # noqa: F401
     tpath_preclear,
     test_trigger,
 )
-from wavestate.pytest import Timer
+from wield.pytest import Timer
 
 asavefig.formats.svg.use = True
 

@@ -11,7 +11,7 @@
 import numpy as np
 import pytest
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,
@@ -21,9 +21,9 @@ from wavestate.pytest.fixtures import (  # noqa: F401
 )
 
 
-from wavestate.utilities.np import logspaced
-from wavestate.utilities.mpl import mplfigB
-from wavestate.control.algorithms.statespace.dense import matrix_algorithms
+from wield.utilities.np import logspaced
+from wield.utilities.mpl import mplfigB
+from wield.control.algorithms.statespace.dense import matrix_algorithms
 
 import numpy.testing
 

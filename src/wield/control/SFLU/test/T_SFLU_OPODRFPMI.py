@@ -11,16 +11,16 @@ for optical systems of mirrors and beamsplitters.
 """
 import numpy as np
 import networkx as nx
-from wavestate.utilities.mpl import mplfigB
+from wield.utilities.mpl import mplfigB
 
-from wavestate.control.SFLU import nx2tikz
-from wavestate.utilities.strings import padding_remove
+from wield.control.SFLU import nx2tikz
+from wield.utilities.strings import padding_remove
 
-from wavestate.control.SFLU import SFLU
-from wavestate.control.SFLU import optics
-from wavestate.control.SFLU.functions import neg
+from wield.control.SFLU import SFLU
+from wield.control.SFLU import optics
+from wield.control.SFLU.functions import neg
 
-from wavestate.pytest.fixtures import (  # noqa: F401
+from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
     dprint,
     plot,
