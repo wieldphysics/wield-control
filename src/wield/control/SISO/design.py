@@ -43,7 +43,10 @@ def root_factored_quadrature_sum(*filts):
     """
     Return a square root filter
 
-    TODO, make this numerically better behaved and t
+    TODO, make this numerically better behaved and test its output.
+
+    This should actually be implemented using spectral factorization using and ARE.
+    But debugging that sounds hard. This should be similarly robust but is not a general method.
     """
     ss_sq = None
     for filt in filts:
