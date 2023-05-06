@@ -68,6 +68,51 @@ def print_dense_nonzero(ssb):
     )
 
 
+def print_dense_nonzero_M(M):
+    """
+    print the nonzero sparsity patter of the statespace.
+
+    NOTE, the code is slightly convoluted as it is based on similar code in the ACE system
+    """
+    c_str = []
+    for key in range(M.shape[-2]):
+        i1 = key
+        i2 = i1 + 1
+        if i2 - i1 == 0:
+            continue
+        c_str.append(str(key))
+        if i2 - i1 > 1:
+            for _ in range(i2 - i1 - 2):
+                c_str.append("┃")
+            c_str.append("┗")
+    c_str = "\n".join(c_str)
+
+    s_str = []
+    s_str_list = []
+    alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    for key in range(M.shape[-1]):
+        kidx = key % len(alpha)
+        i1 = key
+        i2 = i1 + 1
+        if i2 - i1 == 0:
+            continue
+        s_str_list.append(alpha[kidx] + ": " + str(key))
+        s_str.append(alpha[kidx] + " ")
+        if i2 - i1 > 1:
+            for _ in range(i2 - i1 - 2):
+                s_str.append("━━")
+            s_str.append("┓ ")
+    s_str = "  " + "".join(s_str)
+
+    Mstr = np.array2string(nz(M), max_line_width=np.nan, threshold=100 ** 2)
+    # print(" | ".join(s_str_list))
+    ziplines(
+        "\n" + c_str,
+        s_str + "\n" + Mstr,
+        delim=" | ",
+    )
+
+
 def ziplines(*args, delim=""):
     import itertools
 

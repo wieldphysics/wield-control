@@ -266,6 +266,16 @@ class SDomainRootSet(object):
             mirror_imag=self.mirror_imag,
         )
 
+    def time_reversal(self):
+        return self.__class__(
+            c_plane=-self.c_plane.conjugate(),
+            r_line=-self.r_line,
+            i_line=self.i_line,
+            z_point=self.z_point,
+            mirror_real=self.mirror_real,
+            mirror_imag=self.mirror_imag,
+        )
+
     def flip_to_stable(self):
         c_plane = np.copy(self.c_plane)
         select = c_plane.real > 0

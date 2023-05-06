@@ -1,4 +1,4 @@
-#!/USSR/bin/env python
+#!/usr/bin/env python
 
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: Apache-2.0
@@ -39,6 +39,9 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         inputs=None,
         outputs=None,
         warn=True,
+        fiducial=None,
+        fiducial_rtol=None,
+        fiducial_atol=None,
     ):
         # TODO, secondaries should perhaps only be done using a secondary call, not here
         inputs, in_secondaries = util.io_normalize(inputs, ss.Ninputs)
@@ -93,6 +96,14 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         self.outputs = outputs
         super().__init__(ss=ss2)
 
+        # TODO
+        # self.test_fresponse(
+        #     fiducial=fiducial,
+        #     rtol=fiducial_rtol,
+        #     atol=fiducial_atol,
+        #     update=True,
+        # )
+
         self.input_dissections = input_dissections
         self.output_dissections = output_dissections
         return
@@ -140,6 +151,14 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
         self.input_dissections = input_dissections
         self.output_dissections = output_dissections
         return self
+
+    @property
+    def input_dissections_byname(self):
+        return {d.name:d for d in self.input_dissections}
+
+    @property
+    def output_dissections_byname(self):
+        return {d.name:d for d in self.output_dissections}
 
     def secondaries(inputs=None, outputs=None):
         """
@@ -247,47 +266,69 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
             ochannels.extend(olst)
 
         rlst, outputs, olst, rlistified = util.apply_io_map(ochannels, self.outputs)
-        clst, inputs, ilst, clistified = util.apply_io_map(ochannels, self.inputs)
+        clst, inputs, ilst, clistified = util.apply_io_map(ichannels, self.inputs)
         ss = self.ss[rlst, clst]
 
         input_dissections = []
+        idx_ed = 0
         for ilst, iname in zip(ilists, inames):
-            idx_st = inputs[ilst[0]]
-            if isinstance(idx_st, tuple):
-                idx_st = idx_st[0]
-            idx_ed = inputs[ilst[-1]]
-            if isinstance(idx_ed, tuple):
-                idx_ed = idx_st[1]
+            if ilst:
+                idx_st = inputs[ilst[0]]
+                if isinstance(idx_st, tuple):
+                    idx_st = idx_st[0]
+                idx_ed = inputs[ilst[-1]]
+                if isinstance(idx_ed, tuple):
+                    idx_ed = idx_st[1]
+                else:
+                    idx_ed += 1
+                ilength = idx_ed - idx_st
+                idissect = Bunch(
+                    name=iname,
+                    length=ilength,
+                    idx_start=idx_st,
+                    idx_end=idx_ed,
+                    channels=ilst,
+                )
             else:
-                idx_ed += 1
-            ilength = idx_ed - idx_st
-            idissect = Bunch(
-                name=iname,
-                length=ilength,
-                idx_start=idx_st,
-                idx_end=idx_ed,
-                channels=ilst,
-            )
+                #uses the previous idx_ed
+                idissect = Bunch(
+                    name=iname,
+                    length=0,
+                    idx_start=idx_ed,
+                    idx_end=idx_ed,
+                    channels=ilst,
+                )
             input_dissections.append(idissect)
 
         output_dissections = []
+        idx_ed = 0
         for olst, oname in zip(olists, onames):
-            idx_st = outputs[olst[0]]
-            if isinstance(idx_st, tuple):
-                idx_st = idx_st[0]
-            idx_ed = outputs[ilst[-1]]
-            if isinstance(idx_ed, tuple):
-                idx_ed = idx_st[1]
+            if olst:
+                idx_st = outputs[olst[0]]
+                if isinstance(idx_st, tuple):
+                    idx_st = idx_st[0]
+                idx_ed = outputs[olst[-1]]
+                if isinstance(idx_ed, tuple):
+                    idx_ed = idx_st[1]
+                else:
+                    idx_ed += 1
+                olength = idx_ed - idx_st
+                odissect = Bunch(
+                    name=oname,
+                    length=olength,
+                    idx_start=idx_st,
+                    idx_end=idx_ed,
+                    channels=olst,
+                )
             else:
-                idx_ed += 1
-            olength = idx_ed - idx_st
-            odissect = Bunch(
-                name=oname,
-                length=olength,
-                idx_start=idx_st,
-                idx_end=idx_ed,
-                channels=olst,
-            )
+                #uses the previous idx_ed
+                odissect = Bunch(
+                    name=oname,
+                    length=0,
+                    idx_start=idx_ed,
+                    idx_end=idx_ed,
+                    channels=olst,
+                )
             output_dissections.append(odissect)
 
         return self.__build__(
@@ -297,6 +338,22 @@ class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
             output_dissections=output_dissections,
             input_dissections=input_dissections,
         )
+
+    def dissectB(self, iname):
+        Id = self.input_dissections_byname[iname]
+        B = self.B[:, Id.idx_start:Id.idx_end]
+        return B
+
+    def dissectC(self, oname):
+        Od = self.output_dissections_byname[oname]
+        C = self.C[Od.idx_start:Od.idx_end, :]
+        return C
+
+    def dissectBCD(self, iname, oname):
+        Id = self.input_dissections_byname[iname]
+        Od = self.output_dissections_byname[oname]
+        D = self.D[Od.idx_start:Od.idx_end, Id.idx_start:Id.idx_end]
+        return D
 
     def namespace(self, ns):
         """
@@ -532,6 +589,8 @@ def statespace(
     hermitian=True,
     time_symm=False,
     dt=None,
+    fiducial_rtol=None,
+    fiducial_atol=None,
 ):
     """
     Form a MIMO LTI system from statespace matrices.
@@ -585,6 +644,12 @@ def statespace(
             elif k.endswith('.o'):
                 is_output = True
                 k = k[:-2]
+            elif '.out' in k:
+                is_output = True
+                k = k.replace('.out', '')
+            elif '.in' in k:
+                is_output = False
+                k = k.replace('.in', '')
             else:
                 raise RuntimeError("inout dict has key {} which does not end with .in, .i, .out, or .o".format(k))
 
@@ -604,6 +669,8 @@ def statespace(
         ),
         inputs=inputs,
         outputs=outputs,
+        fiducial_rtol=fiducial_rtol,
+        fiducial_atol=fiducial_atol,
     )
 
 
