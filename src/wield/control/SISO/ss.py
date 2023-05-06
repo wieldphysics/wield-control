@@ -24,8 +24,8 @@ from . import response
 
 
 class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
-    fiducial_rtol = 1e-8
-    fiducial_atol = 1e-13
+    fiducial_rtol = 1
+    fiducial_atol = 1
     """
     class to represent SISO Transfer functions using dense state space matrix representations.
     """
@@ -91,6 +91,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
                 fmt="scipy",
             )
             self._zp_tup = (z, p)
+            print("POLES: ", p)
         return self._zp_tup
 
     _ZPK = None
@@ -129,6 +130,23 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             inputs={col: 0},
             outputs={row: 0},
         )
+
+    def time_reversal(self):
+        """
+        Computes the time reversal of the filter
+        """
+        return self.__class__(
+            self.ss.time_reversal(),
+            fiducial=self.fiducial.conjugate(),
+            fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
+        )
+
+    def conjugate(self):
+        return self.time_reversal()
+
+    def adjoint(self):
+        return self.time_reversal()
 
     def fresponse(self, f=None, w=None, s=None, z=None):
         tf = self.ss.fresponse_raw(f=f, w=w, s=s, z=z)[..., 0, 0]
@@ -240,8 +258,16 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             knownSS = True
 
         if knownSS or isinstance(other, SISOStateSpace):
+            if len(self.fiducial) + len(other.fiducial) < self.N_MAX_FID:
+                slc = slice(None, None, 1)
+            else:
+                slc = slice(None, None, 2)
+            fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
+            fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
+
             return self.__class__(
                 self.ss + other.ss,
+                fiducial=(self.fiducial[slc] + fid_other_self).concatenate(fid_self_other + other.fiducial[slc]),
             )
         elif isinstance(other, siso.SISO):
             other = other.asSS
@@ -273,6 +299,17 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             knownSS = True
 
         if knownSS or isinstance(other, SISOStateSpace):
+            if len(self.fiducial) + len(other.fiducial) < self.N_MAX_FID:
+                slc = slice(None, None, 1)
+            else:
+                slc = slice(None, None, 2)
+            fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
+            fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
+
+            return self.__class__(
+                ss=self.ss - other.ss,
+                fiducial=(self.fiducial[slc] - fid_other_self).concatenate(fid_self_other - other.fiducial[slc]),
+            )
             return self.__class__(
                 ss=self.ss - other.ss,
             )

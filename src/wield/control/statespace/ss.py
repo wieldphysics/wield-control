@@ -107,6 +107,51 @@ class RawStateSpace(object):
         if self.E is not None:
             yield self.E
 
+    def time_reversal(self):
+        ret = self.__class__(
+            A=-self.A,
+            B=-self.B,
+            C=self.C,
+            D=self.D,
+            E=self.E,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+        return ret
+
+    def conjugate(self):
+        return self.time_reversal()
+
+    def transpose(self):
+        ret = self.__class__(
+            A=self.A,
+            B=self.C.T,
+            C=self.B.T,
+            D=self.D.T,
+            E=self.E,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+        return ret
+
+    def adjoint(self):
+        """
+        Return the transpose and conjugate (time-reversal) of the system
+        """
+        ret = self.__class__(
+            A=-self.A,
+            B=-self.C.T,
+            C=self.B.T,
+            D=self.D.T,
+            E=self.E,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+        return ret
+
     def print_nonzero(self):
         """
         """
@@ -501,7 +546,7 @@ def joinAE(s, o):
         E = np.block([
             [sE,  blU],
             [blL, oE]
-        ]),
+        ])
 
     A = np.block([
         [s.A,  blU],

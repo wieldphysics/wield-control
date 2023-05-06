@@ -92,4 +92,5 @@ def build_sorz(
             assert(sorz is None)
             sorz = np.asarray(z)
         assert(s is None)
-    return sorz
+    assert(sorz is not None)
+    return np.array(sorz)

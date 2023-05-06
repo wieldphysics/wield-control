@@ -108,19 +108,35 @@ def ss2zp(
         C = C[idx_out: idx_out + 1, :]
         D = D[idx_out: idx_out + 1, idx_in: idx_in + 1]
 
-    if E is None:
-        p = scipy.linalg.eig(A, left=False, right=False)
-    else:
-        p = scipy.linalg.eig(A, E, left=False, right=False)
+    # TODO, should fix this upstream
+    if np.all(E == np.eye(E.shape[-2])):
+        E = None
+
+    Ascale = A.copy()
+    if True:
+        # xGEBAL does not remove the diagonals before scaling.
+        # not sure M is needed, was in the ARE generalized diagonalizer
+        # M = np.abs(SS) + np.abs(SSE)
+        _, (sca, _) = scipy.linalg.matrix_balance(Ascale, separate=1, permute=0)
+        # do we need to bother?
+        if not np.allclose(sca, np.ones_like(sca)):
+            elwisescale = sca * np.reciprocal(sca)[:, None]
+            Ascale *= elwisescale
+            if E is not None:
+                Escale = E.copy()
+                Escale *= elwisescale
+
+    if E is not None:
+        p = scipy.linalg.eigvals(Ascale, Escale)
         p = np.asarray([_ for _ in p if np.isfinite(_.real)])
+    else:
+        p = scipy.linalg.eigvals(Ascale)
+
+
     SS = np.block([[A, B], [C, D]])
+
     if E is None:
-        z = scipy.linalg.eig(
-            a=SS,
-            b=np.diag(np.concatenate([np.ones(A.shape[0]), np.zeros(1)])),
-            left=False,
-            right=False,
-        )
+        SSE = np.diag(np.concatenate([np.ones(A.shape[0]), np.zeros(1)]))
     else:
         SSE = np.block(
             [
@@ -128,7 +144,19 @@ def ss2zp(
                 [np.zeros(E.shape[1]).reshape(1, -1), np.zeros(1).reshape(1, 1)],
             ]
         )
-        z = scipy.linalg.eig(a=SS, b=SSE, left=False, right=False)
+
+    if True:
+        # xGEBAL does not remove the diagonals before scaling.
+        # not sure M is needed, was in the ARE generalized diagonalizer
+        # M = np.abs(SS) + np.abs(SSE)
+        _, (sca, _) = scipy.linalg.matrix_balance(SS, separate=1, permute=0)
+        # do we need to bother?
+        if not np.allclose(sca, np.ones_like(sca)):
+            elwisescale = sca * np.reciprocal(sca)[:, None]
+            SS *= elwisescale
+            SSE *= elwisescale
+
+    z = scipy.linalg.eig(a=SS, b=SSE, left=False, right=False)
     z = np.asarray([_ for _ in z if np.isfinite(_.real)])
     if Q_rank_cutoff is not None:
         z, p, k = order_reduce.order_reduce_zpk(

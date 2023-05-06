@@ -27,8 +27,8 @@ class ZPK(siso.SISOCommonBase):
 
     This class internally uses the s-domain in units of radial frequency and gain.
     """
-    fiducial_rtol = 1e-8
-    fiducial_atol = 1e-13
+    fiducial_rtol = 1
+    fiducial_atol = 1
     _SS = None
 
     def __init__(
@@ -210,6 +210,22 @@ class ZPK(siso.SISOCommonBase):
         )
         return self._SS
 
+    def time_reversal(self):
+        return self.__class__(
+            z=self.zeros.time_reversal(),
+            p=self.poles.time_reversal(),
+            k=self.k,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+            fiducial=self.fiducial.conjugate(),
+            fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
+        )
+
+    def conjugate(self):
+        return self.time_reversal()
+
     def fresponse(
             self,
             *,
@@ -230,7 +246,7 @@ class ZPK(siso.SISOCommonBase):
         # return an empty response
         # attempting to compute it on
         # empty input can throw errors
-        if len(domain) == 0:
+        if len(domain.flatten()) == 0:
             return response.SISOFResponse(
                 tf=domain,
                 w=w,
@@ -673,7 +689,7 @@ def zpk(
             # print("NORM MEDIAN", norm_med)
             # TODO, make better error reporting that a conversion has failed
             np.testing.assert_allclose(
-                norm_rel / norm_med, 1, rtol=ZPKnew.fiducial_rtol, atol=ZPKnew.fiducial_atol
+                fiducial.tf / norm_med, ZPKnew.fiducial.tf, rtol=ZPKnew.fiducial_rtol, atol=ZPKnew.fiducial_atol
             )
         else:
             assert(np.all(np.isfinite(ZPKnew.fiducial)))

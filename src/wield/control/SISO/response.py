@@ -58,6 +58,7 @@ class SISOFResponse(siso.SISO):
             domain = z
             self.__dict__['z'] = z
         assert(domain is not None)
+        domain = np.array(domain)
         shape = domain.shape
 
         if tf is not None:
@@ -431,6 +432,15 @@ class SISOFResponse(siso.SISO):
     @property
     def wplot_deg315(self):
         return self.domain_angle_cut(max=315, arg='w', deg=True)
+
+    def time_reversal(self):
+        return self.__class__(
+            tf=self.tf.conjugate(),
+            **self.__init_kw()
+        )
+
+    def conjugate(self):
+        return self.time_reversal()
 
     @property
     def wplot_rad(self):
