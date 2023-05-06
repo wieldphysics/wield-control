@@ -91,7 +91,6 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
                 fmt="scipy",
             )
             self._zp_tup = (z, p)
-            print("POLES: ", p)
         return self._zp_tup
 
     _ZPK = None
