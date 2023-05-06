@@ -41,7 +41,7 @@ def ss2response_mimo(A, B, C, D, E=None, sorz=None):
     sorz = np.asarray(sorz)
 
     if A.shape[-2:] == (0, 0):
-        print("BCAST", A.shape, D.shape)
+        # print("BCAST", A.shape, D.shape)
         return np.broadcast_to(D, sorz.shape + D.shape[-2:])
 
     if E is None:

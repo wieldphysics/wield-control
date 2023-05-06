@@ -499,9 +499,17 @@ class RawStateSpaceUser(object):
     def hermitian(self):
         return self.ss.hermitian
 
+    @hermitian.setter
+    def hermitian(self, value):
+        self.ss.hermitian = value
+
     @property
     def time_symm(self):
         return self.ss.time_symm
+
+    @time_symm.setter
+    def time_symm(self, value):
+        self.ss.time_symm = value
 
     @property
     def structure_flags(self):

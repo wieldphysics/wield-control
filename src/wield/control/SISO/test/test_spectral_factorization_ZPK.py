@@ -62,7 +62,9 @@ def test_ZPK_spectral_factorize(tpath_join):
     F_Hz = logspaced(1, 1000, 1000)
 
     ss_flat = SISO.zpk((), (), 1, fiducial_f=[]).asSS
-    ss_bns = FBNSsimpSS(gain=10).asSS
+
+    # test dynamic range with higher gain
+    ss_bns = FBNSsimpSS(gain=100000).asSS
 
     ss_sq = ss_bns.conjugate() * ss_bns + ss_flat.conjugate() * ss_flat
 
@@ -73,12 +75,54 @@ def test_ZPK_spectral_factorize(tpath_join):
     axB.ax0.loglog(F_Hz, fr.mag**0.5)
     #axB.ax1.semilogx(*fr.fplot_deg225)
 
-    print(scipy.linalg.eigvals(ss_sq.A))
+    # print(scipy.linalg.eigvals(ss_sq.A))
 
     ss_sqZPK = ss_sq.asZPK
     fr = ss_sqZPK.fresponse(f=F_Hz)
     axB.ax0.loglog(F_Hz, fr.mag**0.5)
+
+    # from wield.control.algorithms.zpk import srootset, zrootset
+    # classifier = srootset.default_root_classifier.classify_function(
+    #     tRootSet=srootset.SDomainRootSet,
+    #     hermitian=True,
+    #     time_symm=True,
+    #     return_unmatched=True
+    # )
+
+    def stable_root_extract(roots):
+        """
+        Return a square root filter
+
+        TODO, make this numerically better behaved and t
+        """
+        roots = np.asarray(roots)
+        lhp = roots[roots.real < 0]
+        eq0 = roots[roots.real == 0]
+        rhp = roots[roots.real > 0]
+        assert(len(lhp) == len(rhp))
+        assert(len(eq0) % 2 == 0)
+        eq0 = sorted(eq0, key=lambda r: abs(r.imag))
+
+        # skip every other real one
+        return list(lhp) + list(eq0[::4]) + list(eq0[1::4])
+    p = stable_root_extract(ss_sqZPK.p)
+    z = stable_root_extract(ss_sqZPK.z)
+    k = ss_sqZPK.k**0.5
+
+    ss_rt = SISO.zpk(
+        z,
+        p,
+        k,
+        fiducial_f=[]
+    )
+
+    fr = ss_rt.fresponse(f=F_Hz)
+    axB.ax0.loglog(*fr.fplot_mag)
+
+    ss_rt2 = SISO.design.root_factored_quadrature_sum(ss_bns, ss_flat)
+    fr = ss_rt.fresponse(f=F_Hz)
+    axB.ax0.loglog(*fr.fplot_mag)
+
     #axB.ax1.semilogx(*fr.fplot_deg225)
     axB.save(tpath_join("Mag_show"))
     return 
-

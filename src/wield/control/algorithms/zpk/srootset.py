@@ -622,21 +622,28 @@ class RootClassifiers:
             tRootSet,
             hermitian,
             time_symm,
+            return_unmatched = False,
     ):
 
         if hermitian:
             if time_symm:
                 def to_rootset(roots, rtype):
                     b = self.R2MR(roots)
-                    if len(b.u) > 0:
-                        raise RuntimeError(f"Unmatched {rtype} while assuming Hermitian filter: {b.u}")
+                    if return_unmatched:
+                        u = list(b.u)
+                    else:
+                        if len(b.u) > 0:
+                            raise RuntimeError(f"Unmatched {rtype} while assuming Hermitian filter: {b.u}")
                     b = self.R2MI(
                         roots_u=b.c,
                         roots_r=b.r,
                     )
-                    if len(b.u) > 0:
-                        raise RuntimeError(f"Unmatched {rtype} while assuming Time symmetric filter: {b.u}")
-                    return tRootSet(
+                    if return_unmatched:
+                        u.extend(b.u)
+                    else:
+                        if len(b.u) > 0:
+                            raise RuntimeError(f"Unmatched {rtype} while assuming Time symmetric filter: {b.u}")
+                    ret = tRootSet(
                         c_plane=b.c,
                         r_line=b.r,
                         i_line=b.i,
@@ -644,36 +651,52 @@ class RootClassifiers:
                         hermitian=hermitian,
                         time_symm=time_symm, 
                     )
+                    if return_unmatched:
+                        return ret, u
+                    else:
+                        return ret
             else:
                 def to_rootset(roots, rtype):
                     b = self.R2MR(roots)
-                    if len(b.u) > 0:
+                    if len(b.u) > 0 and not return_unmatched:
                         raise RuntimeError(f"Unmatched {rtype} while assuming Hermitian filter: {b.u}")
-                    return tRootSet(
+                    ret = tRootSet(
                         c_plane=b.c,
                         r_line=b.r,
                         hermitian=hermitian,
                         time_symm=time_symm, 
                     )
+                    if return_unmatched:
+                        return ret, b.u
+                    else:
+                        return ret
         else:
             if time_symm:
                 def to_rootset(roots, rtype):
                     b = self.R2MI(roots)
-                    if len(b.u) > 0:
+                    if len(b.u) > 0 and not return_unmatched:
                         raise RuntimeError(f"Unmatched {rtype} while assuming time symmetry (mirroring over imaginary line)")
-                    return tRootSet(
+                    ret = tRootSet(
                         c_plane=b.c,
                         i_line=b.i,
                         hermitian=hermitian,
                         time_symm=time_symm, 
                     )
+                    if return_unmatched:
+                        return ret, b.u
+                    else:
+                        return ret
             else:
                 def to_rootset(roots, rtype):
-                    return tRootSet(
+                    ret = tRootSet(
                         c_plane=roots,
                         hermitian=hermitian,
                         time_symm=time_symm, 
                     )
+                    if return_unmatched:
+                        return ret, []
+                    else:
+                        return ret
 
         return to_rootset
 
