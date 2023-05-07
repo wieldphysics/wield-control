@@ -109,7 +109,7 @@ def ss2zp(
         D = D[idx_out: idx_out + 1, idx_in: idx_in + 1]
 
     # TODO, should fix this upstream
-    if np.all(E == np.eye(E.shape[-2])):
+    if E is not None and np.all(E == np.eye(E.shape[-2])):
         E = None
 
     Ascale = A.copy()
