@@ -108,6 +108,7 @@ class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
             time_symm=self.ss.time_symm,
             convention='scipy',
             fiducial=self.fiducial,
+            _fiducial_func=self.fresponse,
             fiducial_rtol=self.fiducial_rtol,
             fiducial_atol=self.fiducial_atol,
         )

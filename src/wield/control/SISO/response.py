@@ -295,6 +295,8 @@ class SISOFResponse(siso.SISO):
             hermitian=self.hermitian,
             time_symm=self.time_symm,
         )
+        """
+        """
         f = self.__dict__.get('f', None)
         if f is not None:
             kw['f'] = f

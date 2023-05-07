@@ -484,6 +484,7 @@ def zpk(
         pi=None,
         angular: bool = None,
         fiducial=None,
+        _fiducial_func=None,
         fiducial_w=None,
         fiducial_f=None,
         fiducial_s=None,
@@ -527,6 +528,8 @@ def zpk(
     Note that this does not affect the interpretation of the gain. By default, it is determined
     by the convention.
 
+    _fiducial_func is a function that allows one to evaluate the response at new points. It should
+    at least take a w=[...] kw arg
     """
     if dt is None:
         tRootSet = srootset.SDomainRootSet
@@ -684,6 +687,7 @@ def zpk(
         )
         norm_rel = fiducial.tf / ZPKnew.fiducial.tf
         norm_med = np.nanmedian(abs(norm_rel))
+
         if np.isfinite(norm_med):
             ZPKnew = ZPKnew * norm_med
             # print("NORM MEDIAN", norm_med)
@@ -692,7 +696,22 @@ def zpk(
                 fiducial.tf / norm_med, ZPKnew.fiducial.tf, rtol=ZPKnew.fiducial_rtol, atol=ZPKnew.fiducial_atol
             )
         else:
-            assert(np.all(np.isfinite(ZPKnew.fiducial)))
+            # since there were no good fiducial points to refer to, make some temporarily
+            w = ZPKnew._fiducial_w_set(ZPKnew.fiducial_rtol)
+            if not w:
+                # then there are no poles or zeros, so add some
+                w = [0]
+
+            fiducial_tst = _fiducial_func(w=w)
+
+            self_response = ZPKnew.fresponse(w=w)
+
+            norm_rel = fiducial_tst.tf / self_response.tf
+            norm_med = np.nanmedian(abs(norm_rel))
+            assert (np.isfinite(norm_med))
+
+            ZPKnew = ZPKnew * norm_med
+            assert (np.all(np.isfinite(ZPKnew.fiducial)))
     else:
         ZPKnew.test_fresponse(
             fiducial=fiducial,
