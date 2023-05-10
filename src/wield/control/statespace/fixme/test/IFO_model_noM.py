@@ -10,7 +10,6 @@
 
 import numpy as np
 import copy
-from wield import declarative
 
 from wield.utilities.np import logspaced
 from wield.utilities.mpl import mplfigB

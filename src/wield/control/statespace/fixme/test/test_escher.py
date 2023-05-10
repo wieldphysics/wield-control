@@ -10,7 +10,6 @@
 
 import numpy as np
 import copy
-from wield import declarative
 import wield.control
 import pytest
 
