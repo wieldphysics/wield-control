@@ -1,0 +1,11 @@
+
+Rolloff tree: algorithm in statespace. Put SS in Schur form, then track through the poles creating an annotation at each pole for the RMS power it receives from the drive and all previous poles. It should keep what order the power is coming from as a list. Once all poles have been traversed through the tree, then the power is finally scaled by the C matrix. This then indicates what the minimum order of pole rolloff is in a convenient manner, without calculating all of the zeros at every output. The power level can then be used as a scaling parameter for the anything requiring the D matrix, such as spectral factorization and Ricatti solvers.
+
+
+ZPK ordering: ZPKs should be constructed in an order that ordqz will want to (naturally) preserve.
+
+
+Similarity in Hamiltonian forms: when operating on Hamiltonian matrices that have -A.T. The transpose can be "undone" using a similarity transformation along the anti-diagonal. This can potentially help out ordqz or anything converting it into a Schur form.
+
+
+Spectral factorization: This algorithm requires a non-singular D matrix. Some preliminary math suggests that you can add one of size I*epsilon^2. In doing so, you add error terms to the sqrt factors of size epsilon. By add the real part of the root-factors back to the original spectral density, you can get the epsilon error down to epsilon^2 again. It appears that the iterative algorithm should have error that is exponential in epsilon, so three iterations should reach machine precision.  One needs to know the appropriate scaling of the epsilon effective-D matrix. The rolloff tree should help with this.
