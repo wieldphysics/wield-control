@@ -39,19 +39,23 @@ class SISOFResponse(siso.SISO):
         """
         domain = None
         if f is not None:
+            f = np.asarray(f)
             domain = f
             # must use the dict assignment since there are properties which alias
             self.__dict__['f'] = f
         if w is not None:
+            w = np.asarray(w)
             assert(domain is None)
             domain = w
             self.__dict__['w'] = w
         if s is not None:
+            s = np.asarray(s)
             assert(domain is None)
             assert(dt is None)
             domain = s
             self.__dict__['s'] = s
         if z is not None:
+            z = np.asarray(z)
             assert(domain is None)
             assert(dt is not None)
             assert(dt > 0)
