@@ -11,7 +11,6 @@
 import numpy as np
 import pytest
 import copy
-from wield import declarative
 import wield.control
 
 from wield.utilities.np import logspaced
