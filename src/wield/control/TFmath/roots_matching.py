@@ -9,7 +9,6 @@
 """
 
 import numpy as np
-from wield import declarative
 
 
 def nearest_idx(

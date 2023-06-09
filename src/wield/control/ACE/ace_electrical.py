@@ -11,7 +11,6 @@ State Space System
 
 import numpy as np
 import copy
-from wield import declarative
 from collections import defaultdict, Mapping
 import functools
 from numbers import Number

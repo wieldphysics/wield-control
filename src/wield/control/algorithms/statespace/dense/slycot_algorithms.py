@@ -8,7 +8,6 @@
 """
 """
 
-from wield import declarative
 import numpy as np
 
 import slycot
