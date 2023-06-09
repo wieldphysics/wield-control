@@ -693,7 +693,7 @@ def zpk(
             # print("NORM MEDIAN", norm_med)
             # TODO, make better error reporting that a conversion has failed
             np.testing.assert_allclose(
-                fiducial.tf / norm_med, ZPKnew.fiducial.tf, rtol=ZPKnew.fiducial_rtol, atol=ZPKnew.fiducial_atol
+                fiducial.tf, ZPKnew.fiducial.tf, rtol=ZPKnew.fiducial_rtol, atol=ZPKnew.fiducial_atol
             )
         else:
             # since there were no good fiducial points to refer to, make some temporarily

@@ -125,6 +125,10 @@ def ss2zp(
             if E is not None:
                 Escale = E.copy()
                 Escale *= elwisescale
+            else:
+                Escale = E
+        else:
+            Escale = E
 
     if E is not None:
         p = scipy.linalg.eigvals(Ascale, Escale)
