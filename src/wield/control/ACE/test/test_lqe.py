@@ -19,7 +19,7 @@ from wield.control.algorithms.statespace import dense
 from wield.control.ACE import ACE
 from wield.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 
-from wield.AAA import AAA
+from wield.control.AAA import AAA
 
 from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,

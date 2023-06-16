@@ -21,7 +21,7 @@ Provided by Kevin Kuns
 """
 import numpy as np
 from wield.control import SISO, MIMO
-from wield.AAA import tfAAA
+from wield.control.AAA import tfAAA
 from wield.pytest import tpath_join, dprint, capture
 from wield.bunch import Bunch
 import scipy.constants as scc

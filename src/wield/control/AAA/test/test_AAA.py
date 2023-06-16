@@ -15,7 +15,7 @@ from wield.iirrational.testing import IIRrational_data
 
 from wield.utilities.mpl import mplfigB
 
-from wield.AAA import tfAAA
+from wield.control.AAA import tfAAA
 
 from wield.pytest.fixtures import (  # noqa: F401
     tpath_join,
