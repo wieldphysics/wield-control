@@ -11,7 +11,7 @@ import scipy.signal
 import pytest
 
 from wield.iirrational.representations import asZPKTF
-from wield.AAA import tfAAA
+from wield.control.AAA import tfAAA
 
 from wield.utilities.mpl import mplfigB, generate_stacked_plot_ax, asavefig, logspaced
 
