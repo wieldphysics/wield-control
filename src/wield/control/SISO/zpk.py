@@ -698,7 +698,8 @@ def zpk(
         else:
             # since there were no good fiducial points to refer to, make some temporarily
             w = ZPKnew._fiducial_w_set(ZPKnew.fiducial_rtol)
-            if not w:
+            w = np.asarray(w)
+            if w.size == 0:
                 # then there are no poles or zeros, so add some
                 w = [0]
 

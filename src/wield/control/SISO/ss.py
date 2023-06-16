@@ -14,7 +14,7 @@ import warnings
 
 # from ..algorithms.statespace.dense import xfer_algorithms
 from ..algorithms.statespace.dense import zpk_algorithms
-from ..statespace.ss import RawStateSpaceUser, RawStateSpace
+from ..ss_bare.ss import BareStateSpaceUser, BareStateSpace
 
 from .. import MIMO
 from . import siso
@@ -23,7 +23,7 @@ from . import zpk
 from . import response
 
 
-class SISOStateSpace(RawStateSpaceUser, siso.SISOCommonBase):
+class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
     fiducial_rtol = 1
     fiducial_atol = 1
     """
@@ -425,7 +425,7 @@ def statespace(
         dt=dt,
     )
     return SISOStateSpace(
-        ss=RawStateSpace(
+        ss=BareStateSpace(
             A, B, C, D, E,
             dt=dt,
             flags=flags,
