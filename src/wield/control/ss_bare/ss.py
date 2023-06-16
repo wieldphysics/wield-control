@@ -14,10 +14,10 @@ import numpy as np
 from ..algorithms.statespace.dense import xfer_algorithms
 from ..algorithms.statespace.dense import zpk_algorithms
 from ..algorithms.statespace.dense import ss_algorithms
-from ..statespace import ssprint
+from . import ssprint
 
 
-class RawStateSpace(object):
+class BareStateSpace(object):
     """
     State space class to represent MIMO Transfer functions using dense matrix representations
 
@@ -86,6 +86,14 @@ class RawStateSpace(object):
     @property
     def Nstates(self):
         return self.A.shape[-1]
+
+    @property
+    def as_controlLTI(self):
+        import control
+        A, B, C, D, E = self.ABCDe
+        # TODO 
+        # assert(E is None)
+        return control.ss(A, B, C, D)
 
     @property
     def ABCD(self):
@@ -251,7 +259,7 @@ class RawStateSpace(object):
     def __matmul__(self, other):
         """
         """
-        if isinstance(other, RawStateSpace):
+        if isinstance(other, BareStateSpace):
             # currently need to do some checking about the inputs
             # and the outputs
             #return NotImplemented
@@ -368,7 +376,7 @@ class RawStateSpace(object):
             # convert to statespace form
             knownSS = True
 
-        if knownSS or isinstance(other, RawStateSpace):
+        if knownSS or isinstance(other, BareStateSpace):
             hermitian = self.hermitian and other.hermitian
             time_symm = self.time_symm and other.time_symm
 
@@ -409,7 +417,7 @@ class RawStateSpace(object):
             # convert to statespace form
             knownSS = True
 
-        if knownSS or isinstance(other, RawStateSpace):
+        if knownSS or isinstance(other, BareStateSpace):
             hermitian = self.hermitian and other.hermitian
             time_symm = self.time_symm and other.time_symm
 
@@ -438,7 +446,7 @@ class RawStateSpace(object):
             other = _number2D_like(self, other)
             knownSS = True
 
-        if knownSS or isinstance(other, RawStateSpace):
+        if knownSS or isinstance(other, BareStateSpace):
             hermitian = self.hermitian and other.hermitian
             time_symm = self.time_symm and other.time_symm
 
@@ -459,7 +467,7 @@ class RawStateSpace(object):
         return NotImplemented
 
 
-class RawStateSpaceUser(object):
+class BareStateSpaceUser(object):
     def __init__(self, *, ss):
         self.ss = ss
 
@@ -490,6 +498,10 @@ class RawStateSpaceUser(object):
     @property
     def ABCDe(self):
         return self.ss.ABCDe
+
+    @property
+    def as_controlLTI(self):
+        return self.ss.as_controlLTI
 
     @property
     def dt(self):

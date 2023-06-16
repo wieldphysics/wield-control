@@ -80,3 +80,5 @@ def root_factored_quadrature_sum(*filts):
     # TODO, test against the actual magnitude
 
     return ss_rt
+
+

@@ -15,7 +15,7 @@ from copy import deepcopy
 
 from wield.bunch import Bunch
 
-from ..statespace.ss import RawStateSpace, RawStateSpaceUser
+from ..ss_bare.ss import BareStateSpace, BareStateSpaceUser
 
 from . import mimo
 from . import response
@@ -23,7 +23,7 @@ from . import util
 from .. import SISO
 
 
-class MIMOStateSpace(RawStateSpaceUser, mimo.MIMO):
+class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
     """
     State space class to represent MIMO Transfer functions using dense matrix representations
 
@@ -661,7 +661,7 @@ def statespace(
                 inputs[k] = idx
 
     return MIMOStateSpace(
-        ss=RawStateSpace(
+        ss=BareStateSpace(
             A, B, C, D, E,
             hermitian=hermitian,
             time_symm=time_symm,
@@ -773,7 +773,7 @@ def ssjoinsum(*args):
                 D[..., oslc_to, islc_to] = ssB.D[..., oslc_fr, islc_fr]
 
     return MIMOStateSpace(
-        ss=RawStateSpace(
+        ss=BareStateSpace(
             A, B, C, D, E,
             hermitian=np.all(ss.hermitian for ss in SSs),
             time_symm=np.all(ss.time_symm for ss in SSs),
