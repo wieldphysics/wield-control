@@ -118,6 +118,11 @@ class MIMOFResponse(mimo.MIMO):
         )
 
     def raw_tf(self, row, col):
+        """
+        returns a numpy array of the raw transfer function data, unwrapped
+
+        TODO: rename this "bare_"
+        """
         rlst, outputs, olst, rlistified = util.apply_io_map(row, self.outputs)
         clst, inputs, ilst, clistified = util.apply_io_map(col, self.inputs)
 

@@ -63,6 +63,19 @@ class BareStateSpace(object):
         self.dt = dt
         return
 
+    @classmethod
+    def fromD(cls, D):
+        return cls(
+            A=np.array([[]]).reshape(0, 0),
+            B=np.array([[]]).reshape(0, D.shape[-1]),
+            C=np.array([[]]).reshape(D.shape[-2], 0),
+            D=D,
+            E=None,
+            hermitian=np.all(D.imag == 0),
+            time_symm=True,
+            dt=None
+        )
+
     @property
     def ABCDE(self):
         if self.E is None:
@@ -217,7 +230,7 @@ class BareStateSpace(object):
             z=z,
             dt=self.dt,
         )
-        return xfer_algorithms.ss2response_mimo(
+        return xfer_algorithms.ss2response_laub(
             A=self.A,
             B=self.B,
             C=self.C,
@@ -225,6 +238,59 @@ class BareStateSpace(object):
             E=self.E,
             sorz=domain,
         )
+
+
+    def balancedA(self):
+        """
+        Return a version of this statespace where A has been balanced for numerical stability.
+
+        TODO, use a pencil method to modify/account for E as well.
+        """
+
+        import scipy.linalg
+        Ascale = self.A.copy()
+        # xGEBAL does not remove the diagonals before scaling.
+        # not sure M is needed, was in the ARE generalized diagonalizer
+        # M = np.abs(SS) + np.abs(SSE)
+
+        def invert_permutation(p):
+            """Return an array s with which np.array_equal(arr[p][s], arr) is True.
+            The array_like argument p must be some permutation of 0, 1, ..., len(p)-1.
+
+            from https://stackoverflow.com/a/25535723
+            """
+            s = np.empty_like(p)
+            s[p] = np.arange(p.size)
+            return s
+
+        Ascale, (sca, P) = scipy.linalg.matrix_balance(Ascale, separate=1, permute=1, overwrite_a = True)
+        Pi = invert_permutation(P)
+        # do we need to bother?
+        if not np.allclose(sca, np.ones_like(sca)):
+            scar = np.reciprocal(sca)
+
+            if self.E is not None:
+                Escale = self.E.copy()
+                elwisescale = sca * scar[:, None]
+                Escale *= elwisescale
+            else:
+                Escale = self.E
+            Bscale = scar.reshape(-1, 1) * self.B[..., Pi, :].copy()
+            Cscale = sca.reshape(1, -1) * self.C[..., :, P].copy()
+        else:
+            Escale = self.E
+
+        return self.__class__(
+            A=Ascale,
+            B=Bscale,
+            C=Cscale,
+            D=self.D,
+            E=Escale,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+
 
     def feedbackD(self, D):
         """
@@ -278,7 +344,66 @@ class BareStateSpace(object):
                 time_symm=time_symm,
                 dt=self.dt,
             )
+        elif isinstance(other, np.ndarray):
+            # assume it is a pure D matrix.
+            return self.__class__(
+                A=self.A,
+                B=self.B @ other,
+                C=self.C,
+                D=self.D @ other,
+                E=self.E,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
+                dt=self.dt,
+            )
         else:
+            return NotImplemented
+
+    def __rmatmul__(self, other):
+        """
+        """
+        # the case that it is also a BareStateSpace should be covered by the non-reversed __matmul__ above
+        if isinstance(other, np.ndarray):
+            # note! this probably is never called, as numpy uses __array_ufunc__ instead
+            # assume it is a pure D matrix.
+            return self.__class__(
+                A=self.A,
+                B=self.B,
+                C=other @ self.C,
+                D=other @ self.D,
+                E=self.E,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
+                dt=self.dt,
+            )
+        else:
+            return NotImplemented
+
+    def __array_function__(self, func, types, args, kwargs):
+        print("BareStateSpace NP __array_function__", func)
+        # TODO, add implementations
+        # see https://numpy.org/doc/stable/reference/arrays.classes.html#numpy.class.__array_function__
+        return NotImplemented
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        # TODO, add implementations
+        # see https://numpy.org/doc/stable/reference/arrays.classes.html#numpy.class.__array_ufunc__
+        if ufunc is np.matmul and method == '__call__':
+            other, sself = inputs
+            assert (sself is self)
+            assert (len(kwargs) == 0)
+            return self.__class__(
+                A=self.A,
+                B=self.B,
+                C=other @ self.C,
+                D=other @ self.D,
+                E=self.E,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
+                dt=self.dt,
+            )
+        else:
+            print("BareStateSpace NP __array_ufunc__", ufunc, method)
             return NotImplemented
 
     def is_square(self):
@@ -463,8 +588,28 @@ class BareStateSpace(object):
                 E=E,
                 hermitian=hermitian,
                 time_symm=time_symm,
+                dt=self.dt,
             )
         return NotImplemented
+
+    def __neg__(self):
+        """
+        """
+        return self.__class__(
+            A=self.A,
+            B=self.B,
+            C=-self.C,
+            D=-self.D,
+            E=self.E,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+
+    def __pos__(self):
+        """
+        """
+        return self
 
 
 class BareStateSpaceUser(object):
@@ -577,7 +722,7 @@ def joinAE(s, o):
 
 def _number2D_like(self, other):
     other = np.asarray(other)
-    assert(self.is_square())
+    assert (self.is_square())
     size = self.square_size()
     other_D = np.eye(size) * other
     other = self.__class__(

@@ -33,6 +33,8 @@ from .conversions import (
     normalize_list2tuple,
 )
 
+from .. import ss_bare
+
 
 class SFLUCompute:
     def __init__(
@@ -289,6 +291,8 @@ class SFLUCompute:
 
         derivatives: if True, include all derivative testpoints in Rset
         """
+        if derivatives:
+            raise NotImplementedError()
         Rset = set(stk.key_map(R) for R in Rset)
         Cmap = {stk.key_map(C): v for C, v in Cmap.items()}
 
@@ -351,6 +355,8 @@ class SFLUCompute:
 
         derivatives: if True, include all derivative excitations in Cset
         """
+        if derivatives:
+            raise NotImplementedError()
         Cset = set(stk.key_map(C) for C in Cset)
         Rmap = {stk.key_map(R): v for R, v in Rmap.items()}
 
@@ -554,3 +560,4 @@ class SFLUCompute:
     def convert_yamlstr2oplistE(cls, s):
         oplistE_yamlpy = yaml.safe_load(s)
         return cls.convert_yamlpy2oplistE(oplistE_yamlpy)
+

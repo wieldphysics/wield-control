@@ -339,6 +339,15 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
             input_dissections=input_dissections,
         )
 
+    def balanced(self, **kwargs):
+        return self.__build__(
+            ss=self.ss.balancedA(**kwargs),
+            inputs=self.inputs,
+            outputs=self.outputs,
+            output_dissections=self.output_dissections,
+            input_dissections=self.input_dissections,
+        )
+
     def dissectB(self, iname):
         Id = self.input_dissections_byname[iname]
         B = self.B[:, Id.idx_start:Id.idx_end]

@@ -115,6 +115,9 @@ def reverse_io_map(d, length, io, warn):
     for k, idx in d.items():
         if isinstance(idx, tuple):
             st, sp = idx
+            if np.any(lst[st:sp]):
+                raise RuntimeError("Overlapping indices")
+            lst[st:sp] = True
         else:
             prev = rev.setdefault(idx, k)
             if prev != k:

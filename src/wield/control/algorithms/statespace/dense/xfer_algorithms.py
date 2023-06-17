@@ -9,6 +9,7 @@
 """
 
 import numpy as np
+import scipy.linalg
 
 
 def ss2xfer(A, B, C, D, E=None, F_Hz=None, idx_in=None, idx_out=None):
@@ -59,3 +60,37 @@ def ss2response_mimo(A, B, C, D, E=None, sorz=None):
                 ),
             ) + D
         )
+
+
+def ss2response_laub(A, B, C, D, E=None, sorz=None):
+    """
+    Use Laub's method to calculate the frequency response. Very fast but in some cases less numerically stable.
+    Generally OK if the A/E matrix has been balanced first.
+    """
+    sorz = np.asarray(sorz)
+
+    if A.shape[-2:] == (0, 0):
+        # print("BCAST", A.shape, D.shape)
+        return np.broadcast_to(D, sorz.shape + D.shape[-2:])
+
+    if E is not None:
+        if np.all(E == np.eye(E.shape[-1])):
+            E = None
+
+    if E is None:
+        print("E is None, Laub")
+        A, Z = scipy.linalg.schur(A, output='complex')
+        B = Z.transpose().conjugate() @ B
+        C = C @ Z
+        S = np.eye(A.shape[0]).reshape(1, *A.shape) * sorz.reshape(-1, 1, 1)
+        return (
+            np.matmul(C, np.matmul(np.linalg.inv(S - A.reshape(1, *A.shape)), B)) + D
+        )
+    else:
+        # TODO, E matrix not supported yet
+        return (
+                C @ (
+                    np.linalg.inv(E * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
+                    @ B
+                )
+            ) + D
