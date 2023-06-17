@@ -19,6 +19,7 @@ from wield.utilities.np import matrix_stack
 from ..import string_tuple_keys as stk
 
 from . import SFLUcompute
+from . import SScompute
 try:
     import networkx as nx
 except ImportError:
@@ -761,6 +762,14 @@ class SFLU(object):
     def computer(self, **kwargs):
         return SFLUcompute.SFLUCompute(
             oplistE=self.oplistE,
+            edges=self.edges_augmented,
+            row2col=dict(self.row2col_cf),
+            col2row=dict(self.col2row_cf),
+            **kwargs
+        )
+
+    def SScomputer(self, **kwargs):
+        return SScompute.SSCompute(
             edges=self.edges_augmented,
             row2col=dict(self.row2col_cf),
             col2row=dict(self.col2row_cf),

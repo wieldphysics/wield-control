@@ -38,10 +38,10 @@ def replicateSS(ss, dim):
         assert(E.shape == A.shape)
 
     for idx in range(dim):
-        slc_s = slice(idx*dim*Nstates, (idx+1)*dim*Nstates)
-        slc_c = slice(idx*dim*Nconstr, (idx+1)*dim*Nconstr)
-        slc_i = slice(idx*dim*Ninputs, (idx+1)*dim*Ninputs)
-        slc_o = slice(idx*dim*Noutputs, (idx+1)*dim*Noutputs)
+        slc_s = slice(idx*Nstates, (idx+1)*Nstates)
+        slc_c = slice(idx*Nconstr, (idx+1)*Nconstr)
+        slc_i = slice(idx*Ninputs, (idx+1)*Ninputs)
+        slc_o = slice(idx*Noutputs, (idx+1)*Noutputs)
 
         A[..., slc_c, slc_s] = ss.A
         E[..., slc_c, slc_s] = ss.E
