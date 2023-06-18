@@ -78,19 +78,75 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None):
             E = None
 
     if E is None:
-        print("E is None, Laub")
         A, Z = scipy.linalg.schur(A, output='complex')
         B = Z.transpose().conjugate() @ B
         C = C @ Z
-        S = np.eye(A.shape[0]).reshape(1, *A.shape) * sorz.reshape(-1, 1, 1)
+
+        diag = (np.diag(A).reshape(1, -1) - sorz.reshape(-1, 1))
+
+        retval = array_solve_triangular(-A, -diag, B)
+
+        # retval2 = np.linalg.inv(np.eye(A.shape[-1]) * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape)) @ B
+        # print(retval - retval2)
+        return C @ retval + D
+
         return (
-            np.matmul(C, np.matmul(np.linalg.inv(S - A.reshape(1, *A.shape)), B)) + D
-        )
+                C @ (
+                    np.linalg.inv(np.eye(A.shape[-1]) * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
+                    @ B
+                )
+            ) + D
     else:
         # TODO, E matrix not supported yet
+        import warnings
+        warnings.warn("Laub method used on descriptor system. Not supported yet (using slow Horner method fallback)")
         return (
                 C @ (
                     np.linalg.inv(E * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
                     @ B
                 )
             ) + D
+
+
+def array_solve_triangular(A, D, b):
+    """
+    Solve a triangular matrix system.
+    A is a (M, M). D is (..., M) are broadcasted diagonals, and b is (M, N)
+    """
+    # b = np.eye(b.shape[-2], dtype=complex)
+    # b = b[:, -2:-1]
+    # idx = -2
+    # D = D[idx:idx+1]
+
+    bwork = np.broadcast_to(b, D.shape[:-1] + b.shape).copy()
+
+    M = A.shape[-1]
+
+    # print("A", A.shape)
+    # print("D", D.shape)
+    # print("B", b.shape)
+    # print("Bwork", bwork.shape)
+
+    # needed for broadcast magic to preserve the size of .shape after indexing
+    # Dv = D.reshape(*D.shape, 1)
+    # Av = A.reshape(*A.shape, 1)
+
+    for idx in range(M - 1, -1, -1):
+        bwork[..., idx, :] /= D[..., idx:idx+1]
+        bwork[..., :idx, :] -= A[:idx, idx:idx+1] * bwork[..., idx:idx+1, :]
+
+    #Atest = A - np.diag(np.diag(A)) + np.diag(D)
+
+    # Atest = A - np.diag(np.diag(A)) + np.diag(D[idx])
+    # bwork2 = np.linalg.inv(Atest) @ b
+    # print(abs(Atest @ bwork - b) < 1e-6)
+    # print(abs(Atest @ bwork[idx] - Atest @ bwork2) < 1e-6)
+    return bwork
+
+
+
+
+
+
+
+

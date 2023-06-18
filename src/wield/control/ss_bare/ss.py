@@ -239,7 +239,6 @@ class BareStateSpace(object):
             sorz=domain,
         )
 
-
     def balancedA(self):
         """
         Return a version of this statespace where A has been balanced for numerical stability.
@@ -721,6 +720,9 @@ def joinAE(s, o):
 
 
 def _number2D_like(self, other):
+    """
+    Converts a number or 2D array into a pure-D form of statespace. Essentially like broadcasting
+    """
     other = np.asarray(other)
     assert (self.is_square())
     size = self.square_size()
