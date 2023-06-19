@@ -222,7 +222,16 @@ class BareStateSpace(object):
         )
         return ret
 
-    def fresponse_raw(self, *, f=None, w=None, s=None, z=None):
+    def fresponse_raw(
+            self,
+            *,
+            f=None,
+            w=None,
+            s=None,
+            z=None,
+            use_laub=True,
+            **kwargs
+    ):
         # TODO fix this import
         from ..SISO import util
         domain = util.build_sorz(
@@ -232,15 +241,27 @@ class BareStateSpace(object):
             z=z,
             dt=self.dt,
         )
-        self_b = self.balancedA()
-        return xfer_algorithms.ss2response_laub(
-            A=self_b.A,
-            B=self_b.B,
-            C=self_b.C,
-            D=self_b.D,
-            E=self_b.E,
-            sorz=domain,
-        )
+        if use_laub:
+            self_b = self.balancedA()
+            return xfer_algorithms.ss2response_laub(
+                A=self_b.A,
+                B=self_b.B,
+                C=self_b.C,
+                D=self_b.D,
+                E=self_b.E,
+                sorz=domain,
+                **kwargs
+            )
+        else:
+            return xfer_algorithms.ss2response_mimo(
+                A=self.A,
+                B=self.B,
+                C=self.C,
+                D=self.D,
+                E=self.E,
+                sorz=domain,
+                **kwargs
+            )
 
     def balancedA(self):
         """
