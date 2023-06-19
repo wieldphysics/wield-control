@@ -11,6 +11,8 @@ import numbers
 import numpy as np
 # import warnings
 
+import scipy.linalg
+
 from ..algorithms.statespace.dense import xfer_algorithms
 from ..algorithms.statespace.dense import zpk_algorithms
 from ..algorithms.statespace.dense import ss_algorithms
@@ -246,8 +248,9 @@ class BareStateSpace(object):
 
         TODO, use a pencil method to modify/account for E as well.
         """
+        if self.A.shape[-2:] == (0, 0):
+            return self
 
-        import scipy.linalg
         Ascale = self.A.copy()
         # xGEBAL does not remove the diagonals before scaling.
         # not sure M is needed, was in the ARE generalized diagonalizer
@@ -278,7 +281,10 @@ class BareStateSpace(object):
             Bscale = scar.reshape(-1, 1) * self.B[..., Pi, :].copy()
             Cscale = sca.reshape(1, -1) * self.C[..., :, P].copy()
         else:
+            Ascale = self.A
             Escale = self.E
+            Bscale = self.B
+            Cscale = self.C
 
         return self.__class__(
             A=Ascale,
