@@ -66,7 +66,7 @@ def ss2response_mimo(A, B, C, D, E=None, sorz=None):
         )
 
 
-def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking_condmax=1e12):
+def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=True, blocking_condmax=1e12):
     """
     Use Laub's method to calculate the frequency response. Very fast but in some cases less numerically stable.
     Generally OK if the A/E matrix has been balanced first.
@@ -90,19 +90,97 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking
             A, Z = scipy.linalg.schur(A, output='complex')
             B = Z.transpose().conjugate() @ B
             C = C @ Z
-            blk_sizes = None
+            blk_tops = None
         else:
-            # this MIGHT not always be as numerically stable as desired
-            A, Z, blk_sizes = bdschur(A, condmax = blocking_condmax)
-            A, Z = scipy.linalg.rsf2csf(A, Z, check_finite=True)
-            B = np.linalg.inv(Z) @ B
-            # ssprint.print_dense_nonzero_M(A)
-            C = C @ Z
-            # print("BLOCK SIZES: ", blk_sizes)
+            # FOR TESTING!
+            if False:
+                A, Z = scipy.linalg.schur(A, output='complex')
+                B = Z.transpose().conjugate() @ B
+                C = C @ Z
+                blk_tops = np.zeros(A.shape[-1], dtype=int)
+
+                ilow = 0
+                ihigh = A.shape[-1]
+
+                split_diff = 3
+                levels = []
+                def bdschur_levels(ilow, ihigh, split_diff=split_diff, level=0):
+                    if level > 2:
+                        return
+                    if (ihigh - ilow) > split_diff * 2 + 2:
+                        split_offs = (ihigh-ilow) // 2 + ilow
+                        split_offsl = split_offs - split_diff
+                        split_offsh = split_offs + split_diff
+                        levels.append((-level, ilow, ihigh))
+                        bdschur_levels(ilow, split_offsh, level=level+1)
+                        bdschur_levels(split_offsl, ihigh, level=level+1)
+                bdschur_levels(ilow, ihigh, split_diff=5, level=0)
+                levels.sort()
+                print(levels)
+
+                # Apre = A.copy()
+                def bdschur_reduce(ilow, ihigh, split_diff=split_diff):
+                    print('bdschur_reduce', ilow, ihigh)
+                    if (ihigh - ilow) > split_diff * 2 + 2:
+                        split_offs = (ihigh-ilow) // 2 + ilow
+                        split_offsl = split_offs - split_diff
+                        split_offsh = split_offs + split_diff
+                        # split_offs = 4
+                        A11 = A[ilow:split_offsl, ilow:split_offsl]
+                        A22 = A[split_offsh:ihigh, split_offsh:ihigh]
+                        A12 = A[ilow:split_offsl, split_offsh:ihigh]
+
+                        P = solve_sylvester_preschur(A11, -A22, -A12)
+                        cond = np.max(abs(P))
+                        print("COND: ", '{:.2e}'.format(np.max(abs(A12))), '{:.2e}'.format(cond))
+                        if cond > 1e18:
+                            return
+
+                        # Z = np.eye(ihigh-ilow, dtype=complex)
+                        # Z[:split_offsl-ilow, split_offsh-ilow:] = P
+                        # Zi = np.linalg.inv(Z)
+                        # A[ilow:ihigh, :] = Zi @ A[ilow:ihigh, :]
+                        # A[:, ilow:ihigh] = A[:, ilow:ihigh] @ Z
+
+                        A[ilow:split_offsl, :] -= P @ A[split_offsh:ihigh, :]
+                        A[:, split_offsh:ihigh] += A[:, ilow:split_offsl] @ P
+
+                        A[ilow:split_offsl, split_offsh:ihigh] = 0
+
+                        # ssprint.print_dense_nonzero_M(abs(A) / abs(Apre) < .1)
+
+                        B[ilow:split_offsl, :] -= P @ B[split_offsh:ihigh, :]
+                        C[:, split_offsh:ihigh] += C[:, ilow:split_offsl] @ P
+
+                        # B[ilow:ihigh, :] = Z @ B[ilow:ihigh, :]
+                        # C[:, ilow:ihigh] = C[:, ilow:ihigh] @ Zi
+
+                        # blk_tops[split_offsh:ihigh] = split_offs
+                        # print(blk_tops)
+
+                # bdschur_reduce(ilow, split_offsh, level=level+1)
+                for level, ilow, ihigh in levels:
+                    bdschur_reduce(ilow=ilow, ihigh=ihigh)
+
+                ssprint.print_dense_nonzero_M(A)
+            else:
+                # CURRENTLY CAN'T RUN, testing alternate blocking method
+
+                # this MIGHT not always be as numerically stable as desired
+                A, Z, blk_sizes = bdschur(A, condmax = blocking_condmax)
+                A, Z = scipy.linalg.rsf2csf(A, Z, check_finite=True)
+
+                # this could use solve_triangular
+                B = np.linalg.inv(Z) @ B
+
+                # ssprint.print_dense_nonzero_M(A)
+                C = C @ Z
+                print("BLOCK SIZES: ", blk_sizes)
+                blk_tops = blk_sizes2blk_tops(A.shape[-1], blk_sizes)
 
         diag = (np.diag(A).reshape(1, -1) - sorz.reshape(-1, 1))
 
-        retval = array_solve_triangular(-A, -diag, B, blk_sizes=blk_sizes)
+        retval = array_solve_triangular(-A, -diag, B, blk_tops=blk_tops)
 
         # retval2 = np.linalg.inv(np.eye(A.shape[-1]) * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape)) @ B
         # print(retval - retval2)
@@ -126,7 +204,7 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking
             ) + D
 
 
-def array_solve_triangular(A, D, b, blk_sizes=None):
+def array_solve_triangular(A, D, b, blk_tops=None):
     """
     Solve a triangular matrix system.
     A is a (M, M). D is (..., M) are broadcasted diagonals, and b is (M, N)
@@ -137,15 +215,12 @@ def array_solve_triangular(A, D, b, blk_sizes=None):
     # D = D[idx:idx+1]
 
     # make on big single block
-    if blk_sizes is None:
-        blk_sizes = [A.shape[-1]]
-
-    # to have access to pop
-    blk_sizes = list(blk_sizes)
-
-    bwork = np.broadcast_to(b, D.shape[:-1] + b.shape).copy()
+    if blk_tops is None:
+        blk_tops = np.zeros(A.shape[-1])
 
     M = A.shape[-1]
+
+    bwork = np.broadcast_to(b, D.shape[:-1] + b.shape).copy()
 
     # print("A", A.shape)
     # print("D", D.shape)
@@ -156,13 +231,8 @@ def array_solve_triangular(A, D, b, blk_sizes=None):
     # Dv = D.reshape(*D.shape, 1)
     # Av = A.reshape(*A.shape, 1)
 
-    block_top = M
-
     for idx in range(M - 1, -1, -1):
-        if idx < block_top:
-            block_len = blk_sizes.pop()
-            block_top = idx - block_len + 1
-
+        block_top = blk_tops[idx]
         bwork[..., idx, :] /= D[..., idx:idx+1]
         if block_top < idx:
             bwork[..., block_top:idx, :] -= A[block_top:idx, idx:idx+1] * bwork[..., idx:idx+1, :]
@@ -174,6 +244,22 @@ def array_solve_triangular(A, D, b, blk_sizes=None):
     # print(abs(Atest @ bwork - b) < 1e-6)
     # print(abs(Atest @ bwork[idx] - Atest @ bwork2) < 1e-6)
     return bwork
+
+
+def blk_sizes2blk_tops(M, blk_sizes):
+    blk_tops = []
+    # to have access to pop
+    blk_sizes = list(blk_sizes)
+    block_top = M
+
+    for idx in range(M - 1, -1, -1):
+        if idx < block_top:
+            block_len = blk_sizes.pop()
+            block_top = idx - block_len + 1
+        blk_tops.append(block_top)
+    blk_tops = blk_tops[::-1]
+    print(blk_tops)
+    return blk_tops
 
 
 ###########################################################
@@ -414,8 +500,59 @@ def _bdschur_defective(blksizes, eigvals):
     return False
 
 
+def solve_sylvester_preschur(a, b, q):
+    """
+    Computes a solution (X) to the Sylvester equation :math:`AX + XB = Q`.
 
+    Parameters
+    ----------
+    a : (M, M) array_like
+        Leading matrix of the Sylvester equation
+    b : (N, N) array_like
+        Trailing matrix of the Sylvester equation
+    q : (M, N) array_like
+        Right-hand side
 
+    Returns
+    -------
+    x : (M, N) ndarray
+        The solution to the Sylvester equation.
 
+    Raises
+    ------
+    LinAlgError
+        If solution was not found
 
+    Notes
+    -----
+    Computes a solution to the Sylvester matrix equation via the Bartels-
+    Stewart algorithm. The A and B matrices first undergo Schur
+    decompositions. The resulting matrices are used to construct an
+    alternative Sylvester equation (``RY + YS^T = F``) where the R and S
+    matrices are in quasi-triangular form (or, when R, S or F are complex,
+    triangular form). The simplified equation is then solved using
+    ``*TRSYL`` from LAPACK directly.
+
+    .. versionadded:: 0.11.0
+
+    """
+    # this slight bit of magic preserves what the schur call does in the lapack version of solve_sylvester
+    # but uses cheaper alternatives
+    s = b.transpose().conj()[::-1, ::-1]
+    f = q[:, ::-1]
+
+    # Call the Sylvester equation solver
+    trsyl, = scipy.linalg.get_lapack_funcs(('trsyl',), (a, s, f))
+    if trsyl is None:
+        raise RuntimeError('LAPACK implementation does not contain a proper '
+                           'Sylvester equation solver (TRSYL)')
+    y, scale, info = trsyl(a, s, f, tranb='C')
+
+    y = scale*y
+
+    if info < 0:
+        raise scipy.linalg.LinAlgError("Illegal value encountered in "
+                          "the %d term" % (-info,))
+
+    return y[:, ::-1]
 
