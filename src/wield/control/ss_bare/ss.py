@@ -230,12 +230,13 @@ class BareStateSpace(object):
             z=z,
             dt=self.dt,
         )
+        self_b = self.balancedA()
         return xfer_algorithms.ss2response_laub(
-            A=self.A,
-            B=self.B,
-            C=self.C,
-            D=self.D,
-            E=self.E,
+            A=self_b.A,
+            B=self_b.B,
+            C=self_b.C,
+            D=self_b.D,
+            E=self_b.E,
             sorz=domain,
         )
 
