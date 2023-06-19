@@ -66,7 +66,7 @@ def ss2response_mimo(A, B, C, D, E=None, sorz=None):
         )
 
 
-def ss2response_laub(A, B, C, D, E=None, sorz=None):
+def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking_condmax=1e12):
     """
     Use Laub's method to calculate the frequency response. Very fast but in some cases less numerically stable.
     Generally OK if the A/E matrix has been balanced first.
@@ -85,7 +85,6 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None):
         if np.all(E == np.eye(E.shape[-1])):
             E = None
 
-    use_blocking = True
     if E is None:
         if not use_blocking:
             A, Z = scipy.linalg.schur(A, output='complex')
@@ -94,7 +93,7 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None):
             blk_sizes = None
         else:
             # this MIGHT not always be as numerically stable as desired
-            A, Z, blk_sizes = bdschur(A, condmax = 1e15)
+            A, Z, blk_sizes = bdschur(A, condmax = blocking_condmax)
             A, Z = scipy.linalg.rsf2csf(A, Z, check_finite=True)
             B = np.linalg.inv(Z) @ B
             # ssprint.print_dense_nonzero_M(A)

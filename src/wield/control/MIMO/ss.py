@@ -426,7 +426,6 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
             else:
                 output_dissections = deepcopy(self.output_dissections)
 
-
         elif callable(renames):
             inputs2 = dict()
             if which == 'both' or which == 'inputs':
@@ -470,8 +469,8 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
     def rename_outputs(self, renames):
         return self.rename(renames=renames, which='outputs')
 
-    def fresponse(self, *, f=None, w=None, s=None):
-        tf = self.ss.fresponse_raw(f=f, s=s, w=w)
+    def fresponse(self, *, f=None, w=None, s=None, **kwargs):
+        tf = self.ss.fresponse_raw(f=f, s=s, w=w, **kwargs)
         return response.MIMOFResponse(
             tf=tf,
             w=w,

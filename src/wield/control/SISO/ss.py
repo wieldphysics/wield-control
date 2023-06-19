@@ -148,8 +148,8 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
     def adjoint(self):
         return self.time_reversal()
 
-    def fresponse(self, f=None, w=None, s=None, z=None):
-        tf = self.ss.fresponse_raw(f=f, w=w, s=s, z=z)[..., 0, 0]
+    def fresponse(self, f=None, w=None, s=None, z=None, **kwargs):
+        tf = self.ss.fresponse_raw(f=f, w=w, s=s, z=z, **kwargs)[..., 0, 0]
         return response.SISOFResponse(
             tf=tf,
             w=w, f=f, s=s, z=z,
