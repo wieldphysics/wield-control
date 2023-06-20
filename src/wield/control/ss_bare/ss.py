@@ -40,18 +40,20 @@ class BareStateSpace(object):
         B = np.asarray(B)
         C = np.asarray(C)
         D = np.asarray(D)
-        assert(A.shape[-1] == A.shape[-2])
+        assert (A.shape[-1] == A.shape[-2])
+
         if E is not None:
             E = np.asarray(E)
+            # if np.all(E == np.eye(E.shape[-1])):
+            #     E = None
 
         if hermitian:
-            assert(np.all(A.imag == 0))
-            assert(np.all(B.imag == 0))
-            assert(np.all(C.imag == 0))
-            assert(np.all(D.imag == 0))
+            assert (np.all(A.imag == 0))
+            assert (np.all(B.imag == 0))
+            assert (np.all(C.imag == 0))
+            assert (np.all(D.imag == 0))
             if E is not None:
-
-                assert(np.all(E.imag == 0))
+                assert (np.all(E.imag == 0))
 
         self.flags = flags
 
@@ -106,16 +108,16 @@ class BareStateSpace(object):
     def as_controlLTI(self):
         import control
         A, B, C, D, E = self.ABCDe
-        # TODO 
+        # TODO
         # assert(E is None)
         return control.ss(A, B, C, D)
 
     @property
     def ABCD(self):
-        if self.E is None:
+        if self.E is not None:
             raise RuntimeError("Cannot Drop E")
         else:
-            assert(np.all(np.eye(self.E.shape[-1]) == self.E))
+            assert (np.all(np.eye(self.E.shape[-1]) == self.E))
             self.E = None
         return self.A, self.B, self.C, self.D
 
@@ -185,18 +187,14 @@ class BareStateSpace(object):
     @property
     def _p(self):
         """
-        Create a raw z, p tuple from the direct calculation
+        Create a raw tuple of poles from direct calculation
         """
         # TODO, not sure this should be included
         if self._p_vals is None:
             p = zpk_algorithms.ss2p(
                 A=self.A,
-                B=self.B,
-                C=self.C,
-                D=self.D,
                 E=self.E,
                 fmt="scipy",
-                allow_MIMO=True,
             )
             self._p_vals = p
         return self._p_vals
@@ -242,7 +240,7 @@ class BareStateSpace(object):
             dt=self.dt,
         )
         if use_laub:
-            self_b = self.balancedA()
+            self_b = self.balanceA()
             return xfer_algorithms.ss2response_laub(
                 A=self_b.A,
                 B=self_b.B,
@@ -263,7 +261,118 @@ class BareStateSpace(object):
                 **kwargs
             )
 
-    def balancedA(self):
+    def balanceBC_svd(self, which):
+        """
+        This balances gains using the SVD of either B or C.
+
+        It is not a very good technique as far as it has been tested
+        """
+        E = self.E
+        if E is not None and np.all(E == np.eye(E.shape[-1])):
+            E = None
+        if E is not None:
+            raise NotImplementedError("balancing on descriptor systems not implemented (yet)")
+
+        A = self.A
+        B = self.B
+        C = self.C
+
+        if which == 'B':
+            u, s, v = np.linalg.svd(B)
+            uc = u[:, len(s):] 
+            u = u[:, :len(s)]
+            print(s)
+
+            s[:] = s[:]**0.5
+            Z = u @ ((1/s).reshape(-1, 1) * u.transpose()) + uc @ uc.transpose()
+            Zi = (u @ ((s).reshape(-1, 1) * u.transpose()) + uc @ uc.transpose())
+            # Br = u @ v
+            Br = Z @ B
+            Ar = Z @ A @ Zi
+            Cr = C @ Zi
+
+        elif which == 'C':
+            u, s, v = np.linalg.svd(C)
+
+            vc = v[len(s):, :]
+            v = v[:len(s), :]
+
+            s[:] = s[:]**0.5
+            Z = v.transpose() @ ((s).reshape(-1, 1) * v) + vc.transpose() @ vc
+            Zi = (v.transpose() @ ((1/s).reshape(-1, 1) * v) + vc.transpose() @ vc)
+
+            # Cr2 = u @ v
+            Cr = C @ Zi
+
+            Ar = Z @ A @ Zi
+            Br = Z @ B
+        else:
+            raise RuntimeError("Unknown job")
+
+        return self.__class__(
+            Ar,
+            Br,
+            Cr,
+            self.D,
+            E=self.E,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+
+    def balanceABC(self, which='A'):
+        """
+        TODO, include the slycot balancer tb01id
+
+        https://github.com/python-control/Slycot/blob/master/slycot/transform.py#L25
+        """
+        E = self.E
+        if E is not None and np.all(E == np.eye(E.shape[-1])):
+            E = None
+        if E is not None:
+            raise NotImplementedError("balancing on descriptor systems not implemented (yet)")
+
+        assert(which in ['A', 'B', 'C', 'ABC', 'AB', 'AC', 'N'])
+
+        if which == 'A':
+            return self.balanceA()
+        elif which == 'AB':
+            job = 'B'
+        elif which == 'AC':
+            job = 'C'
+        elif which == 'ABC':
+            job = 'A'
+
+        A = self.A
+        B = self.B
+        C = self.C
+
+        # Order of the A matrix
+        n = self.A.shape[0]
+        # Number of inputs
+        m = self.B.shape[1]
+        # Number of outputs
+        p = self.C.shape[0]
+
+        from slycot import tb01id
+        s_norm, Ar, Br, Cr, scaled = tb01id(
+            n, m, p,
+            0,  # maxred
+            A, B, C,
+            job='A'
+        )
+        return self.__class__(
+            Ar,
+            Br,
+            Cr,
+            self.D,
+            E=self.E,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+
+    def balanceA(self, permute=True):
         """
         Return a version of this statespace where A has been balanced for numerical stability.
 
@@ -287,7 +396,12 @@ class BareStateSpace(object):
             s[p] = np.arange(p.size)
             return s
 
-        Ascale, (sca, P) = scipy.linalg.matrix_balance(Ascale, separate=1, permute=1, overwrite_a = True)
+        Ascale, (sca, P) = scipy.linalg.matrix_balance(
+            Ascale,
+            separate=1,
+            permute=permute,
+            overwrite_a=True,
+        )
         Pi = invert_permutation(P)
         # do we need to bother?
         if not np.allclose(sca, np.ones_like(sca)):
@@ -318,6 +432,291 @@ class BareStateSpace(object):
             dt=self.dt,
         )
 
+    def balance_sys_gain(self, method='sqrt', equil=True):
+        """
+
+            To compute a reduced order model (Ar,Br,Cr,Dr) for an original state-space representation (A,B,C,D) by using either the square-root or the balancing-free square-root Singular Perturbation Approximation (SPA) model reduction method for the alpha-stable part of the system.
+            - From SLYCOT Documentation for ab09nd
+
+        Args:
+            sys (Bunch): Bunch system with mod as attribute
+            method (str, optional): Method to use for balancing. 'sqrt': use the square-root SPA method. 'bfsqrt': use the balancing-free square-root SPA method. Defaults to 'sqrt'.
+            equil (bool, optional): If True, preliminarily equilibrates the triplet (A,B,C). Defaults to True.
+            iod (dict, optional): input/output dictionary. Defaults to None.
+
+        Returns:
+            wield.bunch: Returns the local name space for the function including the state space model as `mod`, input output dictionary as `iod`, and namespace.
+        """    
+        # Define if the model is discrete or continuous
+        if self.dt == 0 or self.dt == None: # if the model is discrete it will have a non 0 or None dt
+            dico = 'C'
+        else:
+            dico = 'D'
+
+        E = self.E
+        if E is not None and np.all(E == np.eye(E.shape[-1])):
+            E = None
+        if E is not None:
+            raise NotImplementedError("balancing on descriptor systems not implemented (yet)")
+
+        # Define which method to use
+        if method == 'sqrt':
+            job = 'B'
+        elif method == 'bfsqrt':
+            job = 'N'
+
+        # Define if the model is balanced
+        if equil == True:
+            equil = 'S'
+        else:
+            equil = 'N'
+
+        A = self.A
+        B = self.B
+        C = self.C
+        D = self.D
+
+        # Order of the A matrix
+        n = self.A.shape[0]
+        # Number of inputs
+        m = self.B.shape[1]
+        # Number of outputs
+        p = self.C.shape[0]
+
+        from slycot import ab09nd
+        nr, Ar, Br, Cr, Dr, ns, hsv = ab09nd(
+            dico, job, equil,
+            n, m, p,
+            A, B, C, D
+        ) # ,alpha=None,nr=None,tol1=0,tol2=0,ldwork=None)
+        # nr: nr is the order of the resulting reduced order model
+        # ns: The dimension of the alpha-unstable subsystem
+
+        # if the reduced model has fever states than the original model tell the user
+        #if nr < n:
+            #print('The equalized gain model has ' + str(n-nr) + ' fewer state(s) than the original model')
+        return self.__class__(
+            Ar,
+            Br,
+            Cr,
+            Dr,
+            E=self.E,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+
+    def minreal_rescaled(self, job='minimal', scale=True, tol=None):
+        do_controller = False
+        do_observer = False
+        if job == 'minimal':
+            do_controller = True
+            do_observer = True
+        elif job == 'observable':
+            do_observer = True
+        elif job == 'controller':
+            do_observer = True
+        else:
+            raise RuntimeError("Unknown job")
+
+        s = self
+        Bscale = np.sum(abs(s.B)**2, axis=-2)**0.5
+        # print(self.B.shape)
+        # print("Bscale", Bscale)
+        Cscale = np.sum(abs(s.C)**2, axis=-1)**0.5
+        # print(self.C.shape)
+        # print("Cscale", Cscale)
+
+        s = self.__class__(
+            A=s.A,
+            B=s.B / Bscale.reshape(1, -1),
+            C=s.C / Cscale.reshape(-1, 1),
+            D=s.D,
+            E=s.E,
+            hermitian=s.hermitian,
+            time_symm=s.time_symm,
+            dt=s.dt,
+        )
+        
+        if do_controller:
+            # s = s.balanceBC_svd(which='B')
+            s = s.balanceABC(which='AB')
+            s = s.minreal(job='controllable', scale=False, tol=tol)
+            pass
+
+        if do_observer:
+            # s = self.balanceBC_svd(which='C')
+            s = s.balanceABC(which='AC')
+            s = s.minreal(job='observable', scale=False, tol=tol)
+            pass
+
+        s = self.__class__(
+            A=s.A,
+            B=s.B * Bscale.reshape(1, -1),
+            C=s.C * Cscale.reshape(-1, 1),
+            D=s.D,
+            E=s.E,
+            hermitian=s.hermitian,
+            time_symm=s.time_symm,
+            dt=s.dt,
+        )
+        return s
+
+    def minreal(self, job='minimal', scale=True, tol=None):
+        """
+        Calculate a minimal realization, removes unobservable and
+        uncontrollable states
+
+        Originally from python-control!
+        """
+        if job == 'both' or job == 'minimal':
+            jobchar = 'M'
+        elif job == 'observable':
+            jobchar = 'O'
+        elif job == 'controllable' or job == 'reachable':
+            jobchar = 'C'
+        else:
+            raise RuntimeError("Unrecognized ")
+        if scale:
+            scalechar = 'S'
+        else:
+            scalechar = 'N'
+        if self.Nstates:
+            E = self.E
+            if E is not None and np.all(E == np.eye(E.shape[-1])):
+                E = None
+            if E is not None:
+                raise NotImplementedError("Minreal on descriptor systems not implemented (yet)")
+
+            if tol is None:
+                tol = 1e-16
+
+            from slycot import tb01pd
+            B = np.empty((self.Nstates, max(self.Ninputs, self.Noutputs)))
+            B[:, :self.Ninputs] = self.B
+            C = np.empty((max(self.Noutputs, self.Ninputs), self.Nstates))
+            C[:self.Noutputs, :] = self.C
+            A = self.A.copy()
+            nr = self.Nstates
+            A, B, C, nr = tb01pd(
+                self.Nstates,
+                self.Ninputs,
+                self.Noutputs,
+                self.A.copy(),
+                B,
+                C,
+                tol=tol,
+                job=jobchar,
+                equil=scalechar,
+            )
+
+            return self.__class__(
+                A[:nr, :nr],
+                B[:nr, :self.Ninputs],
+                C[:self.Noutputs, :nr],
+                self.D,
+                None,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
+                dt=self.dt,
+            )
+        else:
+            return self
+
+    def minreal_observable_split(self, nc, tol=0.0):
+        """
+        Calculate a minimal observable realization on an nc-sized subset of the outputs.
+        Then propagate the transformations into the full sized view.
+
+        This allows one to create reduced systems with the full set of inputs and outputs but at reduced order
+        """
+
+        if self.Nstates:
+            if self.E is not None:
+                raise NotImplementedError("Minreal on descriptor systems not implemented (yet)")
+
+            from slycot import tb01pd
+
+            # generate a complete set of inputs
+            BZ = np.eye(self.Nstates)
+
+            # use only a subset of C
+            C = np.empty((max(nc, self.Ninputs), self.Nstates))
+            C[:nc, :] = self.C[:nc, :]
+
+            A, BZ, C, nr = tb01pd(
+                self.Nstates,
+                self.Nstates,
+                nc,
+                self.A,
+                BZ,
+                C,
+                tol=tol,
+                job='O',
+                equil='N',
+            )
+            BZ = BZ[:nr, :self.Nstates]
+
+            return self.__class__(
+                A[:nr, :nr],
+                BZ @ self.B,
+                self.C @ BZ.T,
+                self.D,
+                None,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
+                dt=self.dt,
+            )
+        else:
+            return self
+
+    def minreal_controllable_split(self, nb, scale=False, tol=0.0):
+        """
+        Calculate a minimal observable realization on an nc-sized subset of the outputs.
+        Then propagate the transformations into the full sized view.
+
+        This allows one to create reduced systems with the full set of inputs and outputs but at reduced order
+
+        TODO: Untested
+        """
+        if self.Nstates:
+            if self.E is not None:
+                raise NotImplementedError("Minreal on descriptor systems not implemented (yet)")
+
+            from slycot import tb01pd
+
+            # use only a subset of B
+            B = np.empty((self.Nstates, max(nb, self.Noutputs)))
+            B[:, :nb] = self.B[:, :nb]
+
+            # generate a complete set of outputs
+            CZ = np.eye(self.Nstates)
+
+            A, B, CZ, nr = tb01pd(
+                self.Nstates,
+                nb,
+                self.Nstates,
+                self.A,
+                B,
+                CZ,
+                tol=tol,
+                job='C',
+                equil='N',
+            )
+            CZ = CZ[:self.Nstates, :nr]
+
+            return self.__class__(
+                A[:nr, :nr],
+                CZ.T @ self.B,
+                self.C @ CZ,
+                self.D,
+                None,
+                hermitian=self.hermitian,
+                time_symm=self.time_symm,
+                dt=self.dt,
+            )
+        else:
+            return self
 
     def feedbackD(self, D):
         """

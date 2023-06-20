@@ -339,9 +339,43 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
             input_dissections=input_dissections,
         )
 
-    def balanced(self, **kwargs):
+    def minreal(self, job='minimal', scale=True, tol=None):
         return self.__build__(
-            ss=self.ss.balancedA(**kwargs),
+            ss=self.ss.minreal(
+                job=job,
+                scale=scale,
+                tol=tol,
+            ),
+            inputs=self.inputs,
+            outputs=self.outputs,
+            output_dissections=self.output_dissections,
+            input_dissections=self.input_dissections,
+        )
+
+    def minreal_rescaled(self, job='minimal', tol=None):
+        return self.__build__(
+            ss=self.ss.minreal_rescaled(
+                job=job,
+                tol=tol,
+            ),
+            inputs=self.inputs,
+            outputs=self.outputs,
+            output_dissections=self.output_dissections,
+            input_dissections=self.input_dissections,
+        )
+
+    def balance_sys_gain(self, **kwargs):
+        return self.__build__(
+            ss=self.ss.balance_sys_gain(**kwargs),
+            inputs=self.inputs,
+            outputs=self.outputs,
+            output_dissections=self.output_dissections,
+            input_dissections=self.input_dissections,
+        )
+
+    def balance(self, **kwargs):
+        return self.__build__(
+            ss=self.ss.balanceA(**kwargs),
             inputs=self.inputs,
             outputs=self.outputs,
             output_dissections=self.output_dissections,
@@ -358,7 +392,7 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
         C = self.C[Od.idx_start:Od.idx_end, :]
         return C
 
-    def dissectBCD(self, iname, oname):
+    def dissectD(self, iname, oname):
         Id = self.input_dissections_byname[iname]
         Od = self.output_dissections_byname[oname]
         D = self.D[Od.idx_start:Od.idx_end, Id.idx_start:Id.idx_end]

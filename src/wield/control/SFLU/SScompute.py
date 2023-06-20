@@ -165,7 +165,7 @@ class SSCompute:
         # it should only be done on the intersection of the outputs and inputs
         connections = [(n, n) for n in (Inodes & Onodes)]
         ss_conn = ss_disco.feedback_connect(connections=connections)
-        ss_conn = ss_conn.balanced()
+        ss_conn = ss_conn.balance()
 
         # TODO, probably need to rescale and convert to Schur form here
 
@@ -202,7 +202,7 @@ class SSCompute:
         plantSS = self.ss[
             list(Rset),
             list(Cmap.keys())
-        ]
+        ].minreal_rescaled(tol=1e-10)
 
         fr = plantSS.fresponse(f=F_Hz)
         resultsAC = dict()
@@ -245,7 +245,7 @@ class SSCompute:
         plantSS = self.ss[
             list(Rmap.keys()),
             list(Cset)
-        ]
+        ].minreal_rescaled(tol=1e-10)
         fr = plantSS.fresponse(f=F_Hz)
         resultsAC = dict()
 

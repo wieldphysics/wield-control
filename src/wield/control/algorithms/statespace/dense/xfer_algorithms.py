@@ -66,7 +66,7 @@ def ss2response_mimo(A, B, C, D, E=None, sorz=None):
         )
 
 
-def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=True, blocking_condmax=1e12):
+def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking_condmax=1e12):
     """
     Use Laub's method to calculate the frequency response. Very fast but in some cases less numerically stable.
     Generally OK if the A/E matrix has been balanced first.
@@ -196,6 +196,8 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=True, blocking_
         # TODO, E matrix not supported yet
         import warnings
         warnings.warn("Laub method used on descriptor system. Not supported yet (using slow Horner method fallback)")
+        if E is None:
+            E = np.eye(A.shape[-1])
         return (
                 C @ (
                     np.linalg.inv(E * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
@@ -216,7 +218,7 @@ def array_solve_triangular(A, D, b, blk_tops=None):
 
     # make on big single block
     if blk_tops is None:
-        blk_tops = np.zeros(A.shape[-1])
+        blk_tops = np.zeros(A.shape[-1], dtype=int)
 
     M = A.shape[-1]
 
@@ -258,7 +260,7 @@ def blk_sizes2blk_tops(M, blk_sizes):
             block_top = idx - block_len + 1
         blk_tops.append(block_top)
     blk_tops = blk_tops[::-1]
-    print(blk_tops)
+    # print(blk_tops)
     return blk_tops
 
 
