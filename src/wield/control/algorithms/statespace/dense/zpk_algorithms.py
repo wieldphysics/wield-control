@@ -31,41 +31,34 @@ pi2 = np.pi * 2
 
 def ss2p(
     A,
-    B,
-    C,
-    D,
     E=None,
-    idx_in=None,
-    idx_out=None,
-    Q_rank_cutoff=1e-15,
-    Q_rank_cutoff_unstable=None,
     fmt="scipy",
-    allow_MIMO=False,
 ):
-    if not allow_MIMO:
-        if idx_in is None:
-            if B.shape[1] == 1:
-                idx_in = 0
+    Ascale = A.copy()
+    if True:
+        # TODO, should allow permutations in this!
+
+        # xGEBAL does not remove the diagonals before scaling.
+        # not sure M is needed, was in the ARE generalized diagonalizer
+        # M = np.abs(SS) + np.abs(SSE)
+        _, (sca, _) = scipy.linalg.matrix_balance(Ascale, separate=1, permute=0)
+        # do we need to bother?
+        if not np.allclose(sca, np.ones_like(sca)):
+            elwisescale = sca * np.reciprocal(sca)[:, None]
+            Ascale *= elwisescale
+            if E is not None:
+                Escale = E.copy()
+                Escale *= elwisescale
             else:
-                raise RuntimeError("Must specify idx_in if B indicates MISO/MIMO system")
-        if idx_out is None:
-            if C.shape[0] == 1:
-                idx_out = 0
-            else:
-                raise RuntimeError("Must specify idx_in if C indicates SIMO/MIMO system")
+                Escale = E
+        else:
+            Escale = E
 
-        if A.shape[-2:] == (0, 0):
-            return np.asarray([]), np.asarray([])
-
-        B = B[:, idx_in: idx_in + 1]
-        C = C[idx_out: idx_out + 1, :]
-        D = D[idx_out: idx_out + 1, idx_in: idx_in + 1]
-
-    if E is None:
-        p = scipy.linalg.eig(A, left=False, right=False)
-    else:
-        p = scipy.linalg.eig(A, E, left=False, right=False)
+    if E is not None:
+        p = scipy.linalg.eigvals(Ascale, Escale)
         p = np.asarray([_ for _ in p if np.isfinite(_.real)])
+    else:
+        p = scipy.linalg.eigvals(Ascale)
 
     if fmt == "IIRrational":
         p = np.asarray(p) / (2 * np.pi)
@@ -114,6 +107,8 @@ def ss2zp(
 
     Ascale = A.copy()
     if True:
+        # TODO, should allow permutations in this!
+
         # xGEBAL does not remove the diagonals before scaling.
         # not sure M is needed, was in the ARE generalized diagonalizer
         # M = np.abs(SS) + np.abs(SSE)
@@ -135,7 +130,6 @@ def ss2zp(
         p = np.asarray([_ for _ in p if np.isfinite(_.real)])
     else:
         p = scipy.linalg.eigvals(Ascale)
-
 
     SS = np.block([[A, B], [C, D]])
 
