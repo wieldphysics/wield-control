@@ -322,7 +322,7 @@ class BareStateSpace(object):
 
     def balanceABC(self, which='A'):
         """
-        TODO, include the slycot balancer tb01id
+        Uses the slycot balancer tb01id
 
         https://github.com/python-control/Slycot/blob/master/slycot/transform.py#L25
         """
@@ -605,6 +605,10 @@ class BareStateSpace(object):
             return self
 
     def minreal_rescaled(self, job='minimal', scale=True, tol=None):
+        """
+        Apply a rescaling to the B and C matrix so that each Col, Row respectively, has norm 1.
+        This improves the scaling expected of tol for inputs and outputs with greatly differing scales.
+        """
         do_controller = False
         do_observer = False
         if job == 'minimal':
@@ -756,6 +760,75 @@ class BareStateSpace(object):
             )
         else:
             return self
+
+    def Linf_norm(self, nc, scale=True, tol=1e-10):
+
+        """
+        Using slycot ab13dd
+        Return objects:
+                gpeak : float
+                        The L-infinity norm of the system, i.e., the peak gain
+                        of the frequency response (as measured by the largest
+                        singular value in the MIMO case).
+                fpeak : float
+                        The frequency where the gain of the frequency response
+                        achieves its peak value gpeak, i.e.,
+
+                        || G ( j*fpeak ) || = gpeak ,  if dico = 'C', or
+
+                                j*fpeak
+                        || G ( e       ) || = gpeak ,  if dico = 'D'.
+
+        Works with descriptor systems
+        """
+
+        if self.dt == 0 or self.dt == None: # if the model is discrete it will have a non 0 or None dt
+            dico = 'C'
+        else:
+            dico = 'D'
+
+        A = self.A
+        B = self.B
+        C = self.C
+        D = self.D
+        E = self.E
+
+        # Order of the A matrix
+        n = self.A.shape[0]
+        # Number of inputs
+        m = self.B.shape[1]
+        # Number of outputs
+        p = self.C.shape[0]
+
+        if E is None:
+            E = np.eye(self.A.shape[-1])
+            jobe = 'I'
+        elif E is not None and np.all(E == np.eye(E.shape[-1])):
+            jobe = 'I'
+        else:
+            jobe = 'G'
+
+        if scale:
+            equil = 'S'
+        else:
+            equil = 'N'
+
+        if np.any(D):
+            jobd = 'D'
+        else:
+            jobd = 'Z'
+
+        from slycot import ab13dd
+        gpeak, omega_peak = ab13dd(
+            dico,
+            jobe,
+            equil,
+            jobd,
+            n, m, p,
+            A, E, B, C, D,
+            tol=tol
+        )
+        return gpeak, omega_peak / (2 * np.pi)
 
     def feedbackD(self, D):
         """
