@@ -1303,6 +1303,12 @@ class BareStateSpaceUser(object):
             ss=self.ss.balanceA(**kwargs),
         )
 
+    def L2_norm(self, **kwargs):
+        self.ss.L2_norm(**kwargs)
+
+    def Linf_norm(self, **kwargs):
+        self.ss.Linf_norm(**kwargs)
+
 
 def joinAE(s, o):
     """
