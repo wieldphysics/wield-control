@@ -761,8 +761,59 @@ class BareStateSpace(object):
         else:
             return self
 
-    def Linf_norm(self, nc, scale=True, tol=1e-10):
+    def L2_norm(self, mode='L2', scale=True, tol=1e-10):
+        """
+        Using slycot ab13dd
+        Return objects:
+           The L2 or H2 norm of the system
 
+        Does not work with descriptor systems
+        """
+
+        if self.dt == 0 or self.dt == None: # if the model is discrete it will have a non 0 or None dt
+            dico = 'C'
+        else:
+            dico = 'D'
+
+        A = self.A
+        B = self.B
+        C = self.C
+        D = self.D
+        E = self.E
+
+        # Order of the A matrix
+        n = self.A.shape[0]
+        # Number of inputs
+        m = self.B.shape[1]
+        # Number of outputs
+        p = self.C.shape[0]
+
+        if E is None:
+            E = np.eye(self.A.shape[-1])
+            pass
+        elif E is not None and np.all(E == np.eye(E.shape[-1])):
+            pass
+        else:
+            raise RuntimeError("Does not work on descriptor systems")
+
+        if mode == 'L2':
+            jobn = 'L'
+        elif mode == 'H2':
+            jobn = 'H'
+        else:
+            raise RuntimeError("Unrecognized mode")
+
+        from slycot import ab13bd
+        L2 = ab13bd(
+            dico,
+            jobn,
+            n, m, p,
+            A, B, C, D,
+            tol=tol
+        )
+        return L2
+
+    def Linf_norm(self, scale=True, tol=1e-10):
         """
         Using slycot ab13dd
         Return objects:
