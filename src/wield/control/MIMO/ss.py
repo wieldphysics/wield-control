@@ -152,6 +152,21 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
         self.output_dissections = output_dissections
         return self
 
+    def __build_similar__(
+        self,
+        ss,
+    ):
+        """
+        Build a similar system to self, using ss as the underlying Bare statespace
+        """
+        return self.__build__(
+            ss=ss,
+            inputs=self.inputs,
+            outputs=self.outputs,
+            output_dissections=self.output_dissections,
+            input_dissections=self.input_dissections,
+        )
+
     @property
     def input_dissections_byname(self):
         return {d.name:d for d in self.input_dissections}
@@ -337,49 +352,6 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
             outputs=outputs,
             output_dissections=output_dissections,
             input_dissections=input_dissections,
-        )
-
-    def minreal(self, job='minimal', scale=True, tol=None):
-        return self.__build__(
-            ss=self.ss.minreal(
-                job=job,
-                scale=scale,
-                tol=tol,
-            ),
-            inputs=self.inputs,
-            outputs=self.outputs,
-            output_dissections=self.output_dissections,
-            input_dissections=self.input_dissections,
-        )
-
-    def minreal_rescaled(self, job='minimal', tol=None):
-        return self.__build__(
-            ss=self.ss.minreal_rescaled(
-                job=job,
-                tol=tol,
-            ),
-            inputs=self.inputs,
-            outputs=self.outputs,
-            output_dissections=self.output_dissections,
-            input_dissections=self.input_dissections,
-        )
-
-    def balance_sys_gain(self, **kwargs):
-        return self.__build__(
-            ss=self.ss.balance_sys_gain(**kwargs),
-            inputs=self.inputs,
-            outputs=self.outputs,
-            output_dissections=self.output_dissections,
-            input_dissections=self.input_dissections,
-        )
-
-    def balance(self, **kwargs):
-        return self.__build__(
-            ss=self.ss.balanceA(**kwargs),
-            inputs=self.inputs,
-            outputs=self.outputs,
-            output_dissections=self.output_dissections,
-            input_dissections=self.input_dissections,
         )
 
     def dissectB(self, iname):
