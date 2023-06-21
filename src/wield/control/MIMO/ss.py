@@ -586,12 +586,8 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
 
         ss = self.ss.feedbackD(D=fbD)
 
-        return self.__build__(
+        return self.__build_similar__(
             ss=ss,
-            inputs=deepcopy(self.inputs),
-            outputs=deepcopy(self.outputs),
-            input_dissections=deepcopy(self.input_dissections),
-            output_dissections=deepcopy(self.output_dissections),
         )
 
 

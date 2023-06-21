@@ -432,9 +432,8 @@ class BareStateSpace(object):
             dt=self.dt,
         )
 
-    def balance_sys_gain(self, method='sqrt', equil=True):
+    def balance_and_truncate_unscaled(self, method='sqrt', equil=True, tol1=0, tol2=0):
         """
-
             To compute a reduced order model (Ar,Br,Cr,Dr) for an original state-space representation (A,B,C,D) by using either the square-root or the balancing-free square-root Singular Perturbation Approximation (SPA) model reduction method for the alpha-stable part of the system.
             - From SLYCOT Documentation for ab09nd
 
@@ -445,7 +444,7 @@ class BareStateSpace(object):
             iod (dict, optional): input/output dictionary. Defaults to None.
 
         Returns:
-            wield.bunch: Returns the local name space for the function including the state space model as `mod`, input output dictionary as `iod`, and namespace.
+            a similar StateSpace
         """    
         # Define if the model is discrete or continuous
         if self.dt == 0 or self.dt == None: # if the model is discrete it will have a non 0 or None dt
@@ -487,7 +486,8 @@ class BareStateSpace(object):
         nr, Ar, Br, Cr, Dr, ns, hsv = ab09nd(
             dico, job, equil,
             n, m, p,
-            A, B, C, D
+            A, B, C, D,
+            tol1=tol1, tol2=tol2,
         ) # ,alpha=None,nr=None,tol1=0,tol2=0,ldwork=None)
         # nr: nr is the order of the resulting reduced order model
         # ns: The dimension of the alpha-unstable subsystem
@@ -506,60 +506,41 @@ class BareStateSpace(object):
             dt=self.dt,
         )
 
-    def minreal_rescaled(self, job='minimal', scale=True, tol=None):
-        do_controller = False
-        do_observer = False
-        if job == 'minimal':
-            do_controller = True
-            do_observer = True
-        elif job == 'observable':
-            do_observer = True
-        elif job == 'controller':
-            do_observer = True
-        else:
-            raise RuntimeError("Unknown job")
-
+    def balance_and_truncate(self, rescale_io=True, **kwargs):
         s = self
-        Bscale = np.sum(abs(s.B)**2, axis=-2)**0.5
-        # print(self.B.shape)
-        # print("Bscale", Bscale)
-        Cscale = np.sum(abs(s.C)**2, axis=-1)**0.5
-        # print(self.C.shape)
-        # print("Cscale", Cscale)
 
-        s = self.__class__(
-            A=s.A,
-            B=s.B / Bscale.reshape(1, -1),
-            C=s.C / Cscale.reshape(-1, 1),
-            D=s.D,
-            E=s.E,
-            hermitian=s.hermitian,
-            time_symm=s.time_symm,
-            dt=s.dt,
-        )
+        if rescale_io:
+            Bscale = np.sum(abs(s.B)**2, axis=-2)**0.5
+            # print(self.B.shape)
+            # print("Bscale", Bscale)
+            Cscale = np.sum(abs(s.C)**2, axis=-1)**0.5
+            # print(self.C.shape)
+            # print("Cscale", Cscale)
+
+            s = self.__class__(
+                A=s.A,
+                B=s.B / Bscale.reshape(1, -1),
+                C=s.C / Cscale.reshape(-1, 1),
+                D=s.D,
+                E=s.E,
+                hermitian=s.hermitian,
+                time_symm=s.time_symm,
+                dt=s.dt,
+            )
         
-        if do_controller:
-            # s = s.balanceBC_svd(which='B')
-            s = s.balanceABC(which='AB')
-            s = s.minreal(job='controllable', scale=False, tol=tol)
-            pass
+        s = s.balance_and_truncate_unscaled(**kwargs)
 
-        if do_observer:
-            # s = self.balanceBC_svd(which='C')
-            s = s.balanceABC(which='AC')
-            s = s.minreal(job='observable', scale=False, tol=tol)
-            pass
-
-        s = self.__class__(
-            A=s.A,
-            B=s.B * Bscale.reshape(1, -1),
-            C=s.C * Cscale.reshape(-1, 1),
-            D=s.D,
-            E=s.E,
-            hermitian=s.hermitian,
-            time_symm=s.time_symm,
-            dt=s.dt,
-        )
+        if rescale_io:
+            s = self.__class__(
+                A=s.A,
+                B=s.B * Bscale.reshape(1, -1),
+                C=s.C * Cscale.reshape(-1, 1),
+                D=s.D,
+                E=s.E,
+                hermitian=s.hermitian,
+                time_symm=s.time_symm,
+                dt=s.dt,
+            )
         return s
 
     def minreal(self, job='minimal', scale=True, tol=None):
@@ -622,6 +603,64 @@ class BareStateSpace(object):
             )
         else:
             return self
+
+    def minreal_rescaled(self, job='minimal', scale=True, tol=None):
+        do_controller = False
+        do_observer = False
+        if job == 'minimal':
+            do_controller = True
+            do_observer = True
+        elif job == 'observable':
+            do_observer = True
+        elif job == 'controller':
+            do_observer = True
+        else:
+            raise RuntimeError("Unknown job")
+
+        s = self
+        Bscale = np.sum(abs(s.B)**2, axis=-2)**0.5
+        # print(self.B.shape)
+        # print("Bscale", Bscale)
+        Cscale = np.sum(abs(s.C)**2, axis=-1)**0.5
+        # print(self.C.shape)
+        # print("Cscale", Cscale)
+
+        s = self.__class__(
+            A=s.A,
+            B=s.B / Bscale.reshape(1, -1),
+            C=s.C / Cscale.reshape(-1, 1),
+            D=s.D,
+            E=s.E,
+            hermitian=s.hermitian,
+            time_symm=s.time_symm,
+            dt=s.dt,
+        )
+        
+        if do_controller:
+            # s = s.balanceBC_svd(which='B')
+            if scale:
+                s = s.balanceABC(which='AB')
+            s = s.minreal(job='controllable', scale=False, tol=tol)
+            pass
+
+        if do_observer:
+            # s = self.balanceBC_svd(which='C')
+            if scale:
+                s = s.balanceABC(which='AC')
+            s = s.minreal(job='observable', scale=False, tol=tol)
+            pass
+
+        s = self.__class__(
+            A=s.A,
+            B=s.B * Bscale.reshape(1, -1),
+            C=s.C * Cscale.reshape(-1, 1),
+            D=s.D,
+            E=s.E,
+            hermitian=s.hermitian,
+            time_symm=s.time_symm,
+            dt=s.dt,
+        )
+        return s
 
     def minreal_observable_split(self, nc, tol=0.0):
         """
@@ -1113,33 +1152,32 @@ class BareStateSpaceUser(object):
         """
         return ssprint.print_dense_nonzero(self.ss)
 
-    def minreal(self, job='minimal', scale=True, tol=None):
-        return self.__build_similar__(
-            ss=self.ss.minreal(
-                job=job,
-                scale=scale,
-                tol=tol,
-            ),
-        )
+    def minreal(self, job='minimal', scale_io=True, scale=True, tol=None):
+        if scale_io:
+            return self.__build_similar__(
+                ss=self.ss.minreal_rescaled(
+                    job=job,
+                    tol=tol,
+                ),
+            )
+        else:
+            return self.__build_similar__(
+                ss=self.ss.minreal(
+                    job=job,
+                    scale=scale,
+                    tol=tol,
+                ),
+            )
 
-    def minreal_rescaled(self, job='minimal', tol=None):
+    def balance_and_truncate(self, **kwargs):
         return self.__build_similar__(
-            ss=self.ss.minreal_rescaled(
-                job=job,
-                tol=tol,
-            ),
-        )
-
-    def balance_sys_gain(self, **kwargs):
-        return self.__build_similar__(
-            ss=self.ss.balance_sys_gain(**kwargs),
+            ss=self.ss.balance_and_truncate(**kwargs),
         )
 
     def balance(self, **kwargs):
         return self.__build_similar__(
             ss=self.ss.balanceA(**kwargs),
         )
-
 
 
 def joinAE(s, o):
