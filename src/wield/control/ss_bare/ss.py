@@ -1113,6 +1113,34 @@ class BareStateSpaceUser(object):
         """
         return ssprint.print_dense_nonzero(self.ss)
 
+    def minreal(self, job='minimal', scale=True, tol=None):
+        return self.__build_similar__(
+            ss=self.ss.minreal(
+                job=job,
+                scale=scale,
+                tol=tol,
+            ),
+        )
+
+    def minreal_rescaled(self, job='minimal', tol=None):
+        return self.__build_similar__(
+            ss=self.ss.minreal_rescaled(
+                job=job,
+                tol=tol,
+            ),
+        )
+
+    def balance_sys_gain(self, **kwargs):
+        return self.__build_similar__(
+            ss=self.ss.balance_sys_gain(**kwargs),
+        )
+
+    def balance(self, **kwargs):
+        return self.__build_similar__(
+            ss=self.ss.balanceA(**kwargs),
+        )
+
+
 
 def joinAE(s, o):
     """

@@ -49,6 +49,20 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         )
         return
 
+    def __build_similar__(
+        self,
+        ss,
+    ):
+        """
+        Build a similar system to self, using ss as the underlying Bare statespace
+        """
+        return self.__class__(
+            ss=ss,
+            fiducial = self.fiducial,
+            fiducial_rtol = self.fiducial_atol,
+            fiducial_atol = self.fiducial_rtol,
+        )
+
     def _fiducial_w_set(self, rtol):
         # create a list of poiints at each resonance and zero, as well as 1 BW away
         rt_rtol = rtol**0.5
