@@ -93,6 +93,7 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking
             blk_tops = None
         else:
             # FOR TESTING!
+            # TODO, refactor this into a BDSchur method
             if False:
                 A, Z = scipy.linalg.schur(A, output='complex')
                 B = Z.transpose().conjugate() @ B

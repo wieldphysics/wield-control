@@ -358,6 +358,40 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             return self - other
         return NotImplemented
 
+    def closed_loop_gain(self):
+        """
+        If self=G, this returns the filter for 1/(1-G).
+        """
+        A, B, C, D, E = self.ss.ABCDe
+        # extend to pass the input through
+        B2 = np.block([B, [[0]]])
+        D2 = np.block([D, [[1]]])
+        ss = self.ss.__build_similar__(A, B2, C, D2, E)
+        ss = ss.feedbackD([[1, 0]])
+        # now select only the passthrough outputput
+
+        ss = ss[1:, :]
+        return self.__class__(
+            ss[1:, :],
+            fiducial=1 / (1 - self.fiducial),
+            fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
+        )
+        return self.__build_similar__()
+
+    def closed_errorpoint_gain(self):
+        """
+        If self=G, this returns the filter for 1/(1-G).
+        """
+        ss = self.ss.feedbackD([[1]])
+        return self.__class__(
+            ss,
+            fiducial=self.fiducial / (1 - self.fiducial),
+            fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
+        )
+
+
 
 def statespace(
     *args,

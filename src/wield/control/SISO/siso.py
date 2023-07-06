@@ -10,13 +10,19 @@
 import numpy as np
 import warnings
 
-
 class SISO:
     # maximum number of fiducial points to maintain during operations
     N_MAX_FID = 50
 
 
 class SISOCommonBase(SISO):
+    def clear_fiducial(self):
+        from . import util
+        self.fiducial = util.build_fiducial(
+            fiducial=[],
+            fiducial_f=[],
+        )
+
     def test_fresponse(
         self,
         fiducial=None,

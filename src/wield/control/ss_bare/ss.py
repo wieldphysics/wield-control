@@ -34,7 +34,6 @@ class BareStateSpace(object):
         time_symm: bool = False,
         flags={},
         dt=None,
-        warn=True,
     ):
         A = np.asarray(A)
         B = np.asarray(B)
@@ -66,6 +65,19 @@ class BareStateSpace(object):
         self.time_symm = time_symm
         self.dt = dt
         return
+
+    def __build_similar__(self, A, B, C, D, E=None):
+        """
+        Build a statespace that preserves most of the annotations of self.
+        Typically as though it has undergone similarity transformations or other "trivial" extensions
+        TODO: do something about flags
+        """
+        return self.__class__(
+            A=A, B=B, C=C, D=D, E=E,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
 
     @classmethod
     def fromD(cls, D):
@@ -427,6 +439,41 @@ class BareStateSpace(object):
             C=Cscale,
             D=self.D,
             E=Escale,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+
+    def schurA(self):
+        """
+        Return a version of this statespace where A has been converted to a Schur triangular form.
+        """
+        if self.A.shape[-2:] == (0, 0):
+            return self
+
+        E = self.E
+        A = self.A
+        B = self.B
+        C = self.C
+
+        if E is not None:
+            if np.all(E == np.eye(E.shape[-1])):
+                E = None
+
+        if E is None:
+            A, Z = scipy.linalg.schur(A)
+            B = Z.transpose().conjugate() @ B
+            C = C @ Z
+        else:
+            raise RuntimeError("Schur form not supported with an E matrix")
+
+        # todo save Schur form flag
+        return self.__class__(
+            A=A,
+            B=B,
+            C=C,
+            D=self.D,
+            E=E,
             hermitian=self.hermitian,
             time_symm=self.time_symm,
             dt=self.dt,
@@ -1059,8 +1106,7 @@ class BareStateSpace(object):
                 B=self.B,
                 C=self.C / other,
                 D=self.D / other,
-                E=self.E
-                ,
+                E=self.E,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
                 dt=self.dt,
@@ -1303,11 +1349,16 @@ class BareStateSpaceUser(object):
             ss=self.ss.balanceA(**kwargs),
         )
 
+    def schur_form(self, **kwargs):
+        return self.__build_similar__(
+            ss=self.ss.schurA(**kwargs),
+        )
+
     def L2_norm(self, **kwargs):
-        self.ss.L2_norm(**kwargs)
+        return self.ss.L2_norm(**kwargs)
 
     def Linf_norm(self, **kwargs):
-        self.ss.Linf_norm(**kwargs)
+        return self.ss.Linf_norm(**kwargs)
 
 
 def joinAE(s, o):
