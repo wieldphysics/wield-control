@@ -110,12 +110,12 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
 
     @classmethod
     def __build__(
-            cls,
-            ss=None,
-            inputs=None,
-            outputs=None,
-            input_dissections=None,
-            output_dissections=None
+        cls,
+        ss=None,
+        inputs=None,
+        outputs=None,
+        input_dissections=None,
+        output_dissections=None
     ):
         """
         The raw constructor. Performs minimal computations and few consistency checks
