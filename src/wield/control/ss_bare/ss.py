@@ -484,6 +484,8 @@ class BareStateSpace(object):
             To compute a reduced order model (Ar,Br,Cr,Dr) for an original state-space representation (A,B,C,D) by using either the square-root or the balancing-free square-root Singular Perturbation Approximation (SPA) model reduction method for the alpha-stable part of the system.
             - From SLYCOT Documentation for ab09nd
 
+       TODO: have this call AB09HD instead, since that has relative error bounds rather than absolute. https://www.slicot.org/objects/software/shared/doc/AB09HD.html. This requires slycot a new slycot wrapper, so will need a pull request on slycot.
+
         Args:
             sys (Bunch): Bunch system with mod as attribute
             method (str, optional): Method to use for balancing. 'sqrt': use the square-root SPA method. 'bfsqrt': use the balancing-free square-root SPA method. Defaults to 'sqrt'.
