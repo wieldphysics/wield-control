@@ -206,83 +206,170 @@ in_out = dict(
     ],
 )
 
+if True:
 
-def T_SFLU_DRFPMI_show_full(dprint, tpath_join, fpath_join):
-    """
-    Show a graph reduction using networkx+tikz
-    """
-    sflu = SFLU.SFLU(
-        DRFPMI_edges,
-        graph=True,
-    )
-    # match=False allows a reduced input/output set
-    sflu.graph_nodes_pos(DRFPMI_locs, match=True)
-    #sflu.graph_nodes_pos(DRFPMI_locs, match=True)
-    print('inputs: ', sflu.inputs)
-    print('outputs: ', sflu.outputs)
-    print('nodes: ', sflu.nodes)
+    def T_SFLU_DRFPMI_show_full(dprint, tpath_join, fpath_join):
+        """
+        Show a graph reduction using networkx+tikz
+        """
+        sflu = SFLU.SFLU(
+            DRFPMI_edges,
+            graph=True,
+        )
+        # match=False allows a reduced input/output set
+        sflu.graph_nodes_pos(DRFPMI_locs, match=True)
+        #sflu.graph_nodes_pos(DRFPMI_locs, match=True)
+        print('inputs: ', sflu.inputs)
+        print('outputs: ', sflu.outputs)
+        print('nodes: ', sflu.nodes)
 
-    #print('nodes')
-    #print(sflu.graph_nodes_repr())
-    G1 = sflu.G.copy()
-    sflu.graph_reduce_auto_pos(lX=-10, rX=+10, Y=0, dY=-2)
-    sflu.reduce(*reduce_list)
-    sflu.graph_reduce_auto_pos_io(lX=-30, rX=+30, Y=-5, dY=-5)
-    G2 = sflu.G.copy()
+        #print('nodes')
+        #print(sflu.graph_nodes_repr())
+        G1 = sflu.G.copy()
+        sflu.graph_reduce_auto_pos(lX=-10, rX=+10, Y=0, dY=-2)
+        sflu.reduce(*reduce_list)
+        sflu.graph_reduce_auto_pos_io(lX=-30, rX=+30, Y=-5, dY=-5)
+        G2 = sflu.G.copy()
 
-    nx2tikz.dump_pdf(
-        [G1, G2],
-        fname = tpath_join('testG.pdf'),
-        texname = tpath_join('testG.tex'),
-        # preamble = preamble,
-        scale='10pt',
-    )
+        nx2tikz.dump_pdf(
+            [G1, G2],
+            fname = tpath_join('testG.pdf'),
+            texname = tpath_join('testG.tex'),
+            # preamble = preamble,
+            scale='10pt',
+        )
 
-def T_SFLU_DRFPMI_show_sub(dprint, tpath_join, fpath_join):
-    """
-    Show a graph reduction using networkx+tikz
-    """
-    sflu = SFLU.SFLU(
-        DRFPMI_edges,
-        graph=True,
-        **in_out,
-    )
-    # match=False allows a reduced input/output set
-    sflu.graph_nodes_pos(DRFPMI_locs, match=True)
-    G0 = sflu.G.copy()
-    #sflu.graph_nodes_pos(DRFPMI_locs, match=True)
-    print('inputs: ', sflu.inputs)
-    print('outputs: ', sflu.outputs)
-    print('nodes: ', sflu.nodes)
+    def T_SFLU_DRFPMI_show_sub(dprint, tpath_join, fpath_join):
+        """
+        Show a graph reduction using networkx+tikz
+        """
+        sflu = SFLU.SFLU(
+            DRFPMI_edges,
+            graph=True,
+            **in_out,
+        )
+        # match=False allows a reduced input/output set
+        sflu.graph_nodes_pos(DRFPMI_locs, match=True)
+        G0 = sflu.G.copy()
+        #sflu.graph_nodes_pos(DRFPMI_locs, match=True)
+        print('inputs: ', sflu.inputs)
+        print('outputs: ', sflu.outputs)
+        print('nodes: ', sflu.nodes)
 
-    #print('nodes')
-    #print(sflu.graph_nodes_repr())
-    G1 = sflu.G.copy()
+        #print('nodes')
+        #print(sflu.graph_nodes_repr())
+        G1 = sflu.G.copy()
 
-    sflu.graph_reduce_auto_pos(lX=-10, rX=+10, Y=0, dY=-2)
-    sflu.reduce(*reduce_list)
-    print('nodes: ', sflu.nodes)
+        sflu.graph_reduce_auto_pos(lX=-10, rX=+10, Y=0, dY=-2)
+        sflu.reduce(*reduce_list)
+        print('nodes: ', sflu.nodes)
 
-    sflu.graph_reduce_auto_pos_io(lX=-30, rX=+30, Y=-5, dY=-5)
+        sflu.graph_reduce_auto_pos_io(lX=-30, rX=+30, Y=-5, dY=-5)
 
-    G2 = sflu.G.copy()
-    G3 = sflu.G.copy()
-    for rN, cS in sflu.row2col_cf.items():
-        for cN in cS:
-            G2.edges[cN, rN]['color'] = 'blue'
-    for cN, rS in sflu.col2row_cf.items():
-        for rN in rS:
-            G2.edges[cN, rN]['color'] = 'red'
+        G2 = sflu.G.copy()
+        G3 = sflu.G.copy()
+        for rN, cS in sflu.row2col_cf.items():
+            for cN in cS:
+                G2.edges[cN, rN]['color'] = 'blue'
+        for cN, rS in sflu.col2row_cf.items():
+            for rN in rS:
+                G2.edges[cN, rN]['color'] = 'red'
 
-    if True:
-        # this is to colorize the edges of G3 based on the computation
+        if True:
+            # this is to colorize the edges of G3 based on the computation
+            comp = sflu.computer()
+
+            edge_map = {}
+            comp.edge_map(edge_map = edge_map, default = 1)
+            print(edge_map)
+
+            T_etm = 0
+            T_itm = 0.0148
+            T_prm = 0.03
+            T_srm = 0.35
+            emap = {
+                '1': 1,
+                'BS.r': 0.5**0.5,
+                'BS.t': 0.5**0.5,
+                'BS_X.tau': np.exp(np.pi*2j*0),
+                'BS_Y.tau': np.exp(np.pi*2j*0),
+                'X.etm.r': (1-T_etm)**0.5,
+                'X.etm.t': T_etm**0.5,
+                'X.itm.r': (1-T_itm)**0.5,
+                'X.itm.t': T_itm**0.5,
+                'XARM.tau':  np.exp(np.pi*2j*0),
+                'Y.etm.r': (1-T_etm)**0.5,
+                'Y.etm.t': T_etm**0.5,
+                'Y.itm.r': (1-T_itm)**0.5,
+                'Y.itm.t': T_itm**0.5,
+                'YARM.tau': np.exp(np.pi*2j*0),
+                'prc.tau': np.exp(np.pi*2j*0),
+                'prm.r': (1-T_prm)**0.5,
+                'prm.t': T_prm**0.5,
+                'src.tau': np.exp(np.pi*2j*0),
+                'srm.r': (1-T_srm)**0.5,
+                'srm.t': T_srm**0.5,
+            }
+            assert(set(edge_map.keys()) == set(emap.keys()))
+
+            comp.compute(edge_map=emap)
+            for rN, cN in comp.Espace.keys():
+                try:
+                    G3.edges[cN, rN]['color'] = 'red'
+                except KeyError:
+                    pass
+        else:
+            G3 = G2
+
+        nx2tikz.dump_pdf(
+            [G1, G2, G3],
+            fname = tpath_join('testG.pdf'),
+            texname = tpath_join('testG.tex'),
+            # preamble = preamble,
+            scale='10pt',
+        )
+
+
+    def T_SFLU_DRFPMI_serialize(dprint, tpath_join, fpath_join):
+        sflu = SFLU.SFLU(
+            DRFPMI_edges,
+            **in_out,
+        )
+        sflu.reduce(*reduce_list)
         comp = sflu.computer()
+
+        oplistE_yamlstr = comp.convert_oplistE2yamlstr()
+        print(oplistE_yamlstr)
+
+        assert(comp.convert_yamlstr2oplistE(oplistE_yamlstr) == comp.oplistE)
+
+        comp_yamlstr = comp.convert_self2yamlstr()
+        print(comp_yamlstr)
+
+        comp2 = SFLU.SFLUCompute.from_yaml(comp_yamlstr)
+        assert(comp2.oplistE == comp.oplistE)
+        assert(comp2.edges == comp.edges)
+        assert(comp2.row2col == comp.row2col)
+        assert(comp2.col2row == comp.col2row)
+
+        with open(tpath_join('DRFPMI.yaml'), 'w') as F:
+            F.write(comp_yamlstr)
+        return
+
+    def T_SFLU_DRFPMI_working(dprint, tpath_join, fpath_join):
+        sflu = SFLU.SFLU(
+            DRFPMI_edges,
+            **in_out,
+        )
+        sflu.reduce(*reduce_list)
+        comp = sflu.computer()
+        print(comp.edges)
 
         edge_map = {}
         comp.edge_map(edge_map = edge_map, default = 1)
         print(edge_map)
 
-        T_etm = 0
+        T_etm = 80e-6
         T_itm = 0.0148
         T_prm = 0.03
         T_srm = 0.35
@@ -290,7 +377,7 @@ def T_SFLU_DRFPMI_show_sub(dprint, tpath_join, fpath_join):
             '1': 1,
             'BS.r': 0.5**0.5,
             'BS.t': 0.5**0.5,
-            'BS_X.tau': np.exp(np.pi*2j*0),
+            'BS_X.tau': np.exp(np.pi*0.5j),
             'BS_Y.tau': np.exp(np.pi*2j*0),
             'X.etm.r': (1-T_etm)**0.5,
             'X.etm.t': T_etm**0.5,
@@ -312,105 +399,19 @@ def T_SFLU_DRFPMI_show_sub(dprint, tpath_join, fpath_join):
         assert(set(edge_map.keys()) == set(emap.keys()))
 
         comp.compute(edge_map=emap)
-        for rN, cN in comp.Espace.keys():
-            try:
-                G3.edges[cN, rN]['color'] = 'red'
-            except KeyError:
-                pass
-    else:
-        G3 = G2
+        dprint(list(comp.Espace.keys()))
+        #results = comp.inverse_col(['srm.B.o.tp'], {'srm.B.i.exc':1})['srm.B.o.tp']
+        results = comp.inverse_single('srm.B.o.tp', 'srm.B.i.exc')
+        print("CALC: ", abs(results)**2)
 
-    nx2tikz.dump_pdf(
-        [G1, G2, G3],
-        fname = tpath_join('testG.pdf'),
-        texname = tpath_join('testG.tex'),
-        # preamble = preamble,
-        scale='10pt',
-    )
-
-
-def T_SFLU_DRFPMI_serialize(dprint, tpath_join, fpath_join):
-    sflu = SFLU.SFLU(
-        DRFPMI_edges,
-        **in_out,
-    )
-    sflu.reduce(*reduce_list)
-    comp = sflu.computer()
-
-    oplistE_yamlstr = comp.convert_oplistE2yamlstr()
-    print(oplistE_yamlstr)
-
-    assert(comp.convert_yamlstr2oplistE(oplistE_yamlstr) == comp.oplistE)
-
-    comp_yamlstr = comp.convert_self2yamlstr()
-    print(comp_yamlstr)
-
-    comp2 = SFLU.SFLUCompute.from_yaml(comp_yamlstr)
-    assert(comp2.oplistE == comp.oplistE)
-    assert(comp2.edges == comp.edges)
-    assert(comp2.row2col == comp.row2col)
-    assert(comp2.col2row == comp.col2row)
-
-    with open(tpath_join('DRFPMI.yaml'), 'w') as F:
-        F.write(comp_yamlstr)
-    return
-
-def T_SFLU_DRFPMI_working(dprint, tpath_join, fpath_join):
-    sflu = SFLU.SFLU(
-        DRFPMI_edges,
-        **in_out,
-    )
-    sflu.reduce(*reduce_list)
-    comp = sflu.computer()
-    print(comp.edges)
-
-    edge_map = {}
-    comp.edge_map(edge_map = edge_map, default = 1)
-    print(edge_map)
-
-    T_etm = 80e-6
-    T_itm = 0.0148
-    T_prm = 0.03
-    T_srm = 0.35
-    emap = {
-        '1': 1,
-        'BS.r': 0.5**0.5,
-        'BS.t': 0.5**0.5,
-        'BS_X.tau': np.exp(np.pi*0.5j),
-        'BS_Y.tau': np.exp(np.pi*2j*0),
-        'X.etm.r': (1-T_etm)**0.5,
-        'X.etm.t': T_etm**0.5,
-        'X.itm.r': (1-T_itm)**0.5,
-        'X.itm.t': T_itm**0.5,
-        'XARM.tau':  np.exp(np.pi*2j*0),
-        'Y.etm.r': (1-T_etm)**0.5,
-        'Y.etm.t': T_etm**0.5,
-        'Y.itm.r': (1-T_itm)**0.5,
-        'Y.itm.t': T_itm**0.5,
-        'YARM.tau': np.exp(np.pi*2j*0),
-        'prc.tau': np.exp(np.pi*2j*0),
-        'prm.r': (1-T_prm)**0.5,
-        'prm.t': T_prm**0.5,
-        'src.tau': np.exp(np.pi*2j*0),
-        'srm.r': (1-T_srm)**0.5,
-        'srm.t': T_srm**0.5,
-    }
-    assert(set(edge_map.keys()) == set(emap.keys()))
-
-    comp.compute(edge_map=emap)
-    dprint(list(comp.Espace.keys()))
-    #results = comp.inverse_col(['srm.B.o.tp'], {'srm.B.i.exc':1})['srm.B.o.tp']
-    results = comp.inverse_single('srm.B.o.tp', 'srm.B.i.exc')
-    print("CALC: ", abs(results)**2)
-
-    results = comp.inverse_row({'srm.B.o.tp': None}, {
-        'srm.B.i.exc',
-        'prm.A.i.exc',
-        'X.etm.B.i',
-        'Y.etm.B.i',
-    })
-    print("CALC: ", {k : abs(r)**2 for k, r in results.items()}, sum(abs(r)**2 for k, r in results.items()))
-    pass
+        results = comp.inverse_row({'srm.B.o.tp': None}, {
+            'srm.B.i.exc',
+            'prm.A.i.exc',
+            'X.etm.B.i',
+            'Y.etm.B.i',
+        })
+        print("CALC: ", {k : abs(r)**2 for k, r in results.items()}, sum(abs(r)**2 for k, r in results.items()))
+        pass
 
 
 
