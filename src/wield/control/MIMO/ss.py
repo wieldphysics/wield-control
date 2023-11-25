@@ -785,8 +785,8 @@ def ssjoinsum(*args):
     return MIMOStateSpace(
         ss=BareStateSpace(
             A, B, C, D, E,
-            hermitian=np.all(ss.hermitian for ss in SSs),
-            time_symm=np.all(ss.time_symm for ss in SSs),
+            hermitian=np.all([ss.hermitian for ss in SSs]),
+            time_symm=np.all([ss.time_symm for ss in SSs]),
             dt=SSs[0].dt,
         ),
         inputs=inputs,
