@@ -12,6 +12,3 @@ import pytest
 import os
 import wield.pytest
 
-pytest_plugins = [
-    "wield.pytest.plugin",
-]

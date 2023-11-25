@@ -19,6 +19,7 @@ def test_convert_zpk_ss(fpath_join, dprint):
     """
     fname = fpath_join('damping_filters.h5')
     zpk = load(fname).L
+    dprint('testing!')
     filt_zpk = SISO.zpk(zpk.z, zpk.p, zpk.k)
     filt_ss = filt_zpk.asSS
     filt_zpk2 = filt_ss.asZPK
