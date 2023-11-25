@@ -23,8 +23,12 @@ def test_convert_zpk_ss(fpath_join, dprint):
     filt_zpk = SISO.zpk(zpk.z, zpk.p, zpk.k)
     filt_ss = filt_zpk.asSS
     filt_zpk2 = filt_ss.asZPK
+
+    # TODO - no reason to think these sets are sorted the same way for a direct comparison
     dprint(np.allclose(filt_zpk.z, filt_zpk2.z))
+    # TODO - no reason to think these sets are sorted the same way for a direct comparison
     dprint(np.allclose(filt_zpk.p, filt_zpk2.p))
+    # this should be True
     dprint(np.isclose(filt_zpk.k, filt_zpk2.k))
 
 

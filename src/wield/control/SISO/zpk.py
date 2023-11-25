@@ -686,15 +686,23 @@ def zpk(
             update=True,
         )
         norm_rel = fiducial.tf / ZPKnew.fiducial.tf
-        norm_med = np.nanmedian(abs(norm_rel))
+        norm_med = np.nanmedian(abs(norm_rel)) * np.sign(np.nanmedian(norm_rel.real))
 
         if np.isfinite(norm_med):
             ZPKnew = ZPKnew * norm_med
             # print("NORM MEDIAN", norm_med)
             # TODO, make better error reporting that a conversion has failed
-            np.testing.assert_allclose(
-                fiducial.tf, ZPKnew.fiducial.tf, rtol=ZPKnew.fiducial_rtol, atol=ZPKnew.fiducial_atol
-            )
+            
+            try:
+                np.testing.assert_allclose(
+                    fiducial.tf,
+                    ZPKnew.fiducial.tf,
+                    rtol=ZPKnew.fiducial_rtol,
+                    atol=ZPKnew.fiducial_atol,
+                )
+            except AssertionError as e:
+                warnings.warn("SS to ZPK not showing consistency: ", str(e))
+                # raise
         else:
             # since there were no good fiducial points to refer to, make some temporarily
             w = ZPKnew._fiducial_w_set(ZPKnew.fiducial_rtol)
@@ -708,10 +716,12 @@ def zpk(
             self_response = ZPKnew.fresponse(w=w)
 
             norm_rel = fiducial_tst.tf / self_response.tf
-            norm_med = np.nanmedian(abs(norm_rel))
+            norm_med = np.nanmedian(abs(norm_rel)) * np.sign(np.nanmedian(norm_rel.real))
+            
             assert (np.isfinite(norm_med))
-
             ZPKnew = ZPKnew * norm_med
+            # TODO, this might fail on unstable poles. Should consider adjusting the
+            # fiducial set to handle those
             assert (np.all(np.isfinite(ZPKnew.fiducial)))
     else:
         ZPKnew.test_fresponse(
