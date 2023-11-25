@@ -54,7 +54,7 @@ class SISOCommonBase(SISO):
                         equal_nan=False,
                     )
                 except AssertionError as e:
-                    warnings.warn("test_fresponse not showing consistency: ", str(e))
+                    warnings.warn("test_fresponse not showing consistency: " + str(e))
                     # raise
             else:
                 fiducial = self_response

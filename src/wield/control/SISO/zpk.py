@@ -701,7 +701,7 @@ def zpk(
                     atol=ZPKnew.fiducial_atol,
                 )
             except AssertionError as e:
-                warnings.warn("SS to ZPK not showing consistency: ", str(e))
+                warnings.warn("SS to ZPK not showing consistency: " + str(e))
                 # raise
         else:
             # since there were no good fiducial points to refer to, make some temporarily
