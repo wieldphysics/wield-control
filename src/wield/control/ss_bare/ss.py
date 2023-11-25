@@ -35,6 +35,7 @@ class BareStateSpace(object):
         flags={},
         dt=None,
     ):
+        # assert(isinstance(time_symm, numbers.Number))
         A = np.asarray(A)
         B = np.asarray(B)
         C = np.asarray(C)
