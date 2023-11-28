@@ -12,4 +12,5 @@ include MANIFEST.in
 include setup.cfg
 include setup.py
 
-recursive-include tools/ *.py *.sty *.tex
+recursive-include tools/ *.py
+global-include *.sty *.tex
