@@ -46,6 +46,7 @@ class BareStateSpace(object):
             E = np.asarray(E)
             # if np.all(E == np.eye(E.shape[-1])):
             #     E = None
+            assert(E.shape == A.shape)
 
         if hermitian:
             assert (np.all(A.imag == 0))
