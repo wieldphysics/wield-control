@@ -418,6 +418,7 @@ def zpkdict_cascade(
         Rr = rdict["r"]
 
         poly = []
+        # print("ROOTS,", Rc, Rr)
         for c in Rc:
             poly.append((c.real * c.real + c.imag * c.imag, -2 * c.real, 1))
         idx = 0
@@ -547,6 +548,53 @@ def ZPKdict(
     ABCDEs = zpkdict_cascade(
         zdict=zdict, pdict=pdict, k=k, convention=convention
     )
+
+    def split_chain(ABCDEs):
+        idx_spl = len(ABCDEs) // 2
+        if idx_spl < 2:
+            return ss_algorithms.chain(ABCDEs)
+
+        left = split_chain(ABCDEs[:idx_spl])
+        right = split_chain(ABCDEs[idx_spl:])
+
+        A, B, C, D, E = left 
+        left = ABCDE = (
+            A[..., ::-1, ::-1],
+            B[..., ::-1, :],
+            C[..., :, ::-1],
+            D,
+            E[..., ::-1, ::-1],
+        )
+
+
+        val = ss_algorithms.chain([left, right])
+
+        A, B, C, D, E = val
+        return val
+
+        # Order of the A matrix
+        n = A.shape[0]
+        # Number of inputs
+        m = B.shape[1]
+        # Number of outputs
+        p = C.shape[0]
+
+        dico = 'C'
+        job = 'B'
+        equil = 'S'
+        tol1 = 0
+        tol2 = 0
+        from slycot import ab09nd
+        nr, Ar, Br, Cr, Dr, ns, hsv = ab09nd(
+            dico, job, equil,
+            n, m, p,
+            A, B, C, D,
+            tol1=tol1, tol2=tol2,
+        )  # ,alpha=None,nr=None,tol1=0,tol2=0,ldwork=None)
+
+        return Ar, Br, Cr, Dr, np.eye(Ar.shape[0])
+
+    # ABCDE = split_chain(ABCDEs)
     ABCDE = ss_algorithms.chain(ABCDEs)
 
     orientation = orientation.lower()

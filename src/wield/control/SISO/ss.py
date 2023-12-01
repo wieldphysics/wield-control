@@ -26,6 +26,9 @@ from . import response
 class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
     fiducial_rtol = 1
     fiducial_atol = 1
+
+    _t_MIMO = MIMO.MIMOStateSpace
+
     """
     class to represent SISO Transfer functions using dense state space matrix representations.
     """
@@ -139,7 +142,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         row: name of the single output
         col: name of the single input
         """
-        return MIMO.MIMOStateSpace(
+        return self._t_MIMO(
             ss=self.ss,
             inputs={col: 0},
             outputs={row: 0},
