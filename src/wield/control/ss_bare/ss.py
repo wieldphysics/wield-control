@@ -1051,8 +1051,30 @@ class BareStateSpace(object):
         assert(self.is_square())
         return self.D.shape[-1]
 
+    def inv_proper(self):
+        assert(self.is_square)
+
+        D = self.D
+        Dinv = np.linalg.inv(D)
+        A2 = self.A - self.B @ Dinv @ self.C
+        B2 = self.B @ Dinv
+        C2 = -Dinv @ self.C
+        D2 = Dinv
+
+        return self.__class__(
+            A=A2,
+            B=B2,
+            C=C2,
+            D=D2,
+            E=None,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+
     def inv(self):
         assert(self.is_square)
+
         ABCDE = ss_algorithms.inverse_DSS(*self.ABCDE)
         return self.__class__(
             A=ABCDE.A,

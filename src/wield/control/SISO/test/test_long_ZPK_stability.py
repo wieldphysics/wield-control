@@ -240,3 +240,41 @@ def chebcompanion2(c, scale = None):
     return mat
 
 
+
+def test_long_cascade():
+    """
+    This is a demonstration showing the construction of a statespace using a
+    Chechen companion matrix. 
+    """
+    filt = SISO.zpk(
+        [-3000] * 8,
+        [-1] * 8,
+        1,
+        angular=True,
+        fiducial_rtol=1e-5,
+        fiducial_atol=1e-10
+    )
+    filtss = filt.asSS
+    norm = abs(filtss.Linf_norm()[0])
+    filt = filt.inv()
+    filtss = filtss.inv()
+
+    print(filtss.A)
+
+    axB = mplfigB(Nrows=2)
+
+    F_Hz = np.geomspace(1e-3, 1e5, 1000)
+
+    xfer = filt.fresponse(f=F_Hz)
+    axB.ax0.loglog(*xfer.fplot_mag, label="ZPK, wield")
+    axB.ax1.semilogx(*xfer.fplot_deg180, label="ZPK, wield")
+    axB.ax0.axhline(1e-16, ls='--', color='black', lw=1)
+
+    xfer = filtss.fresponse(f=F_Hz)
+    axB.ax0.loglog(*xfer.fplot_mag, label="filt2")
+    axB.ax1.semilogx(*xfer.fplot_deg180, label="filt2")
+    #axB.ax0.set_ylim(1e-25, 10)
+    axB.ax0.legend()
+
+    axB.save(tjoin('long_zpk'))
+    return
