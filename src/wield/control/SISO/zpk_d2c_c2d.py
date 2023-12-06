@@ -5,6 +5,8 @@
 # SPDX-FileCopyrightText: © 2022 Lee McCuller <mcculler@caltech.edu>
 # NOTICE: authors should document their contributions in concisely in NOTICE
 # with details inline in source files, comments, and docstrings.
+#
+# 12-6-23: Ian MacMillan (Caltech): updated np.complex after deprecation
 """
 Perform discrete to continuous conversion
 """
