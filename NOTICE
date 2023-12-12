@@ -17,4 +17,8 @@ Timeline of contributions:
 
 2021-: Lee McCuller is a principle contributor and maintainer of python wield.
 Wavestate is originally constructed from a set of software projects related to
-the LIGO graviational-wave observatories and optical squeezing research at MIT.
+the LIGO gravitational-wave observatories and optical squeezing research at MIT.
+
+2023: Ian MacMillan is a graduate student at Caltech in Prof. Lee McCuller's 
+group. He is the mainly involved in the development of the optimal controls
+package buzz. 

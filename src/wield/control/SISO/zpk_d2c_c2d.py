@@ -5,6 +5,8 @@
 # SPDX-FileCopyrightText: © 2022 Lee McCuller <mcculler@caltech.edu>
 # NOTICE: authors should document their contributions in concisely in NOTICE
 # with details inline in source files, comments, and docstrings.
+#
+# 12-6-23: Ian MacMillan (Caltech): updated np.complex after deprecation
 """
 Perform discrete to continuous conversion
 """
@@ -37,7 +39,7 @@ def d2c_zpk(zpk_z, fs, method="tustin"):
     fmax = fs * 3 / 8.0
 
     nzz, npz = len(zz), len(pz)
-    zs, ps = np.zeros(nzz, dtype=np.complex), np.zeros(npz, dtype=np.complex)
+    zs, ps = np.zeros(nzz, dtype=complex), np.zeros(npz, dtype=complex)
     ks = kz
 
     method = method.lower()
@@ -62,11 +64,11 @@ def d2c_zpk(zpk_z, fs, method="tustin"):
             ks /= 1.0 + pz[i]
 
         if npz > nzz:
-            zs_pad = fs2x * np.ones(npz - nzz, dtype=np.complex)
+            zs_pad = fs2x * np.ones(npz - nzz, dtype=complex)
             zs = np.hstack([zs, zs_pad])
             ks *= (-1)**(npz - nzz)
         elif nzz > npz:
-            ps_pad = fs2x * np.ones(nzz - npz, dtype=np.complex)
+            ps_pad = fs2x * np.ones(nzz - npz, dtype=complex)
             ps = np.hstack([ps, ps_pad])
             ks *= (-1)**(nzz - npz)
 
@@ -99,8 +101,8 @@ def c2d_zpk(zpk_s, *, method, dt=None, fs=None, pad=None):
 
     nzs = len(zs)
     nps = len(ps)
-    zz = np.zeros(nzs, dtype=np.complex)
-    pz = np.zeros(nps, dtype=np.complex)
+    zz = np.zeros(nzs, dtype=complex)
+    pz = np.zeros(nps, dtype=complex)
 
     kz = ks
 
@@ -141,10 +143,10 @@ def c2d_zpk(zpk_s, *, method, dt=None, fs=None, pad=None):
     if pad:
         kadj *= (2.0 - 1/fs)**float(nzs - nps)
         if nps > nzs:
-            zz_pad = -np.ones(nps - nzs, dtype=np.complex) * (1 - 1 / fs)
+            zz_pad = -np.ones(nps - nzs, dtype=complex) * (1 - 1 / fs)
             zz = np.hstack([zz, zz_pad])
         elif nzs > nps:
-            pz_pad = -np.ones(nzs - nps, dtype=np.complex) * (1 - 1 / fs)
+            pz_pad = -np.ones(nzs - nps, dtype=complex) * (1 - 1 / fs)
             pz = np.hstack([pz, pz_pad])
 
     kz *= kadj
