@@ -14,10 +14,10 @@ import scipy.signal
 
 import pytest
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -35,7 +35,7 @@ from wield.control.SISO import zpk_d2c_c2d
     ((-200+450j, -200-450j), (-100, -100, -10), 0.01),
     ((-100, -10), (-1+450j, -1-450j), 0.01),
 ])
-def test_ZPK_c2d_various(zpk, tpath_join):
+def test_ZPK_c2d_various(zpk):
     """
     Test the conversions to and from ZPK representation and statespace representation
     using a delay filter
@@ -70,7 +70,7 @@ def test_ZPK_c2d_various(zpk, tpath_join):
     axB.ax1.semilogx(*xfer_z2.fplot_deg135, ls='--')
 
     axB.ax0.set_ylim(1e-8, 1)
-    axB.save(tpath_join("test_ZPK"))
+    axB.save(tjoin("test_ZPK"))
 
     #np.testing.assert_almost_equal(xfer4, 1/xfer4c)
 

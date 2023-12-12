@@ -22,13 +22,13 @@ Provided by Kevin Kuns
 import numpy as np
 from wield.control import SISO, MIMO
 from wield.control.AAA import tfAAA
-from wield.pytest import tpath_join, dprint, capture
+from wield.pytest import tjoin, dprint, capture
 from wield.bunch import Bunch
 import scipy.constants as scc
 from wield.control.plotting import plotTF
 
 
-def test_hard_soft_modes(tpath_join, dprint, capture):
+def test_hard_soft_modes(capture):
     F_Hz = np.logspace(-2, 1, 1000)
 
     # Parameters
@@ -135,7 +135,7 @@ def test_hard_soft_modes(tpath_join, dprint, capture):
     )
     fig.axes[1].legend(loc='upper left')
     fig.set_size_inches((6, 6.4))
-    fig.savefig(tpath_join('compare_siso.pdf'))
+    fig.savefig(tjoin('compare_siso.pdf'))
 
     ###########################################################################
     # AAA fit
@@ -183,7 +183,7 @@ def test_hard_soft_modes(tpath_join, dprint, capture):
     fig.axes[1].legend(loc='upper left')
     fig.axes[0].set_xlim(F_Hz[0], F_Hz[-1])
     fig.set_size_inches((6, 6.4))
-    fig.savefig(tpath_join('compare_aaa.pdf'))
+    fig.savefig(tjoin('compare_aaa.pdf'))
 
     ###########################################################################
     # MIMO state space
@@ -270,7 +270,7 @@ def test_hard_soft_modes(tpath_join, dprint, capture):
     )
     fig.axes[1].legend(loc='upper left')
     fig.set_size_inches((6, 6.4))
-    fig.savefig(tpath_join('mimo_mirror_basis.pdf'))
+    fig.savefig(tjoin('mimo_mirror_basis.pdf'))
 
     # Analyze results in the hard/soft basis.
     # The full numerical MIMO plant (now a matrix) is given by the tf attribute
@@ -314,7 +314,7 @@ def test_hard_soft_modes(tpath_join, dprint, capture):
     )
     fig.axes[1].legend(loc='upper left')
     fig.set_size_inches((6, 6.4))
-    fig.savefig(tpath_join('compare_mimo.pdf'))
+    fig.savefig(tjoin('compare_mimo.pdf'))
 
     ###########################################################################
     # Check that all of these methods are equavalent

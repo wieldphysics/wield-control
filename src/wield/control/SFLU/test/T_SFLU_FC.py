@@ -21,14 +21,14 @@ from quantum_lib import mats_planewave as ilib
 
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
 )
 
 
-def T_SFLU_FP(dprint, tpath_join, fpath_join):
+def T_SFLU_FP():
     """
     Setup a cavity with fields
     a2:a1 ---- b1:b2
@@ -107,7 +107,7 @@ def T_SFLU_FP(dprint, tpath_join, fpath_join):
     axB = mplfigB(Nrows=2)
     axB.ax0.loglog(F_Hz, abs(SI[:, 0, 0]))
     axB.ax1.semilogx(F_Hz, np.angle(SI[:, 0, 0]))
-    axB.save(tpath_join("reflSI"))
+    axB.save(tjoin("reflSI"))
     # print(Espace)
     return
 

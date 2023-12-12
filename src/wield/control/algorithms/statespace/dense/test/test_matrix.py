@@ -12,10 +12,10 @@ import numpy as np
 import pytest
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )

@@ -111,6 +111,27 @@ class SISOFResponse(siso.SISO):
         return f
 
     @property
+    def df(self):
+        # currently @property is a "Data" descriptor
+        # so the "f" in __dict__ doesn't take precedence
+        # and we have to shunt it here
+
+        df = self.__dict__.get('_df', None)
+        if df is not None:
+            return df
+
+        f = self.f
+        df = np.concatenate(
+            [
+                [(f[1] - f[0])],
+                (f[2:] - f[:-2]) / 2,
+                [(f[-1] - f[-2])],
+            ]
+        )
+        self.__dict__['_df'] = df
+        return df
+
+    @property
     def w(self):
         # currently @property is a "Data" descriptor
         # so the "f" in __dict__ doesn't take precedence

@@ -14,10 +14,10 @@ import scipy.signal
 
 import pytest
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -47,7 +47,7 @@ def bode(xfer, axm, axp, *, deg=True, **kw):
     return
 
 
-def test_conversion(tpath_join):
+def test_conversion():
     """
     Test the conversions to and from ZPK representation and statespace representation
     using a delay filter
@@ -105,7 +105,7 @@ def test_conversion(tpath_join):
     axB.ax1_1.semilogx(F_Hz, np.angle(1/xfer4c/xfer1, deg=True))
 
     axB.ax0.legend()
-    axB.save(tpath_join("test_ZPK"))
+    axB.save(tjoin("test_ZPK"))
 
     np.testing.assert_almost_equal(xfer3, 4 * xfer1)
     np.testing.assert_almost_equal(xfer4, 4 * xfer1)

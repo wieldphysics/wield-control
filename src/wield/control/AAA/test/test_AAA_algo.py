@@ -14,14 +14,14 @@ from wield.utilities.mpl import mplfigB
 
 
 from wield.pytest import (  # noqa: F401
-    tpath_join,
+    tjoin,
     plot,
     dprint,
     tpath,
     tpath_preclear,
 )
 
-def test_AAA_sym(tpath_join, tpath_preclear, dprint):
+def test_AAA_sym(tpath_preclear):
     ZPK1 = asZPKTF(((-0.1 + 5j, -0.1 - 5j), (-2, -2), 1))
     F_Hz = np.linspace(0, 10, 100)
     sF_Hz = 1j * F_Hz
@@ -119,12 +119,12 @@ def test_AAA_sym(tpath_join, tpath_preclear, dprint):
     # axB.ax0.semilogy(F_Hz, abs())
     # axB.ax0.semilogy(F_Hz, abs(N))
     # axB.ax0.semilogy(F_Hz, abs(D))
-    axB.save(tpath_join("test"))
+    axB.save(tjoin("test"))
     return
 
 
 @pytest.mark.xfail(reason="Needs matlab and chebfun")
-def test_AAA3(tpath_join, tpath_preclear, dprint):
+def test_AAA3(tpath_preclear):
     import matlab
     import matlab.engine
 
@@ -158,11 +158,11 @@ def test_AAA3(tpath_join, tpath_preclear, dprint):
     # axB.ax0.semilogy(F_Hz, abs())
     # axB.ax0.semilogy(F_Hz, abs(N))
     # axB.ax0.semilogy(F_Hz, abs(D))
-    axB.save(tpath_join("test"))
+    axB.save(tjoin("test"))
     return
 
 
-def test_AAA_success(tpath_join, tpath_preclear, dprint):
+def test_AAA_success(tpath_preclear):
     ZPK1 = asZPKTF(((-0.1 + 5j, -0.1 - 5j), (-2, -2), 1))
     F_Hz = np.linspace(0, 10, 100)
     sF_Hz = 1j * F_Hz
@@ -243,5 +243,5 @@ def test_AAA_success(tpath_join, tpath_preclear, dprint):
     # axB.ax0.semilogy(F_Hz, abs())
     # axB.ax0.semilogy(F_Hz, abs(N))
     # axB.ax0.semilogy(F_Hz, abs(D))
-    axB.save(tpath_join("test"))
+    axB.save(tjoin("test"))
     return

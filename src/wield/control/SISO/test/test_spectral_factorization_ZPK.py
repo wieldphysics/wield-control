@@ -14,10 +14,10 @@ import scipy.signal
 
 import pytest
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -80,7 +80,7 @@ def FBNSsimpSSfull(gain=1):
     return filt * gain
 
 
-def test_ZPK_spectral_factorize(tpath_join):
+def test_ZPK_spectral_factorize():
     """
     """
     axB = mplfigB(Nrows=1)
@@ -150,11 +150,11 @@ def test_ZPK_spectral_factorize(tpath_join):
     axB.ax0.loglog(*fr.fplot_mag)
 
     #axB.ax1.semilogx(*fr.fplot_deg225)
-    axB.save(tpath_join("Mag_show"))
+    axB.save(tjoin("Mag_show"))
     return 
 
 
-def test_ZPK_spectral_factorize2(tpath_join):
+def test_ZPK_spectral_factorize2():
     """
     """
     axB = mplfigB(Nrows=1)
@@ -224,5 +224,5 @@ def test_ZPK_spectral_factorize2(tpath_join):
     axB.ax0.loglog(*fr.fplot_mag, ls = '--')
 
     #axB.ax1.semilogx(*fr.fplot_deg225)
-    axB.save(tpath_join("Mag_show"))
+    axB.save(tjoin("Mag_show"))
     return 

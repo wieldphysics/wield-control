@@ -13,10 +13,10 @@ import scipy
 import scipy.signal
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -39,7 +39,7 @@ def print_ssd(ssd):
     print("D", ssd.D)
 
 
-def test_delay(tpath_join, test_trigger):
+def test_delay(test_trigger):
     length_m = 3995
     delta_t = length_m / c_m_s
     delta_t = 1
@@ -63,10 +63,10 @@ def test_delay(tpath_join, test_trigger):
     axB.ax1.axvline(3 / delta_t / 4)
     axB.ax1.axvline(4 / delta_t / 4)
     axB.ax0.legend()
-    axB.save(tpath_join("test"))
+    axB.save(tjoin("test"))
 
 
-def test_big_delay(tpath_join, test_trigger):
+def test_big_delay(test_trigger):
     length_m = 3995
     delta_t = length_m / c_m_s
     delta_t = 1
@@ -89,4 +89,4 @@ def test_big_delay(tpath_join, test_trigger):
     axB.ax1.axvline(3 / delta_t / 4)
     axB.ax1.axvline(4 / delta_t / 4)
     axB.ax0.legend()
-    axB.save(tpath_join("test"))
+    axB.save(tjoin("test"))

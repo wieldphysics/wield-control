@@ -99,10 +99,10 @@ def test_long_ZPK_stability():
 def test_long_cheby():
     """
     This is a demonstration showing the construction of a statespace using a
-    Chechen companion matrix. 
+    Chebychev companion matrix. 
     """
     filt = gen_filt()
-    filt = filt
+    filt = filt * filt
     p = filt.p
     z = filt.z
     norm = max(abs(p))**0.5
@@ -174,6 +174,11 @@ def test_long_cheby():
     xfer = filt.fresponse(f=F_Hz)
     axB.ax0.loglog(*xfer.fplot_mag, label="ZPK, wield")
     axB.ax1.semilogx(*xfer.fplot_deg180, label="ZPK, wield")
+    axB.ax0.axhline(1e-16, ls='--', color='black', lw=1)
+
+    xfer = filt.asSS.fresponse(f=F_Hz)
+    axB.ax0.loglog(*xfer.fplot_mag, label="SS, wield")
+    axB.ax1.semilogx(*xfer.fplot_deg180, label="SS, wield")
     axB.ax0.axhline(1e-16, ls='--', color='black', lw=1)
 
     #filt2 = filt2 * filt2
@@ -254,10 +259,11 @@ def test_long_cascade():
         fiducial_rtol=1e-5,
         fiducial_atol=1e-10
     )
+    filt = gen_filt()
     filtss = filt.asSS
     norm = abs(filtss.Linf_norm()[0])
-    filt = filt.inv()
-    filtss = filtss.inv()
+    # filt = filt.inv()
+    # filtss = filtss.inv()
 
     print(filtss.A)
 

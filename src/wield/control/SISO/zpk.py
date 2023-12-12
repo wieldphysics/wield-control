@@ -185,19 +185,35 @@ class ZPK(siso.SISOCommonBase):
     def asSS(self):
         if self._SS is not None:
             self._SS
-        assert(self.hermitian)
+        assert (self.hermitian)
+
         z = self.zeros.drop_mirror_imag()
         p = self.poles.drop_mirror_imag()
         # Currently only supports hermitian inputs
-        ABCDE = zpk_algorithms.zpk_rc(
-            Zc=z.c_plane,
-            Zr=z.r_line,
-            Pc=p.c_plane,
-            Pr=p.r_line,
-            k=self.k,
-            convention="scipy",
-            orientation="upper"
-        )
+
+        if len(z) <= len(p) and len(p) > 0:
+            ABCDE = zpk_algorithms.zpk_rc(
+                Zc=z.c_plane,
+                Zr=z.r_line,
+                Pc=p.c_plane,
+                Pr=p.r_line,
+                k=self.k,
+                convention="scipy",
+                orientation="upper",
+                method='companion_cheby',
+                # method='chain_poly',
+            )
+        else:
+            ABCDE = zpk_algorithms.zpk_rc(
+                Zc=z.c_plane,
+                Zr=z.r_line,
+                Pc=p.c_plane,
+                Pr=p.r_line,
+                k=self.k,
+                convention="scipy",
+                orientation="upper",
+                method='chain_poly',
+            )
 
         self._SS = ss.statespace(
             ABCDE,
@@ -206,7 +222,7 @@ class ZPK(siso.SISOCommonBase):
             fiducial=self.fiducial,
             fiducial_rtol=self.fiducial_rtol,
             fiducial_atol=self.fiducial_atol,
-            flags={"schur_real_upper", "hessenburg_upper"},
+            # flags={"schur_real_upper", "hessenburg_upper"},
         )
         return self._SS
 

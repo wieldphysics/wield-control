@@ -22,10 +22,10 @@ from wield.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 from wield.control.AAA import AAA
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -43,7 +43,7 @@ def print_ssd(ssd):
     print("D", ssd.D)
 
 
-def test_lqe1(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_lqe1(test_trigger, tpath_preclear, plot):
     ace = ACE.ACE()
 
     seis_acc = dense.zpk_rc(
@@ -160,7 +160,7 @@ def test_lqe1(dprint, test_trigger, tpath_join, tpath_preclear, plot):
             legend.remove()
             all_axes[-1].add_artist(legend)
 
-    axB.save(tpath_join("inputs"))
+    axB.save(tjoin("inputs"))
 
     ace.bind_equal({"g1.O", "s2.O"})
     ace.bind_equal({"g1.O", "s1.O"})
@@ -198,7 +198,7 @@ def test_lqe1(dprint, test_trigger, tpath_join, tpath_preclear, plot):
         axB.ax1.semilogx(F_Hz, np.angle(xfer2A, deg=True))
         axB.ax0.loglog(F_Hz, abs(xfer2B))
         axB.ax1.semilogx(F_Hz, np.angle(xfer2B, deg=True))
-        axB.save(tpath_join("test_ssB0"))
+        axB.save(tjoin("test_ssB0"))
 
     with test_trigger(trigger, plot=plot):
         pass
@@ -230,14 +230,14 @@ def test_lqe1(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     axB.ax1.semilogx(F_Hz, np.angle(xfer00, deg=True))
     axB.ax0.loglog(F_Hz, abs(xfer10))
     axB.ax1.semilogx(F_Hz, np.angle(xfer10, deg=True))
-    axB.save(tpath_join("test_lqe"))
+    axB.save(tjoin("test_lqe"))
 
     axB = mplfigB(Nrows=2)
     axB.ax0.loglog(F_Hz, abs(xfer00 / w_xfer))
     axB.ax1.semilogx(F_Hz, np.angle(xfer00 / w_xfer, deg=True))
     axB.ax0.loglog(F_Hz, abs(xfer10 / w_xfer))
     axB.ax1.semilogx(F_Hz, np.angle(xfer10 / w_xfer, deg=True))
-    axB.save(tpath_join("test_lqeW"))
+    axB.save(tjoin("test_lqeW"))
 
     ace2 = ACE.ACE()
     ace2.insert(ACE.ACE.from_ABCD(*ssB.ABCDE), cmn="env")
@@ -294,7 +294,7 @@ def test_lqe1(dprint, test_trigger, tpath_join, tpath_preclear, plot):
         axB.ax0.set_ylabel("Seismic Acceleration-like units")
         axB.ax0.legend()
         axB.ax0.set_ylim(1e-14, 1e-6)
-        axB.save(tpath_join("test_final"))
+        axB.save(tjoin("test_final"))
 
     with test_trigger(trigger, plot=plot):
         pass
@@ -302,7 +302,7 @@ def test_lqe1(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     return
 
 
-def test_lqe2(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_lqe2(test_trigger, tpath_preclear, plot):
     A = np.array(
         [
             [0.00000000e00, -5.00000000e-01, 0.00000000e00, 0.00000000e00],
@@ -345,7 +345,7 @@ def test_lqe2(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     axB.ax0.loglog(F_Hz, abs(xfer10))
     axB.ax1.semilogx(F_Hz, np.angle(xfer11, deg=True))
 
-    axB.save(tpath_join("test_ssB0"))
+    axB.save(tjoin("test_ssB0"))
 
 
 def lqe(A, G, C, QN, RN):

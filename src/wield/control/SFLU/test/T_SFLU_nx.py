@@ -16,10 +16,10 @@ from wield.utilities.strings import padding_remove
 from wield.control.SFLU import SFLU
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
 )
 
 
@@ -37,7 +37,7 @@ FP_edges = {
 }
 
 
-def T_networkx_basic(dprint, tpath_join, fpath_join):
+def T_networkx_basic():
     """
     Most basic checks about how networkx is used
     """
@@ -49,11 +49,11 @@ def T_networkx_basic(dprint, tpath_join, fpath_join):
     nx.set_node_attributes(G, pos, 'pos')
     print(G.nodes(data=True))
     nx.draw_networkx(G, arrows=True, pos = nx.get_node_attributes(G, 'pos'), ax = axB.ax0)
-    axB.save(tpath_join('test'))
+    axB.save(tjoin('test'))
 
     nx2tikz.dump_tex(
         G,
-        fname = tpath_join('test.tex'),
+        fname = tjoin('test.tex'),
     )
     pass
 
@@ -71,7 +71,7 @@ edges_FP = {
     ("a1_i", "b1_o"): "l",
 }
 
-def T_networkx_SFLU_FP(dprint, tpath_join, fpath_join):
+def T_networkx_SFLU_FP():
     """
     most basic checks about how networkx is used to great tikz output.
 
@@ -108,14 +108,14 @@ def T_networkx_SFLU_FP(dprint, tpath_join, fpath_join):
 
     nx2tikz.dump_pdf(
         G,
-        fname = tpath_join('testG.pdf'),
-        texname = tpath_join('testG.tex'),
+        fname = tjoin('testG.pdf'),
+        texname = tjoin('testG.tex'),
         preamble = preamble,
         scale='1pt',
     )
     pass
 
-def T_networkx_SFLU_FP2(dprint, tpath_join, fpath_join):
+def T_networkx_SFLU_FP2():
     """
     Show a graph reduction using networkx+tikz
     """
@@ -161,8 +161,8 @@ def T_networkx_SFLU_FP2(dprint, tpath_join, fpath_join):
     G5 = sflu.G.copy()
     nx2tikz.dump_pdf(
         [G1, G2, G3, G4, G5],
-        fname = tpath_join('testG.pdf'),
-        texname = tpath_join('testG.tex'),
+        fname = tjoin('testG.pdf'),
+        texname = tjoin('testG.tex'),
         preamble = preamble,
         scale='1pt',
     )
@@ -295,7 +295,7 @@ edges = {
 }
 
 
-def T_networkx_lg(dprint, tpath_join, fpath_join):
+def T_networkx_lg():
     """
     """
     G = nx.DiGraph()
@@ -321,16 +321,16 @@ def T_networkx_lg(dprint, tpath_join, fpath_join):
     print(G.nodes(data=True))
     nx.draw_networkx(G, arrows=True, pos = nx.get_node_attributes(G, 'pos'), ax = axB.ax0)
     nx.set_edge_attributes(G, edges, 'edge_text')
-    axB.save(tpath_join('test'))
+    axB.save(tjoin('test'))
 
     nx2tikz.dump_tex(
         [G, G,],
-        fname = tpath_join('test.tex'),
+        fname = tjoin('test.tex'),
         preamble = preamble,
     )
     nx2tikz.dump_pdf(
         [G, G,],
-        fname = tpath_join('testG.pdf'),
+        fname = tjoin('testG.pdf'),
         preamble = preamble,
     )
     pass

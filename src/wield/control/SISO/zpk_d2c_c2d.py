@@ -78,6 +78,7 @@ def d2c_zpk(zpk_z, fs, method="tustin"):
         __, k1 = scipy.signal.freqz_zpk(zz, pz, kz, np.pi * f_match / (fs / 2.0))
         ks = k1 / k0
 
+    ks = ks.real
     return (zs, ps, ks)
 
 

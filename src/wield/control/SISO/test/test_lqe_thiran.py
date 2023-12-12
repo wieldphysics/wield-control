@@ -19,10 +19,10 @@ from wield.control.SISO import design
 from wield.control import SISO
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -33,7 +33,7 @@ c_m_s = 299792458
 
 
 
-def test_Thiran_lqe(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_Thiran_lqe(test_trigger, tpath_preclear, plot):
     ss = SISO.design.delay_thiran_raw(delay_s = 1e-3, order=6).asSS
     L, P = lqe(
         ss.A,
@@ -67,7 +67,7 @@ def test_Thiran_lqe(dprint, test_trigger, tpath_join, tpath_preclear, plot):
         axB.ax0.loglog(*xfer3.fplot_mag, label="Direct ZPK")
         axB.ax1.semilogx(*xfer3.fplot_deg135, label="Direct ZPK")
 
-        axB.save(tpath_join("test_final"))
+        axB.save(tjoin("test_final"))
 
     with test_trigger(trigger, plot=plot):
         pass

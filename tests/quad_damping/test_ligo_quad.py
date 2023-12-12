@@ -8,16 +8,16 @@ import pytest
 
 from wield.control import SISO, MIMO
 from wield.bunch import Bunch
-from wield.pytest import fpath_join, tpath_join, dprint
+from wield.pytest import fjoin, tjoin, dprint
 from wield.control.plotting import plotTF
 from wield.utilities.file_io import load, save
 
 
-def test_convert_zpk_ss(fpath_join, dprint):
+def test_convert_zpk_ss():
     """
     Converts a LIGO damping filter from ZPK to statespace and back to test numerical stability
     """
-    fname = fpath_join('damping_filters.h5')
+    fname = fjoin('damping_filters.h5')
     zpk = load(fname).L
     dprint('testing!')
     filt_zpk = SISO.zpk(zpk.z, zpk.p, zpk.k)
@@ -33,7 +33,7 @@ def test_convert_zpk_ss(fpath_join, dprint):
 
 
 @pytest.mark.parametrize('quad_type', ['quad_full', 'quad_small'])
-def test_damp_quad(quad_type, fpath_join, tpath_join, dprint):
+def test_damp_quad(quad_type):
     """
     Damp the undamped LIGO QUAD state space model
 
@@ -41,14 +41,14 @@ def test_damp_quad(quad_type, fpath_join, tpath_join, dprint):
     plant to ZPK
     """
     # load quad state space
-    ss_data = load(fpath_join(quad_type + '.h5'))
+    ss_data = load(fjoin(quad_type + '.h5'))
     udamp_plant = MIMO.statespace(
         ss_data.A, ss_data.B, ss_data.C, ss_data.D,
         inputs=dict(ss_data.inputs), outputs=dict(ss_data.outputs),
     )
 
     # load ZPK damping filters and convert to state space
-    zpk_data = load(fpath_join('damping_filters.h5'))
+    zpk_data = load(fjoin('damping_filters.h5'))
     damp_filts = Bunch()
     for dof, zpk in zpk_data.items():
         damp_filts[dof] = SISO.zpk(zpk.z, zpk.p, zpk.k).asSS
@@ -94,13 +94,13 @@ def test_damp_quad(quad_type, fpath_join, tpath_join, dprint):
     plotTF(F_Hz, damp_fresp_L3, *fig.axes, label='Damped', ls='--')
     fig.axes[0].legend()
     fig.axes[0].set_title('L3 to L3')
-    fig.savefig(tpath_join('L3.pdf'))
+    fig.savefig(tjoin('L3.pdf'))
 
     fig = plotTF(F_Hz, udamp_fresp_M0, label='Undamped')
     plotTF(F_Hz, damp_fresp_M0, *fig.axes, label='Damped', ls='--')
     fig.axes[0].legend()
     fig.axes[0].set_title('M0 to M0')
-    fig.savefig(tpath_join('M0.pdf'))
+    fig.savefig(tjoin('M0.pdf'))
 
     # make zpk filters and convert back to SS
     for (to, fr) in zip(['L3.disp.L', 'M0.disp.L'], ['L3.drive.L', 'M0.drive.L']):

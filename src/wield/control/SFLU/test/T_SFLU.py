@@ -18,14 +18,14 @@ import re
 from wield.control.SFLU import SFLU
 
 from wield.pytest import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
 )
 
 
-def T_SFLU_pre1(dprint, tpath_join, fpath_join):
+def T_SFLU_pre1():
     """
     Setup 2-node problem, nodes a and b with edges Eaa, Eab, Eba, Ebb.
     """

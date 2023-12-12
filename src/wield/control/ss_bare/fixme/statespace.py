@@ -19,7 +19,7 @@ from . import reduce_algorithms
 from . import shuffle_algorithms
 
 from wield.pytest.fixtures import (
-    tpath_join,
+    tjoin,
     dprint,
 )
 

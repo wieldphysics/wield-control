@@ -16,10 +16,10 @@ from wield.utilities.mpl import mplfigB
 
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -41,7 +41,7 @@ def print_ssd(ssd):
     print("D", ssd.D)
 
 
-def settest(test_trigger, tpath_join, plot, Zc, Zr, Pc, Pr, k):
+def settest(test_trigger, plot, Zc, Zr, Pc, Pr, k):
     Zc = 2 * np.pi * np.asarray(Zc)
     Zr = 2 * np.pi * np.asarray(Zr)
     Pc = 2 * np.pi * np.asarray(Pc)
@@ -70,7 +70,7 @@ def settest(test_trigger, tpath_join, plot, Zc, Zr, Pc, Pr, k):
         axB.ax1.semilogx(F_Hz, np.angle(xfer, deg=True))
         axB.ax0.loglog(F_Hz, abs(xfer2))
         axB.ax1.semilogx(F_Hz, np.angle(xfer2, deg=True))
-        axB.save(tpath_join("test"))
+        axB.save(tjoin("test"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer, xfer2, decimal=5)
@@ -84,16 +84,16 @@ def settest(test_trigger, tpath_join, plot, Zc, Zr, Pc, Pr, k):
         axB.ax1.semilogx(F_Hz, np.angle(xfer, deg=True))
         axB.ax0.loglog(F_Hz, abs(xfer2))
         axB.ax1.semilogx(F_Hz, np.angle(xfer2, deg=True))
-        axB.save(tpath_join("test_inv"))
+        axB.save(tjoin("test_inv"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer, xfer2, decimal=5)
 
 
-def test_xfers(test_trigger, tpath_join, tpath_preclear, plot):
+def test_xfers(test_trigger, tpath_preclear, plot):
     settest(
         test_trigger,
-        tpath_join,
+        tjoin,
         plot,
         Zc=[-1 + 1j, -1 + 5j],
         Zr=[-100, -200],
@@ -105,10 +105,10 @@ def test_xfers(test_trigger, tpath_join, tpath_preclear, plot):
     )
 
 
-def test_xfers2(test_trigger, tpath_join, tpath_preclear, plot):
+def test_xfers2(test_trigger, tpath_preclear, plot):
     settest(
         test_trigger,
-        tpath_join,
+        tjoin,
         plot,
         Zc=[-1 + 1j, -1 + 5j],
         Zr=[-100, -200],
@@ -118,20 +118,20 @@ def test_xfers2(test_trigger, tpath_join, tpath_preclear, plot):
     )
 
 
-def test_xfers12(test_trigger, tpath_join, tpath_preclear, plot):
-    settest(test_trigger, tpath_join, plot, Zc=[], Zr=[-100], Pc=[-1 + 2j], Pr=[], k=1)
+def test_xfers12(test_trigger, tpath_preclear, plot):
+    settest(test_trigger, tjoin, plot, Zc=[], Zr=[-100], Pc=[-1 + 2j], Pr=[], k=1)
 
 
-def test_xfers22(test_trigger, tpath_join, tpath_preclear, plot):
+def test_xfers22(test_trigger, tpath_preclear, plot):
     settest(
-        test_trigger, tpath_join, plot, Zc=[], Zr=[-10, -10], Pc=[-1 + 2j], Pr=[], k=1
+        test_trigger, tjoin, plot, Zc=[], Zr=[-10, -10], Pc=[-1 + 2j], Pr=[], k=1
     )
 
 
-def test_xfers2i(test_trigger, tpath_join, tpath_preclear, plot):
+def test_xfers2i(test_trigger, tpath_preclear, plot):
     settest(
         test_trigger,
-        tpath_join,
+        tjoin,
         plot,
         Zc=[-1 + 1j, -1 + 5j],
         Zr=[-100, -200, -10, -10],

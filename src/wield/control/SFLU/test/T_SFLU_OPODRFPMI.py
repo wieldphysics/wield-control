@@ -21,10 +21,10 @@ from wield.control.SFLU import optics
 from wield.control.SFLU.functions import neg
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
 )
 
 
@@ -60,7 +60,7 @@ def build_OPO():
     return opo
 
 
-def T_SFLU_OPO_build_show(dprint, tpath_join, fpath_join):
+def T_SFLU_OPO_build_show():
     """
     Show a graph reduction using networkx+tikz
     """
@@ -87,7 +87,7 @@ def T_SFLU_OPO_build_show(dprint, tpath_join, fpath_join):
     if True:
         yamlstr = sflu.convert_self2yamlstr()
         # print(yamlstr)
-        with open(tpath_join('DRFPMI.yaml'), 'w') as F:
+        with open(tjoin('DRFPMI.yaml'), 'w') as F:
             F.write(yamlstr)
         sflu = SFLU.SFLU.convert_yamlstr2self(yamlstr)
     #sflu.graph_nodes_pos(DRFPMI_locs, match=True)
@@ -112,14 +112,14 @@ def T_SFLU_OPO_build_show(dprint, tpath_join, fpath_join):
             G1,
             #G2,
         ],
-        fname = tpath_join('testG.pdf'),
-        texname = tpath_join('testG.tex'),
+        fname = tjoin('testG.pdf'),
+        texname = tjoin('testG.tex'),
         # preamble = preamble,
         scale='10pt',
     )
 
 
-def T_SFLU_OPODRFPMI_build_show(dprint, tpath_join, fpath_join):
+def T_SFLU_OPODRFPMI_build_show():
     """
     Show a graph reduction using networkx+tikz
     """
@@ -243,7 +243,7 @@ def T_SFLU_OPODRFPMI_build_show(dprint, tpath_join, fpath_join):
     if True:
         yamlstr = sflu.convert_self2yamlstr()
         # print(yamlstr)
-        with open(tpath_join('DRFPMI.yaml'), 'w') as F:
+        with open(tjoin('DRFPMI.yaml'), 'w') as F:
             F.write(yamlstr)
         sflu = SFLU.SFLU.convert_yamlstr2self(yamlstr)
     #sflu.graph_nodes_pos(DRFPMI_locs, match=True)
@@ -268,8 +268,8 @@ def T_SFLU_OPODRFPMI_build_show(dprint, tpath_join, fpath_join):
             G1,
             #G2,
         ],
-        fname = tpath_join('testG.pdf'),
-        texname = tpath_join('testG.tex'),
+        fname = tjoin('testG.pdf'),
+        texname = tjoin('testG.tex'),
         # preamble = preamble,
         scale='10pt',
     )

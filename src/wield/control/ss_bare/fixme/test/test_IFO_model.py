@@ -21,13 +21,13 @@ import IFO_model
 import IFO_model_noM
 
 from wield.pytest.fixtures import (
-    tpath_join,
+    tjoin,
     dprint,
 )
 
 
 # TODO, should check this against the analytical model in setups
-def test_IFO_model(tpath_join):
+def test_IFO_model():
     model = IFO_model.build_model(theta=0.01)
     sys1 = model.sys1
 
@@ -41,7 +41,7 @@ def test_IFO_model(tpath_join):
     axB = mplfigB(Nrows=2)
     axB.ax0.loglog(F_Hz, abs(xfer_DARM))
     axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
-    axB.save(tpath_join("DARM"))
+    axB.save(tjoin("DARM"))
 
     xfer_REFLPQ = sys1.xfer(
         F_Hz=F_Hz,
@@ -60,10 +60,10 @@ def test_IFO_model(tpath_join):
     axB.ax0.loglog(F_Hz, abs(xfer_REFLPQ))
     axB.ax1.semilogx(F_Hz, np.angle(xfer_REFLPP, deg=True))
     axB.ax1.semilogx(F_Hz, np.angle(xfer_REFLPQ, deg=True))
-    axB.save(tpath_join("REFL"))
+    axB.save(tjoin("REFL"))
 
 
-def test_reduce(test_trigger, tpath_join, plot, dprint):
+def test_reduce(test_trigger, plot):
     model = IFO_model.build_model(theta=+0.01)
     sys1 = model.sys1
     sys1c = sys1.copy()
@@ -95,14 +95,14 @@ def test_reduce(test_trigger, tpath_join, plot, dprint):
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_reducer2(test_trigger, tpath_join, plot):
+def test_reducer2(test_trigger, plot):
     model = IFO_model.build_model(theta=-0.01)
     sys1 = model.sys1
     sys1c = sys1.copy()
@@ -132,14 +132,14 @@ def test_reducer2(test_trigger, tpath_join, plot):
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_percolate_names(test_trigger, tpath_join, plot):
+def test_percolate_names(test_trigger, plot):
     model = IFO_model.build_model(theta=-0.01)
     sys1 = model.sys1
     sys1c = sys1.copy()
@@ -165,7 +165,7 @@ def test_percolate_names(test_trigger, tpath_join, plot):
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
@@ -173,7 +173,7 @@ def test_percolate_names(test_trigger, tpath_join, plot):
 
 
 @pytest.mark.xfail(reason="Need to revisit these")
-def test_controllable(test_trigger, tpath_join, plot):
+def test_controllable(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.01,
         space_order=4,
@@ -212,7 +212,7 @@ def test_controllable(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
@@ -220,7 +220,7 @@ def test_controllable(test_trigger, tpath_join, plot):
 
 
 @pytest.mark.xfail(reason="Need to revisit these")
-def test_controllable_noQRPN(test_trigger, tpath_join, plot):
+def test_controllable_noQRPN(test_trigger, plot):
     model = IFO_model_noM.build_model(
         theta=-0.01,
         space_order=4,
@@ -259,14 +259,14 @@ def test_controllable_noQRPN(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_save(test_trigger, tpath_join, plot):
+def test_save(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.01,
         space_order=4,
@@ -277,7 +277,7 @@ def test_save(test_trigger, tpath_join, plot):
     print("Output: ", sys1.output.idx2name)
     print("Output[n]: ", sys1.output.idx2name.index("Msrm+A-oP"))
     wield.control.save(
-        tpath_join("system.mat"),
+        tjoin("system.mat"),
         dict(
             A=sys1.A,
             B=sys1.B,

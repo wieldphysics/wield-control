@@ -19,10 +19,10 @@ from wield.control.ACE import ace_electrical
 from wield.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -39,7 +39,7 @@ def print_ssd(ssd):
     print("D", ssd.D)
 
 
-def test_opamp(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_opamp(test_trigger, tpath_preclear, plot):
     F_Hz = logspaced(0.01, 1e7, 100)
 
     ace = ACE.ACE()
@@ -63,11 +63,11 @@ def test_opamp(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     axB.ax0.loglog(F_Hz, abs(xfer))
     axB.ax1.semilogx(F_Hz, np.angle(xfer, deg=True))
     axB.ax0.axhline(1)
-    axB.save(tpath_join("opamp_forward"))
+    axB.save(tjoin("opamp_forward"))
     return
 
 
-def test_opamp_fb(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_opamp_fb(test_trigger, tpath_preclear, plot):
     F_Hz = logspaced(0.01, 1e7, 100)
 
     ace = ACE.ACE()
@@ -86,7 +86,7 @@ def test_opamp_fb(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     xfer = ss2xfer(*ssB.ABCDE, F_Hz=F_Hz, idx_in=0)
     axB.ax0.loglog(F_Hz, abs(xfer))
     axB.ax1.semilogx(F_Hz, np.angle(xfer, deg=True))
-    axB.save(tpath_join("opamp_feedback"))
+    axB.save(tjoin("opamp_feedback"))
     return
 
 

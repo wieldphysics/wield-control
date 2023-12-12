@@ -18,7 +18,7 @@ from wield.utilities.mpl import mplfigB
 from wield.control.AAA import tfAAA
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     plot,
     dprint,
     tpath,
@@ -26,7 +26,7 @@ from wield.pytest.fixtures import (  # noqa: F401
     test_trigger,
 )
 
-def test_AAA_mod(tpath_join, tpath_preclear, dprint):
+def test_AAA_mod(tpath_preclear):
     ZPK1 = asZPKTF(
         (
             (
@@ -75,7 +75,7 @@ def test_AAA_mod(tpath_join, tpath_preclear, dprint):
     axB.ax1.semilogx(F_Hz, np.angle(TF2, deg=True))
     for z in results.supports:
         axB.ax0.axvline(z)
-    axB.save(tpath_join("test"))
+    axB.save(tjoin("test"))
     return
 
 
@@ -95,7 +95,7 @@ def test_AAA_mod(tpath_join, tpath_preclear, dprint):
         10,
     ],
 )
-def test_AAA_rand6_lin(test_trigger, tpath_join, tpath_preclear, dprint, plot, set_num):
+def test_AAA_rand6_lin(test_trigger, tpath_preclear, plot, set_num):
     data = IIRrational_data("rand6_lin100E", set_num=set_num)
     F_Hz = data.F_Hz
     TF1 = data.rep_s.data
@@ -132,7 +132,7 @@ def test_AAA_rand6_lin(test_trigger, tpath_join, tpath_preclear, dprint, plot, s
         axB.ax1.semilogx(F_Hz, np.angle(TF3, deg=True))
         for z in results.supports:
             axB.ax0.axvline(z)
-        axB.save(tpath_join("test"))
+        axB.save(tjoin("test"))
 
         axB = mplfigB(Nrows=2)
         axB.ax0.semilogy(F_Hz, abs(TF2 / TF1))
@@ -140,7 +140,7 @@ def test_AAA_rand6_lin(test_trigger, tpath_join, tpath_preclear, dprint, plot, s
         axB.ax1.semilogx(F_Hz, np.angle(TF2 / TF1, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(TF3 / TF1, deg=True))
         if fail:
-            axB.save(tpath_join("test_fail"))
+            axB.save(tjoin("test_fail"))
 
     with test_trigger(trigger, plot=plot):
         dprint(TF2 / TF1)
@@ -168,7 +168,7 @@ def test_AAA_rand6_lin(test_trigger, tpath_join, tpath_preclear, dprint, plot, s
         10,
     ],
 )
-def test_AAA_rand6_log(test_trigger, tpath_join, tpath_preclear, dprint, plot, set_num):
+def test_AAA_rand6_log(test_trigger, tpath_preclear, plot, set_num):
     data = IIRrational_data("rand6_log100E", set_num=set_num)
     F_Hz = data.F_Hz
     TF1 = data.rep_s.data
@@ -214,7 +214,7 @@ def test_AAA_rand6_log(test_trigger, tpath_join, tpath_preclear, dprint, plot, s
         axB.ax1.semilogx(F_Hz, np.angle(TF3, deg=True))
         for z in results.supports:
             axB.ax0.axvline(z)
-        axB.save(tpath_join("test"))
+        axB.save(tjoin("test"))
 
         axB = mplfigB(Nrows=2)
         axB.ax0.loglog(F_Hz, abs(TF2 / TF1))
@@ -222,7 +222,7 @@ def test_AAA_rand6_log(test_trigger, tpath_join, tpath_preclear, dprint, plot, s
         axB.ax1.semilogx(F_Hz, np.angle(TF2 / TF1, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(TF3 / TF1, deg=True))
         if fail:
-            axB.save(tpath_join("test_fail"))
+            axB.save(tjoin("test_fail"))
 
     with test_trigger(trigger, plot=plot):
         dprint("TF2/TF1 - 1", TF2 / TF1 - 1)

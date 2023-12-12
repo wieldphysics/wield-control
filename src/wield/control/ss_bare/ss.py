@@ -810,7 +810,7 @@ class BareStateSpace(object):
         else:
             return self
 
-    def L2_norm(self, mode='L2', scale=True, tol=1e-10):
+    def L2_norm(self, mode='L2', scale=True, tol=1e-14):
         """
         Using slycot ab13dd
         Return objects:
@@ -818,6 +818,7 @@ class BareStateSpace(object):
 
         Does not work with descriptor systems
         """
+
 
         if self.dt == 0 or self.dt == None: # if the model is discrete it will have a non 0 or None dt
             dico = 'C'
@@ -1379,7 +1380,10 @@ class BareStateSpaceUser(object):
         )
 
     def L2_norm(self, **kwargs):
-        return self.ss.L2_norm(**kwargs)
+        # TODO, is necessary?
+        ssx = self.ss.balanceABC(which='ABC')
+        # print('balnorm')
+        return ssx.L2_norm(**kwargs)
 
     def Linf_norm(self, **kwargs):
         return self.ss.Linf_norm(**kwargs)

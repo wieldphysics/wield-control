@@ -18,10 +18,10 @@ from wield.control.SFLU import SFLU
 from wield.control.SFLU.functions import neg
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
 )
 
 
@@ -208,7 +208,7 @@ in_out = dict(
 
 if True:
 
-    def T_SFLU_DRFPMI_show_full(dprint, tpath_join, fpath_join):
+    def T_SFLU_DRFPMI_show_full():
         """
         Show a graph reduction using networkx+tikz
         """
@@ -233,13 +233,13 @@ if True:
 
         nx2tikz.dump_pdf(
             [G1, G2],
-            fname = tpath_join('testG.pdf'),
-            texname = tpath_join('testG.tex'),
+            fname = tjoin('testG.pdf'),
+            texname = tjoin('testG.tex'),
             # preamble = preamble,
             scale='10pt',
         )
 
-    def T_SFLU_DRFPMI_show_sub(dprint, tpath_join, fpath_join):
+    def T_SFLU_DRFPMI_show_sub():
         """
         Show a graph reduction using networkx+tikz
         """
@@ -323,14 +323,14 @@ if True:
 
         nx2tikz.dump_pdf(
             [G1, G2, G3],
-            fname = tpath_join('testG.pdf'),
-            texname = tpath_join('testG.tex'),
+            fname = tjoin('testG.pdf'),
+            texname = tjoin('testG.tex'),
             # preamble = preamble,
             scale='10pt',
         )
 
 
-    def T_SFLU_DRFPMI_serialize(dprint, tpath_join, fpath_join):
+    def T_SFLU_DRFPMI_serialize():
         sflu = SFLU.SFLU(
             DRFPMI_edges,
             **in_out,
@@ -352,11 +352,11 @@ if True:
         assert(comp2.row2col == comp.row2col)
         assert(comp2.col2row == comp.col2row)
 
-        with open(tpath_join('DRFPMI.yaml'), 'w') as F:
+        with open(tjoin('DRFPMI.yaml'), 'w') as F:
             F.write(comp_yamlstr)
         return
 
-    def T_SFLU_DRFPMI_working(dprint, tpath_join, fpath_join):
+    def T_SFLU_DRFPMI_working():
         sflu = SFLU.SFLU(
             DRFPMI_edges,
             **in_out,

@@ -14,10 +14,10 @@ import scipy.signal
 
 import pytest
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -35,7 +35,7 @@ from .HSTS import HSTS_build
 from wield.control import MIMO
 
 
-def test_HSTS_WS(tpath_join):
+def test_HSTS_WS():
     ABCD, iod = HSTS_build.getHSTSModel()
 
     ws_hsts = MIMO.statespace(
@@ -53,6 +53,6 @@ def test_HSTS_WS(tpath_join):
 
     axB.ax0.loglog(*rs.siso("P.m3.disp.L", "P.gnd.disp.L").fplot_mag)
     axB.ax0.loglog(*ws_hsts.siso("P.m3.disp.L", "P.gnd.disp.L").fresponse(f=f_Hz).fplot_mag)
-    axB.save(tpath_join("test"))
+    axB.save(tjoin("test"))
     return
 

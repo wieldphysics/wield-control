@@ -24,7 +24,7 @@ import IFO_model_noM
 pytestmark = pytest.mark.xfail(reason="Need to revisit these")
 
 
-def test_controllable(test_trigger, tpath_join, plot):
+def test_controllable(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.01,
         space_order=4,
@@ -44,11 +44,11 @@ def test_controllable(test_trigger, tpath_join, plot):
     # sys1.B = sys1.B[::-1, :]
     sys1.controllable_staircase(
         reciprocal_system=True,
-        debug_path=tpath_join,
+        debug_path=tjoin,
     )
     sys1.controllable_staircase(
         reciprocal_system=False,
-        # debug_path = tpath_join,
+        # debug_path = tjoin,
     )
 
     F_Hz = logspaced(1, model.FSR_Hz * 0.8, 1000)
@@ -71,14 +71,14 @@ def test_controllable(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_controllable_octave(test_trigger, tpath_join, plot):
+def test_controllable_octave(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.01,
         space_order=6,
@@ -135,14 +135,14 @@ def test_controllable_octave(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_controllable_matlab(test_trigger, tpath_join, plot):
+def test_controllable_matlab(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.01,
         space_order=10,
@@ -205,14 +205,14 @@ def test_controllable_matlab(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_controllable_slycotDSS(test_trigger, tpath_join, plot):
+def test_controllable_slycotDSS(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.01,
         space_order=1,
@@ -288,14 +288,14 @@ def test_controllable_slycotDSS(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_controllable_slycotSS(test_trigger, tpath_join, plot):
+def test_controllable_slycotSS(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.00,
         space_order=1,
@@ -368,14 +368,14 @@ def test_controllable_slycotSS(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_controllable_slycot(test_trigger, tpath_join, plot):
+def test_controllable_slycot(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.00,
         space_order=1,
@@ -448,14 +448,14 @@ def test_controllable_slycot(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_controllable_guptri(test_trigger, tpath_join, plot):
+def test_controllable_guptri(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.00,
         space_order=1,
@@ -509,7 +509,7 @@ def test_controllable_guptri(test_trigger, tpath_join, plot):
     return
 
 
-def test_controllable_slycot_xfer(test_trigger, tpath_join, plot):
+def test_controllable_slycot_xfer(test_trigger, plot):
     Zc = [-1 + 1j, -1 + 5j]
     Zr = [-100, -200]
     Pc = [-1 + 2j, -1 + 5j]
@@ -613,14 +613,14 @@ def test_controllable_slycot_xfer(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_controllable_guptri2(test_trigger, tpath_join, plot):
+def test_controllable_guptri2(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.01,
         space_order=1,
@@ -756,7 +756,7 @@ def test_controllable_guptri2(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)

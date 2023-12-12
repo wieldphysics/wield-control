@@ -14,16 +14,16 @@ import scipy.signal
 from wield.control.ACE import ACE
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
 
 
-def test_reduce_ladder(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_reduce_ladder(test_trigger, tpath_preclear, plot):
     ace = ACE.ACE()
     ace.states_augment(N=1, st="A", io=True)
     ace.states_augment(N=1, st="B", io=True)
@@ -41,7 +41,7 @@ def test_reduce_ladder(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     return
 
 
-def test_reduce_double(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_reduce_double(test_trigger, tpath_preclear, plot):
     ace = ACE.ACE()
     ace.states_augment(N=1, st="A", io=True)
     ace.states_augment(N=1, st="B", io=True)
@@ -59,7 +59,7 @@ def test_reduce_double(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     return
 
 
-def test_reduce_loop(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_reduce_loop(test_trigger, tpath_preclear, plot):
     ace = ACE.ACE()
     ace.states_augment(N=1, st="A", io=True)
     ace.states_augment(N=1, st="B", io=True)
@@ -81,7 +81,7 @@ def test_reduce_loop(dprint, test_trigger, tpath_join, tpath_preclear, plot):
     return
 
 
-def test_reduce_loop2(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_reduce_loop2(test_trigger, tpath_preclear, plot):
     ace = ACE.ACE()
     ace.states_augment(N=1, st="A", io=True)
     ace.states_augment(N=1, st="B", io=True)

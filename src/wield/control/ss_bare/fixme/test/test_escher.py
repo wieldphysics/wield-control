@@ -24,7 +24,7 @@ import IFO_model
 pytestmark = pytest.mark.xfail(reason="Need to revisit these")
 
 
-def test_slycotSS(test_trigger, tpath_join, plot):
+def test_slycotSS(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.01,
         space_order=6,
@@ -176,14 +176,14 @@ def test_slycotSS(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)
     return
 
 
-def test_rescale_slycot(test_trigger, tpath_join, plot):
+def test_rescale_slycot(test_trigger, plot):
     model = IFO_model.build_model(
         theta=-0.01,
         space_order=4,
@@ -214,7 +214,7 @@ def test_rescale_slycot(test_trigger, tpath_join, plot):
         axB.ax0.loglog(F_Hz, abs(xfer_DARMc))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARM, deg=True))
         axB.ax1.semilogx(F_Hz, np.angle(xfer_DARMc, deg=True))
-        axB.save(tpath_join("DARM"))
+        axB.save(tjoin("DARM"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_almost_equal(xfer_DARM / xfer_DARMc, 1, decimal=5)

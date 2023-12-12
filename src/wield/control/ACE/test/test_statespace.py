@@ -20,10 +20,10 @@ from wield.control.algorithms.statespace.dense.zpk_algorithms import zpk_cascade
 from wield.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -41,14 +41,14 @@ def print_ssd(ssd):
     print("D", ssd.D)
 
 
-def test_ACE_tupleize(dprint, tpath_join, fpath_join):
+def test_ACE_tupleize():
     dprint(ACE.tupleize("A.B"))
     dprint(ACE.tupleize(("A.B",)))
     dprint(ACE.tupleize((None, ("A.B",), "C")))
     dprint(ACE.tupleize(None))
 
 
-def test_xfers_ACE(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_xfers_ACE(test_trigger, tpath_preclear, plot):
     Zc = [-1 + 1j, -1 + 5j]
     Zr = [-100, -200]
     Pc = [-1 + 2j, -1 + 6j]
@@ -89,7 +89,7 @@ def test_xfers_ACE(dprint, test_trigger, tpath_join, tpath_preclear, plot):
         axB.ax1.semilogx(F_Hz, np.angle(ABCD_xfer, deg=True))
         axB.ax0.loglog(F_Hz, abs(zpk_zfer))
         axB.ax1.semilogx(F_Hz, np.angle(zpk_zfer, deg=True))
-        axB.save(tpath_join("test"))
+        axB.save(tjoin("test"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_allclose(ABCD_xfer, zpk_zfer, rtol=1e-5)
@@ -153,7 +153,7 @@ def test_xfers_ACE(dprint, test_trigger, tpath_join, tpath_preclear, plot):
         axB.ax1.semilogx(F_Hz, np.angle(xfer, deg=True))
         axB.ax0.loglog(F_Hz, abs(ABCD_xfer))
         axB.ax1.semilogx(F_Hz, np.angle(ABCD_xfer, deg=True))
-        axB.save(tpath_join("test_ssB0"))
+        axB.save(tjoin("test_ssB0"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_allclose(xfer, ABCD_xfer, rtol=1e-5)
@@ -166,7 +166,7 @@ def test_xfers_ACE(dprint, test_trigger, tpath_join, tpath_preclear, plot):
         axB.ax1.semilogx(F_Hz, np.angle(xfer1, deg=True))
         axB.ax0.loglog(F_Hz, abs(ABCD_xfer))
         axB.ax1.semilogx(F_Hz, np.angle(ABCD_xfer, deg=True))
-        axB.save(tpath_join("test_ssB1"))
+        axB.save(tjoin("test_ssB1"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_allclose(xfer1, ABCD_xfer, rtol=1e-5)
@@ -179,7 +179,7 @@ def test_xfers_ACE(dprint, test_trigger, tpath_join, tpath_preclear, plot):
         axB.ax1.semilogx(F_Hz, np.angle(xfer2, deg=True))
         axB.ax0.loglog(F_Hz, abs(ABCD_xfer))
         axB.ax1.semilogx(F_Hz, np.angle(ABCD_xfer, deg=True))
-        axB.save(tpath_join("test_ssB2"))
+        axB.save(tjoin("test_ssB2"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_allclose(xfer2, ABCD_xfer, rtol=1e-5)
@@ -192,7 +192,7 @@ def test_xfers_ACE(dprint, test_trigger, tpath_join, tpath_preclear, plot):
         axB.ax1.semilogx(F_Hz, np.angle(xfer3, deg=True))
         axB.ax0.loglog(F_Hz, abs(ABCD_xfer))
         axB.ax1.semilogx(F_Hz, np.angle(ABCD_xfer, deg=True))
-        axB.save(tpath_join("test_ssB3"))
+        axB.save(tjoin("test_ssB3"))
 
     with test_trigger(trigger, plot=plot):
         np.testing.assert_allclose(xfer3, ABCD_xfer, rtol=1e-5)
@@ -223,7 +223,7 @@ def ziplines(*args, delim=""):
         print(delim.join(line))
 
 
-def test_reducer(dprint, test_trigger, tpath_join, tpath_preclear, plot):
+def test_reducer(test_trigger, tpath_preclear, plot):
     ace = ACE.ACE()
 
     seis_acc = dense.zpk_rc(

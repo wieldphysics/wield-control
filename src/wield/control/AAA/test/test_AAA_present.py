@@ -17,7 +17,7 @@ from wield.utilities.mpl import mplfigB, generate_stacked_plot_ax, asavefig, log
 
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     plot,
     dprint,
     tpath,
@@ -29,7 +29,7 @@ from wield.pytest import Timer
 asavefig.formats.svg.use = True
 
 
-def test_AAA_view(tpath_join, tpath_preclear, dprint):
+def test_AAA_view(tpath_preclear):
     ZPK1 = asZPKTF(
         (
             (
@@ -58,9 +58,9 @@ def test_AAA_view(tpath_join, tpath_preclear, dprint):
     F_Hz = logspaced(0.5, 120, 200)
     axB = fitplot(ZPK1, F_Hz, dprint=dprint)
     axB.ax0.legend(framealpha=1)
-    axB.save(tpath_join("First_demo200pts"))
+    axB.save(tjoin("First_demo200pts"))
     axB = fitplot(ZPK1, F_Hz, CLG=True, dprint=dprint)
-    axB.save(tpath_join("First_demo200pts_CLG"))
+    axB.save(tjoin("First_demo200pts_CLG"))
 
     ZPK2 = asZPKTF(
         (
@@ -73,18 +73,18 @@ def test_AAA_view(tpath_join, tpath_preclear, dprint):
         )
     )
     axB = fitplot(ZPK2, F_Hz, dprint=dprint)
-    axB.save(tpath_join("Second_demo200pts"))
+    axB.save(tjoin("Second_demo200pts"))
     axB = fitplot(ZPK1, F_Hz, addZPK=ZPK2, dprint=dprint)
     axB.ax0.legend(framealpha=1, loc="upper right")
-    axB.save(tpath_join("Third_demo200pts"))
+    axB.save(tjoin("Third_demo200pts"))
     F_Hz = logspaced(0.5, 120, 50)
     axB = fitplot(ZPK1, F_Hz, addZPK=ZPK2, dprint=dprint)
     axB.ax0.legend(framealpha=1, loc="upper right")
-    axB.save(tpath_join("Third_demo50pts"))
+    axB.save(tjoin("Third_demo50pts"))
     return
 
 
-def test_AAA_BNS(tpath_join, tpath_preclear, dprint):
+def test_AAA_BNS(tpath_preclear):
     params = dict()
     params["m1"] = 30
     params["m2"] = 30
@@ -108,7 +108,7 @@ def test_AAA_BNS(tpath_join, tpath_preclear, dprint):
     hp *= 1e21
     axB.ax0.loglog(F_Hz, abs(hp))
     axB.ax1.semilogx(F_Hz, np.angle(hp, deg=True))
-    axB.save(tpath_join("BNS"))
+    axB.save(tjoin("BNS"))
 
     dprint("N points", len(F_Hz))
 
@@ -186,10 +186,10 @@ def test_AAA_BNS(tpath_join, tpath_preclear, dprint):
         return axB
 
     axB = fitplot(TF1=hp, F_Hz=F_Hz)
-    axB.save(tpath_join("BNSfit"))
+    axB.save(tjoin("BNSfit"))
 
     axB = fitplot(TF1=abs(hp) ** 2, F_Hz=F_Hz)
-    axB.save(tpath_join("BNSfitPow"))
+    axB.save(tjoin("BNSfitPow"))
 
 
 def gen_waveform(**params):
@@ -258,7 +258,7 @@ def ZPKorder(ZPK):
 
 
 @pytest.mark.xfail(reason="Needs updated GWINC interface")
-def test_AAA_GWINC(tpath_join, tpath_preclear, dprint):
+def test_AAA_GWINC(tpath_preclear):
     import gwinc
     import numpy as np
 
@@ -269,8 +269,8 @@ def test_AAA_GWINC(tpath_join, tpath_preclear, dprint):
     ax = fig.add_subplot(1, 1, 1)
     ax.set_title("PyGWINC aLIGO noise budget")
     ax.set_ylabel("Strain ASD [h/rtHz]")
-    fig.savefig(tpath_join("GWINC.pdf"))
-    fig.savefig(tpath_join("GWINC.svg"))
+    fig.savefig(tjoin("GWINC.pdf"))
+    fig.savefig(tjoin("GWINC.svg"))
     traces2 = dict()
     traces3 = dict()
 
@@ -316,8 +316,8 @@ def test_AAA_GWINC(tpath_join, tpath_preclear, dprint):
         )
     )
     ax.set_ylabel("Strain ASD [h/rtHz]")
-    fig.savefig(tpath_join("GWINCfit.pdf"))
-    fig.savefig(tpath_join("GWINCfit.svg"))
+    fig.savefig(tjoin("GWINCfit.pdf"))
+    fig.savefig(tjoin("GWINCfit.svg"))
 
     fig = gwinc.plot_noise(F_Hz, traces3)
     ax = fig.add_subplot(1, 1, 1)
@@ -327,14 +327,14 @@ def test_AAA_GWINC(tpath_join, tpath_preclear, dprint):
         )
     )
     ax.set_ylabel("Strain ASD [h/rtHz]")
-    fig.savefig(tpath_join("GWINCfitUgly.pdf"))
-    fig.savefig(tpath_join("GWINCfitUgly.svg"))
+    fig.savefig(tjoin("GWINCfitUgly.pdf"))
+    fig.savefig(tjoin("GWINCfitUgly.svg"))
 
     # axB = fitplot(TF1 = hp, F_Hz = F_Hz)
-    # axB.save(tpath_join('BNSfit'))
+    # axB.save(tjoin('BNSfit'))
 
     # axB = fitplot(TF1 = abs(hp)**2, F_Hz = F_Hz)
-    # axB.save(tpath_join('BNSfitPow'))
+    # axB.save(tjoin('BNSfitPow'))
 
 
 def fitplot(

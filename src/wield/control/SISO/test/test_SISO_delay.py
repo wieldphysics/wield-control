@@ -14,10 +14,10 @@ import scipy.signal
 
 import pytest
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
     test_trigger,
     tpath_preclear,
 )
@@ -67,7 +67,7 @@ def bessel_delay_ZPK(delay_s, order=1, rescale=None):
     )
 
 
-def test_ZPK_delay_many(tpath_join):
+def test_ZPK_delay_many():
     length_m = 3995
     delta_t = length_m / c_m_s
     delta_t = 1
@@ -100,11 +100,11 @@ def test_ZPK_delay_many(tpath_join):
     axB.ax1.axvline(3 / delta_t / 4, ls='--', color='black')
     axB.ax1.axvline(4 / delta_t / 4, ls='--', color='black')
     axB.ax0.legend()
-    axB.save(tpath_join("test_ZPK"))
+    axB.save(tjoin("test_ZPK"))
 
 
 @pytest.mark.parametrize('idx_ord', [4, 40, 100])
-def test_ZPK_delay_various(idx_ord, tpath_join):
+def test_ZPK_delay_various(idx_ord):
     """
     Test the conversions to and from ZPK representation and statespace representation
     using a delay filter
@@ -147,7 +147,7 @@ def test_ZPK_delay_various(idx_ord, tpath_join):
     axB.ax1.plot(F_Hz, np.angle(1/xfer4c, deg=True))
 
     axB.ax0.legend()
-    axB.save(tpath_join("test_ZPK"))
+    axB.save(tjoin("test_ZPK"))
 
     np.testing.assert_almost_equal(xfer2, xfer1**2)
     np.testing.assert_almost_equal(xfer3, 4 * xfer1)
@@ -171,7 +171,7 @@ def test_ZPK_delay_various(idx_ord, tpath_join):
     ((-1, ), (10, 10), 0.1),
     ((10, 10), (-1, ), 0.1),
 ])
-def test_ZPK_various(zpk, tpath_join):
+def test_ZPK_various(zpk):
     """
     Test the conversions to and from ZPK representation and statespace representation
     using a delay filter
@@ -213,7 +213,7 @@ def test_ZPK_various(zpk, tpath_join):
     axB.ax1.plot(F_Hz, np.angle(1/xfer4c, deg=True))
 
     axB.ax0.legend()
-    axB.save(tpath_join("test_ZPK"))
+    axB.save(tjoin("test_ZPK"))
 
     np.testing.assert_almost_equal(xfer2, xfer1**2)
     np.testing.assert_almost_equal(xfer3, 4 * xfer1)
@@ -222,7 +222,7 @@ def test_ZPK_various(zpk, tpath_join):
     np.testing.assert_almost_equal(xfer4, 1/xfer4b)
     np.testing.assert_almost_equal(xfer4, 1/xfer4c)
 
-def test_ZPK_delay_math(tpath_join):
+def test_ZPK_delay_math():
     """
     Test the conversions to and from ZPK representation and statespace representation
     using a delay filter
@@ -246,11 +246,11 @@ def test_ZPK_delay_math(tpath_join):
     #axB.ax1.semilogx(fr2.fplot_deg, label="SS2ZPK")
 
     axB.ax0.legend()
-    axB.save(tpath_join("test_ZPK.pdf"))
+    axB.save(tjoin("test_ZPK.pdf"))
 
 
 @pytest.mark.parametrize('idx_ord', [4, 40, 100])
-def test_SS_delay_print(idx_ord, tpath_join):
+def test_SS_delay_print(idx_ord):
     """
     Test the conversions to and from ZPK representation and statespace representation
     using a delay filter

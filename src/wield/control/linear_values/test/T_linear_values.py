@@ -11,14 +11,14 @@ import numpy as np
 import wield.control.linear_values as lv
 
 from wield.pytest.fixtures import (  # noqa: F401
-    tpath_join,
+    tjoin,
     dprint,
     plot,
-    fpath_join,
+    fjoin,
 )
 
 
-def T_linear_values(dprint, tpath_join, fpath_join):
+def T_linear_values():
     ZERO = lv.scalar(0)
     IDENT = lv.scalar(1)
     SCALAR = lv.scalar(2)

@@ -24,6 +24,15 @@ from numpy.polynomial.chebyshev import (
 
 from . import ss_algorithms
 
+
+from numpy.polynomial.chebyshev import (
+    chebcompanion,
+    chebfromroots,
+    chebroots,
+    chebdiv,
+)
+
+
 TupleABCDE = collections.namedtuple("ABCDE", ('A', 'B', 'C', 'D', 'E'))
 
 pi2 = np.pi * 2
@@ -513,7 +522,11 @@ def zpk_rc(
     k=1,
     convention="scipy",
     orientation="lower",
+    method="chain_poly",
 ):
+    """
+    Adapter method to convert ZPK into statespace using the known methods
+    """
     if convention == "scipyHz":
         convention = "scipy"
         Zc = pi2 * np.array(Zc)
@@ -525,13 +538,22 @@ def zpk_rc(
     else:
         raise RuntimeError("Unrecognized Convention")
 
-    return ZPKdict(
-        zdict=dict(c=Zc, r=Zr),
-        pdict=dict(c=Pc, r=Pr),
-        k=k,
-        convention=convention,
-        orientation=orientation,
-    )
+    if method == 'chain_poly':
+        return ZPKdict(
+            zdict=dict(c=Zc, r=Zr),
+            pdict=dict(c=Pc, r=Pr),
+            k=k,
+            convention=convention,
+            orientation=orientation,
+        )
+    elif method == 'companion_cheby':
+        return ZPK2ss_cheby_companion(
+            Zc, Zr,
+            Pc, Pr,
+            k
+        )
+    else:
+        raise RuntimeError("Unrecognized Method {}".format(method))
 
 
 def ZPKdict(
@@ -566,33 +588,33 @@ def ZPKdict(
             E[..., ::-1, ::-1],
         )
 
-
         val = ss_algorithms.chain([left, right])
 
         A, B, C, D, E = val
         return val
+    
+        if False:
+            # Order of the A matrix
+            n = A.shape[0]
+            # Number of inputs
+            m = B.shape[1]
+            # Number of outputs
+            p = C.shape[0]
 
-        # Order of the A matrix
-        n = A.shape[0]
-        # Number of inputs
-        m = B.shape[1]
-        # Number of outputs
-        p = C.shape[0]
+            dico = 'C'
+            job = 'B'
+            equil = 'S'
+            tol1 = 0
+            tol2 = 0
+            from slycot import ab09nd
+            nr, Ar, Br, Cr, Dr, ns, hsv = ab09nd(
+                dico, job, equil,
+                n, m, p,
+                A, B, C, D,
+                tol1=tol1, tol2=tol2,
+            )  # ,alpha=None,nr=None,tol1=0,tol2=0,ldwork=None)
 
-        dico = 'C'
-        job = 'B'
-        equil = 'S'
-        tol1 = 0
-        tol2 = 0
-        from slycot import ab09nd
-        nr, Ar, Br, Cr, Dr, ns, hsv = ab09nd(
-            dico, job, equil,
-            n, m, p,
-            A, B, C, D,
-            tol1=tol1, tol2=tol2,
-        )  # ,alpha=None,nr=None,tol1=0,tol2=0,ldwork=None)
-
-        return Ar, Br, Cr, Dr, np.eye(Ar.shape[0])
+            return Ar, Br, Cr, Dr, np.eye(Ar.shape[0])
 
     # ABCDE = split_chain(ABCDEs)
     ABCDE = ss_algorithms.chain(ABCDEs)
@@ -613,5 +635,111 @@ def ZPKdict(
         raise RuntimeError("Unrecognized Orientation")
 
     return TupleABCDE(*ABCDE)
+
+
+def ZPK2ss_cheby_companion(
+    Zc,
+    Zr,
+    Pc,
+    Pr,
+    k
+):
+    """
+    This is a  construction of a ADBC statespace using a
+    Chebychev companion matrix. 
+    """
+    p = np.concatenate(
+        [Pc, Pc.conjugate(), Pr]
+    )
+    z = np.concatenate(
+        [Zc, Zc.conjugate(), Zr]
+    )
+
+    # norm = max(abs(p))**0.5
+    norm = 1
+    p = p / norm
+    z = z / norm
+    cp = chebfromroots(p).real
+    cz = chebfromroots(z).real
+    nd = len(cp) - len(cz)
+
+    if nd == 0:
+        qz, cz = chebdiv(cz, cp)
+        # surprisingly, the nd needs to stay 0 for the normalization call below,
+        # rather than being reset
+        # nd = len(cp) - len(cz)
+    else:
+        qz = 0
+
+    czl = np.concatenate([cz, np.zeros(len(cp) - len(cz))])
+    A = chebcompanion(cp)
+
+    n = len(cp) - 1
+    scl = np.array([1.] + [np.sqrt(.5)]*(n-1))
+    # this is basically the last line of the companion matrix, but not subtracting
+    # the companion coupling alpha beta gamma contribution.
+    czs = (czl[:-1]/cp[-1])*(scl/scl[-1])*.5
+
+    A = A * norm
+
+    C = np.zeros(len(cp) - 1)
+    C[-1] = k
+    C = C.reshape(1, -1)
+
+    B = czs / norm**(nd - 1)
+    B = B.reshape(-1, 1)
+
+    D = np.asarray([qz]).reshape(1, 1) * k
+    E = None
+
+    return A, B, C, D, E
+
+
+def chebcompanion_scaled(c, scale = None):
+    """Return the scaled companion matrix of c.
+
+    The basis polynomials are scaled so that the companion matrix is
+    symmetric when `c` is a Chebyshev basis polynomial. This provides
+    better eigenvalue estimates than the unscaled case and for basis
+    polynomials the eigenvalues are guaranteed to be real if
+    `numpy.linalg.eigvalsh` is used to obtain them.
+
+    Parameters
+    ----------
+    c : array_like
+        1-D array of Chebyshev series coefficients ordered from low to high
+        degree.
+
+    Returns
+    -------
+    mat : ndarray
+        Scaled companion matrix of dimensions (deg, deg).
+
+    Notes
+    -----
+
+    .. versionadded:: 1.7.0
+
+    """
+    # c is a trimmed copy
+    if scale is None:
+        scale = c[-1]
+
+    if len(c) < 2:
+        raise ValueError('Series must have maximum degree of at least 1.')
+    if len(c) == 2:
+        return np.array([[-c[0]/c[1]]])
+
+    n = len(c) - 1
+    mat = np.zeros((n, n), dtype=c.dtype)
+    scl = np.array([1.] + [np.sqrt(.5)]*(n-1))
+    top = mat.reshape(-1)[1::n+1]
+    bot = mat.reshape(-1)[n::n+1]
+    top[0] = np.sqrt(.5)
+    top[1:] = 1/2
+    bot[...] = top
+    mat[:, -1] -= (c[:-1]/scale)*(scl/scl[-1])*.5
+    return mat
+
 
 
