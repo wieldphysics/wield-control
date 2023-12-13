@@ -20,7 +20,7 @@ import copy
 import scipy.signal
 
 
-def d2c_zpk(zpk_z, fs, method="tustin"):
+def d2c_zpk(zpk_z, fs, method="tustin", f_match = None):
     """
     # From pyctrl, .../userapps../lsc/h1/scripts/feedforward/ipython_notebooks/pyctrl.py
     ## discrete <-> continuous conversion
@@ -48,20 +48,27 @@ def d2c_zpk(zpk_z, fs, method="tustin"):
         ps = fs2x * (pz - 1.0) / (pz + 1.0)
 
         zselect = abs(zs) < fmax
-        zs = zs[zselect]
-        zz = zz[zselect]
         pselect = abs(ps) < fmax
-        ps = ps[pselect]
-        pz = pz[pselect]
-        # print("select", zselect, pselect)
-        nzz, npz = len(zz), len(pz)
 
         for i in range(nzz):
+            if not zselect[i]:
+                zz[i] += 1e-2
             # kz /= 1.0 - 0.5 * dt * zs[i]
             ks *= 1.0 + zz[i]
         for i in range(npz):
+            if not pselect[i]:
+                pz[i] += 1e-2
             # kz *= 1.0 - 0.5 * dt * zs[i]
             ks /= 1.0 + pz[i]
+
+        zs = zs[zselect]
+        zz = zz[zselect]
+        # print(np.sum(~zselect))
+        ps = ps[pselect]
+        pz = pz[pselect]
+        # print(np.sum(~pselect))
+        # print("select", zselect, pselect)
+        nzz, npz = len(zz), len(pz)
 
         if npz > nzz:
             zs_pad = fs2x * np.ones(npz - nzz, dtype=complex)
@@ -75,6 +82,9 @@ def d2c_zpk(zpk_z, fs, method="tustin"):
     else:  # use direct matching, i.e., the `matched' method in matlab
         zs = np.log(zz) / dt
         ps = np.log(pz) / dt
+
+        if f_match is None:
+            raise RuntimeError("Must specify f_match if using the 'match' method")
 
         __, k0 = scipy.signal.freqresp((zs, ps, 1), 2.0 * np.pi * f_match)
         __, k1 = scipy.signal.freqz_zpk(zz, pz, kz, np.pi * f_match / (fs / 2.0))
