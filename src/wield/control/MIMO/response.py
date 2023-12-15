@@ -13,7 +13,6 @@ import numpy as np
 
 from . import mimo
 from . import util
-from .. import SISO
 
 
 class MIMOFResponse(mimo.MIMO):
@@ -109,6 +108,8 @@ class MIMOFResponse(mimo.MIMO):
         convert a single output (row) and input (col) into a SISO
         representation
         """
+        from .. import SISO
+
         r = self.outputs[row]
         c = self.inputs[col]
 
@@ -140,6 +141,8 @@ class MIMOFResponse(mimo.MIMO):
 
         ss[output_chn, input_chn] which will return a SISO object losing channel information
         """
+        from .. import SISO
+
         row, col = key
 
         rlst, outputs, olst, rlistified = util.apply_io_map(row, self.outputs)

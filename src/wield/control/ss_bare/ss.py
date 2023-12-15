@@ -44,9 +44,9 @@ class BareStateSpace(object):
 
         if E is not None:
             E = np.asarray(E)
-            # if np.all(E == np.eye(E.shape[-1])):
-            #     E = None
-            assert(E.shape == A.shape)
+            assert (E.shape == A.shape)
+            if np.all(E == np.eye(E.shape[-1])):
+                E = None
 
         if hermitian:
             assert (np.all(A.imag == 0))
@@ -530,6 +530,8 @@ class BareStateSpace(object):
         m = self.B.shape[1]
         # Number of outputs
         p = self.C.shape[0]
+
+        assert (self.E is None)
 
         from slycot import ab09nd
         nr, Ar, Br, Cr, Dr, ns, hsv = ab09nd(
@@ -1372,6 +1374,11 @@ class BareStateSpaceUser(object):
     def balance(self, **kwargs):
         return self.__build_similar__(
             ss=self.ss.balanceA(**kwargs),
+        )
+
+    def balanceABC(self, **kwargs):
+        return self.__build_similar__(
+            ss=self.ss.balanceABC(**kwargs),
         )
 
     def schur_form(self, **kwargs):

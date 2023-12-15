@@ -20,7 +20,6 @@ from ..ss_bare.ss import BareStateSpace, BareStateSpaceUser
 from . import mimo
 from . import response
 from . import util
-from .. import SISO
 
 
 class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
@@ -189,6 +188,8 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
         convert a single output (row) and input (col) into a SISO
         representation
         """
+        from .. import SISO
+
         r = self.outputs[row]
         if isinstance(r, tuple):
             raise RuntimeError("Row name is a span and cannot be used to create a SISO system")
@@ -208,6 +209,8 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
 
         drops dissection information if it existed
         """
+        from .. import SISO
+
         row, col = key
 
         rlst, outputs, olst, rlistified = util.apply_io_map(row, self.outputs)

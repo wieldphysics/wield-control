@@ -13,6 +13,56 @@ import numpy as np
 def nz(M):
     return 1 * (M != 0)
 
+def nz(M):
+    if M != 0:
+        v = np.log10(abs(M) * 3)
+        if 0 <= v < 9:
+            v = int(v)
+            return '123456789'[v]
+        elif v <= 0:
+            # v is negative
+            v = -v
+
+            # v is positive and large
+
+            # 11 options
+            c1 = 'abcdefghijk'
+            # 14 options
+            c2 = 'lmnopqrstuvwxy'
+            if v < 11:
+                return c1[int(v)]
+            else:
+                # v is at most 308
+                v = v / 12
+                if v < 14:
+                    return c2[int(v)]
+                else:
+                    # really small value
+                    return 'z'
+        else:
+            v = (v - 9)
+            # v is at most 308 - 9
+            v = v
+
+            # v is positive and large
+
+            # 25 options
+            c1 = 'ABCDEFGHIJK'
+            c2 = 'LMNOPQRSTUVWXY'
+            if v < 11:
+                return c1[int(v)]
+            else:
+                # v is at most 308
+                v = v / 12
+                if v < 14:
+                    return c2[int(v)]
+                else:
+                    # really large
+                    return 'Z'
+    else:
+        # is zero
+        return '.'
+nz = np.vectorize(nz, otypes='U')
 
 def print_dense_nonzero(ssb):
     """
@@ -50,14 +100,17 @@ def print_dense_nonzero(ssb):
             s_str.append("┓ ")
     s_str = "  " + "".join(s_str)
 
-    Astr = np.array2string(nz(ssb.A), max_line_width=np.nan, threshold=100 ** 2)
+    kw = dict(
+        formatter={'str_kind': lambda x: str(x)}
+    )
+    Astr = np.array2string(nz(ssb.A), max_line_width=np.nan, threshold=100 ** 2, **kw)
     if ssb.E is not None:
-        Estr = np.array2string(nz(ssb.E), max_line_width=np.nan, threshold=30 ** 2)
+        Estr = np.array2string(nz(ssb.E), max_line_width=np.nan, threshold=30 ** 2, **kw)
     else:
         Estr = ''
-    Bstr = np.array2string(nz(ssb.B), max_line_width=np.nan, threshold=100 ** 2)
-    Cstr = np.array2string(nz(ssb.C), max_line_width=np.nan, threshold=100 ** 2)
-    Dstr = np.array2string(nz(ssb.D), max_line_width=np.nan, threshold=100 ** 2)
+    Bstr = np.array2string(nz(ssb.B), max_line_width=np.nan, threshold=100 ** 2, **kw)
+    Cstr = np.array2string(nz(ssb.C), max_line_width=np.nan, threshold=100 ** 2, **kw)
+    Dstr = np.array2string(nz(ssb.D), max_line_width=np.nan, threshold=100 ** 2, **kw)
     # print(" | ".join(s_str_list))
     ziplines(
         "\n" + c_str,

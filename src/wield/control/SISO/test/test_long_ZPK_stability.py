@@ -56,18 +56,36 @@ def gen_filt():
     filt = filt / abs(filtss.Linf_norm()[0]) 
     return filt
 
-def test_long_ZPK_stability():
+def test_long_ZPK_stability_plot():
     """
     This is a test of the numerical stability of a very large ZPK filter that spans 18 orders of magnitude
 
     """
     filt = gen_filt()
-    # filt = filt * filt
     filtss = filt.asSS
+    filt = filt * filt
+    filtss_bal2 = filtss.balance_and_truncate()
+    filtss = filtss.balance()
+    filtss = filtss.schur_form()
+
+    filtss_bal3 = filtss.ss.transpose() @ filtss.ss.transpose()
+    filtss_bal3.print_nonzero()
+
+    filtss = filtss * filtss
+    filtss_bal2 = filtss_bal2 * filtss_bal2
+    # print(filtss.A.shape, filtss.E.shape)
 
     filt = filt / abs(filtss.Linf_norm()[0]) 
     filtss = filtss / abs(filtss.Linf_norm()[0]) 
-    print("gain", filt.k)
+    # print(filtss.A.shape, filtss.E.shape)
+
+    filtss_bal = filtss.balance_and_truncate()
+    filtss_bal2 = filtss_bal2.balance_and_truncate()
+
+
+    filtss.print_nonzero()
+    filtss.print_nonzero()
+    filtss_bal.print_nonzero()
 
     F_Hz = np.geomspace(1e-3, 1e3, 1000)
 
@@ -89,6 +107,15 @@ def test_long_ZPK_stability():
     xfer = filtss.fresponse(f=F_Hz)
     axB.ax0.loglog(*xfer.fplot_mag, label="state space, wield")
     axB.ax1.semilogx(*xfer.fplot_deg180, label="state space, wield")
+
+    xfer = filtss_bal.fresponse(f=F_Hz)
+    axB.ax0.loglog(*xfer.fplot_mag, label="state space, wield bal")
+    axB.ax1.semilogx(*xfer.fplot_deg180, label="state space, wield bal")
+
+    xfer = filtss_bal2.fresponse(f=F_Hz)
+    axB.ax0.loglog(*xfer.fplot_mag, label="state space, wield bal2")
+    axB.ax1.semilogx(*xfer.fplot_deg180, label="state space, wield bal2")
+
     axB.ax0.set_ylim(1e-25, 10)
     axB.ax0.legend()
 
