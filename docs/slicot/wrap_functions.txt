@@ -1,0 +1,9 @@
+python -m numpy.f2py \
+SLICOT-Reference/src/AB09HD.f \
+SLICOT-Reference/src/SG03AD.f \
+SLICOT-Reference/src/SG03BD.f \
+SLICOT-Reference/src/SG03BD.f \
+SLICOT-Reference/src/TG01GD.f \
+SLICOT-Reference/src/TG01LD.f \
+-h dss.pyf --overwrite-signature
+
