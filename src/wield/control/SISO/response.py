@@ -13,6 +13,7 @@ import numbers
 import numpy as np
 
 from .. import MIMO
+from ..utilities import algorithm_choice
 
 from . import siso
 
@@ -31,6 +32,8 @@ class SISOFResponse(siso.SISO):
         tf=None,
         snr=None,
         dt=None,
+        algorithm_choices=None,
+        algorithm_ranking=None,
         hermitian: bool = True,
         time_symm: bool = False,
     ):
@@ -64,6 +67,10 @@ class SISOFResponse(siso.SISO):
         assert(domain is not None)
         domain = np.array(domain)
         shape = domain.shape
+
+        self.algorithm_choices, self.algorithm_ranking = algorithm_choice.choices_and_rankings(
+            algorithm_choices, algorithm_ranking
+        )
 
         if tf is not None:
             self.tf_sm = tf
@@ -203,6 +210,8 @@ class SISOFResponse(siso.SISO):
 
     def __getitem__(self, key):
         kw = dict(
+            algorithm_choices=self.algorithm_choices,
+            algorithm_ranking=self.algorithm_ranking,
             dt=self.dt,
             hermitian=self.hermitian,
             time_symm=self.time_symm,
@@ -316,6 +325,8 @@ class SISOFResponse(siso.SISO):
         kw = dict(
             tf=None,
             snr=None,
+            algorithm_choices=self.algorithm_choices,
+            algorithm_ranking=self.algorithm_ranking,
             dt=self.dt,
             hermitian=self.hermitian,
             time_symm=self.time_symm,
@@ -543,6 +554,8 @@ class SISOFResponse(siso.SISO):
             if snr is None:
                 snr = self.snr_sm
             kw = dict(
+                algorithm_choices=self.algorithm_choices,
+                algorithm_ranking=self.algorithm_ranking,
                 snr=snr,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
@@ -556,6 +569,8 @@ class SISOFResponse(siso.SISO):
                 else:
                     snr = (self.snr_sm**-2 + other.snr_sm**-2)**-0.5
             kw = dict(
+                algorithm_choices=self.algorithm_choices,
+                algorithm_ranking=self.algorithm_ranking,
                 snr=snr,
                 dt=self.dt,
                 hermitian=self.hermitian and other.hermitian,
@@ -773,6 +788,8 @@ class SISOFResponse(siso.SISO):
             tf = np.concatenate([self.tf, other.tf])
 
         kw = dict(
+            algorithm_choices=self.algorithm_choices,
+            algorithm_ranking=self.algorithm_ranking,
             snr=snr,
             tf=tf,
             dt=self.dt,

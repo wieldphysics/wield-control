@@ -16,6 +16,7 @@ from copy import deepcopy
 from wield.bunch import Bunch
 
 from ..ss_bare.ss import BareStateSpace, BareStateSpaceUser
+from ..utilities import algorithm_choice
 
 from . import mimo
 from . import response
@@ -604,6 +605,8 @@ def statespace(
     dt=None,
     fiducial_rtol=None,
     fiducial_atol=None,
+    algorithm_choices=None,
+    algorithm_ranking=None,
 ):
     """
     Form a MIMO LTI system from statespace matrices.
@@ -678,6 +681,8 @@ def statespace(
             A, B, C, D, E,
             hermitian=hermitian,
             time_symm=time_symm,
+            algorithm_choices=algorithm_choices,
+            algorithm_ranking=algorithm_ranking,
             dt=dt,
         ),
         inputs=inputs,
@@ -785,12 +790,24 @@ def ssjoinsum(*args):
                 islc_to, islc_fr = toslc(key_to, key_fr)
                 D[..., oslc_to, islc_to] = ssB.D[..., oslc_fr, islc_fr]
 
+    # now merge all of the algorithm choices
+    ss = SSs[0]
+    algorithm_choices = ss.algorithm_choices
+    algorithm_ranking = ss.algorithm_ranking
+    for ss in enumerate(SSs[1:]):
+        algorithm_choices, algorithm_ranking = algorithm_choice.algo_merge_full(
+            algorithm_choices, algorithm_ranking,
+            ss.algorithm_choices, ss.algorithm_ranking,
+        )
+
     return MIMOStateSpace(
         ss=BareStateSpace(
             A, B, C, D, E,
             hermitian=np.all([ss.hermitian for ss in SSs]),
             time_symm=np.all([ss.time_symm for ss in SSs]),
             dt=SSs[0].dt,
+            algorithm_choices=algorithm_choices,
+            algorithm_ranking=algorithm_ranking,
         ),
         inputs=inputs,
         outputs=outputs,

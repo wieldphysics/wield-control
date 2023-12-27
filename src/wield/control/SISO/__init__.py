@@ -15,3 +15,6 @@ from .response import SISOFResponse
 
 from . import design
 
+
+# needed to cause the registrations
+from . import algorithms_zpk2ss  # noqa

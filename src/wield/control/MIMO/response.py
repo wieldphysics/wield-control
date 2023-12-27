@@ -31,6 +31,8 @@ class MIMOFResponse(mimo.MIMO):
         outputs=None,
         hermitian: bool = True,
         time_symm: bool = False,
+        algorithm_choices=None,
+        algorithm_ranking=None,
     ):
         """
         snr of None means that the tf was computed numerically. A snr of False (or 0) means that it is from data but is unknown
@@ -194,6 +196,8 @@ class MIMOFResponse(mimo.MIMO):
                 snr=snr,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
+                algorithm_choices=self.algorithm_choices,
+                algorithm_ranking=self.algorithm_ranking,
             )
         else:
             if snr is None:
@@ -207,6 +211,8 @@ class MIMOFResponse(mimo.MIMO):
                 snr=snr,
                 hermitian=self.hermitian and other.hermitian,
                 time_symm=self.time_symm and other.time_symm,
+                algorithm_choices=self.algorithm_choices,
+                algorithm_ranking=self.algorithm_ranking,
             )
         f = self.__dict__.get('f', None)
         if f is not None:

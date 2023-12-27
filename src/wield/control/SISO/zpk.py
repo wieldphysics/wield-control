@@ -12,11 +12,10 @@ import numbers
 import numpy as np
 import warnings
 
-from ..algorithms.statespace.dense import zpk_algorithms
-
 from ..algorithms.zpk import srootset, zrootset
+from ..utilities import algorithm_choice
+
 from . import siso
-from . import ss
 from . import util
 from . import response
 
@@ -40,6 +39,8 @@ class ZPK(siso.SISOCommonBase):
         time_symm: bool = False,
         dt=None,
         fiducial=None,
+        algorithm_choices=None,
+        algorithm_ranking=None,
         fiducial_rtol=None,
         fiducial_atol=None,
     ):
@@ -51,11 +52,15 @@ class ZPK(siso.SISOCommonBase):
         response: transfer function responses mapped to the response_w values
         """
         if dt is None:
-            assert(isinstance(z, srootset.SDomainRootSet))
-            assert(isinstance(p, srootset.SDomainRootSet))
+            assert (isinstance(z, srootset.SDomainRootSet))
+            assert (isinstance(p, srootset.SDomainRootSet))
         else:
-            assert(isinstance(z, zrootset.ZDomainRootSet))
-            assert(isinstance(p, zrootset.ZDomainRootSet))
+            assert (isinstance(z, zrootset.ZDomainRootSet))
+            assert (isinstance(p, zrootset.ZDomainRootSet))
+
+        self.algorithm_choices, self.algorithm_ranking = algorithm_choice.choices_and_rankings(
+            algorithm_choices, algorithm_ranking
+        )
 
         self.zeros = z
         self.poles = p
@@ -65,22 +70,22 @@ class ZPK(siso.SISOCommonBase):
         self.dt = dt
 
         if self.hermitian:
-            assert(k.imag == 0)
+            assert (k.imag == 0)
 
         if dt is None:
             if self.hermitian:
-                assert(self.zeros.mirror_real)
-                assert(self.poles.mirror_real)
+                assert (self.zeros.mirror_real)
+                assert (self.poles.mirror_real)
             if self.time_symm:
-                assert(self.zeros.mirror_imag)
-                assert(self.poles.mirror_imag)
+                assert (self.zeros.mirror_imag)
+                assert (self.poles.mirror_imag)
         else:
             if self.hermitian:
-                assert(self.zeros.mirror_real)
-                assert(self.poles.mirror_real)
+                assert (self.zeros.mirror_real)
+                assert (self.poles.mirror_real)
             if self.time_symm:
-                assert(self.zeros.mirror_disc)
-                assert(self.poles.mirror_disc)
+                assert (self.zeros.mirror_disc)
+                assert (self.poles.mirror_disc)
         self.test_fresponse(
             fiducial=fiducial,
             rtol=fiducial_rtol,
@@ -185,44 +190,14 @@ class ZPK(siso.SISOCommonBase):
     def asSS(self):
         if self._SS is not None:
             self._SS
-        assert (self.hermitian)
 
-        z = self.zeros.drop_mirror_imag()
-        p = self.poles.drop_mirror_imag()
-        # Currently only supports hermitian inputs
-
-        if len(z) <= len(p) and len(p) > 0:
-            ABCDE = zpk_algorithms.zpk_rc(
-                Zc=z.c_plane,
-                Zr=z.r_line,
-                Pc=p.c_plane,
-                Pr=p.r_line,
-                k=self.k,
-                convention="scipy",
-                orientation="upper",
-                method='companion_cheby',
-                # method='chain_poly',
+        self._SS = algorithm_choice.algo_run(
+            'zpk2ss',
+            self.algorithm_ranking,
+            args=(),
+            kwargs=dict(
+                zpk=self,
             )
-        else:
-            ABCDE = zpk_algorithms.zpk_rc(
-                Zc=z.c_plane,
-                Zr=z.r_line,
-                Pc=p.c_plane,
-                Pr=p.r_line,
-                k=self.k,
-                convention="scipy",
-                orientation="upper",
-                method='chain_poly',
-            )
-
-        self._SS = ss.statespace(
-            ABCDE,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            fiducial=self.fiducial,
-            fiducial_rtol=self.fiducial_rtol,
-            fiducial_atol=self.fiducial_atol,
-            # flags={"schur_real_upper", "hessenburg_upper"},
         )
         return self._SS
 
@@ -268,6 +243,8 @@ class ZPK(siso.SISOCommonBase):
                 w=w,
                 f=f,
                 s=s,
+                algorithm_choices=self.algorithm_choices,
+                algorithm_ranking=self.algorithm_ranking,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
                 snr=None,
@@ -286,6 +263,8 @@ class ZPK(siso.SISOCommonBase):
             w=w,
             f=f,
             s=s,
+            algorithm_choices=self.algorithm_choices,
+            algorithm_ranking=self.algorithm_ranking,
             hermitian=self.hermitian,
             time_symm=self.time_symm,
             snr=None,
@@ -304,6 +283,14 @@ class ZPK(siso.SISOCommonBase):
                 slc = slice(None, None, 2)
             fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
             fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
+
+            algorithm_choices, algorithm_ranking = algorithm_choice.algo_merge_full(
+                self.algorithm_choices,
+                self.algorithm_ranking,
+                other.algorithm_choices,
+                other.algorithm_ranking,
+            )
+
             assert(self.dt == other.dt)
             return self.__class__(
                 z=self.zeros * other.zeros,
@@ -311,6 +298,8 @@ class ZPK(siso.SISOCommonBase):
                 k=self.k * other.k,
                 hermitian=hermitian,
                 time_symm=time_symm,
+                algorithm_choices=algorithm_choices,
+                algorithm_ranking=algorithm_ranking,
                 dt=self.dt,
                 fiducial=(self.fiducial[slc] * fid_other_self).concatenate(fid_self_other * other.fiducial[slc]),
                 fiducial_rtol=self.fiducial_rtol,
@@ -321,6 +310,8 @@ class ZPK(siso.SISOCommonBase):
                 z=self.zeros,
                 p=self.poles,
                 k=self.k * other,
+                algorithm_choices=self.algorithm_choices,
+                algorithm_ranking=self.algorithm_ranking,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
                 dt=self.dt,
@@ -345,6 +336,8 @@ class ZPK(siso.SISOCommonBase):
                 fiducial=other * self.fiducial,
                 fiducial_rtol=self.fiducial_rtol,
                 fiducial_atol=self.fiducial_atol,
+                algorithm_choices=self.algorithm_choices,
+                algorithm_ranking=self.algorithm_ranking,
             )
         else:
             return NotImplemented
@@ -362,6 +355,14 @@ class ZPK(siso.SISOCommonBase):
                 slc = slice(None, None, 2)
             fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
             fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
+
+            algorithm_choices, algorithm_ranking = algorithm_choice.algo_merge_full(
+                self.algorithm_choices,
+                self.algorithm_ranking,
+                other.algorithm_choices,
+                other.algorithm_ranking,
+            )
+
             assert(self.dt == other.dt)
             return self.__class__(
                 z=self.zeros * other.poles,
@@ -373,6 +374,8 @@ class ZPK(siso.SISOCommonBase):
                 fiducial=(self.fiducial[slc] / fid_other_self).concatenate(fid_self_other / other.fiducial[slc]),
                 fiducial_rtol=self.fiducial_rtol,
                 fiducial_atol=self.fiducial_atol,
+                algorithm_choices=algorithm_choices,
+                algorithm_ranking=algorithm_ranking,
             )
         elif isinstance(other, numbers.Number):
             return self.__class__(
@@ -385,6 +388,8 @@ class ZPK(siso.SISOCommonBase):
                 fiducial=self.fiducial / other,
                 fiducial_rtol=self.fiducial_rtol,
                 fiducial_atol=self.fiducial_atol,
+                algorithm_choices=self.algorithm_choices,
+                algorithm_ranking=self.algorithm_ranking,
             )
         else:
             return NotImplemented
@@ -403,6 +408,8 @@ class ZPK(siso.SISOCommonBase):
                 fiducial=other / self.fiducial,
                 fiducial_rtol=self.fiducial_rtol,
                 fiducial_atol=self.fiducial_atol,
+                algorithm_choices=self.algorithm_choices,
+                algorithm_ranking=self.algorithm_ranking,
             )
         else:
             return NotImplemented
@@ -418,6 +425,8 @@ class ZPK(siso.SISOCommonBase):
             fiducial=1/self.fiducial,
             fiducial_rtol=self.fiducial_rtol,
             fiducial_atol=self.fiducial_atol,
+            algorithm_choices=self.algorithm_choices,
+            algorithm_ranking=self.algorithm_ranking,
         )
 
     def __pow__(self, other):
@@ -484,6 +493,8 @@ class ZPK(siso.SISOCommonBase):
             fiducial=None,
             fiducial_rtol=self.fiducial_rtol,
             fiducial_atol=self.fiducial_atol,
+            algorithm_choices=self.algorithm_choices,
+            algorithm_ranking=self.algorithm_ranking,
         )
 
 
@@ -512,6 +523,8 @@ def zpk(
         convention='scipy',
         classifier=None,
         dt=None,
+        algorithm_choices=None,
+        algorithm_ranking=None,
 ):
     """
     Form a SISO LTI system from root locations as zeros and poles.
@@ -663,6 +676,8 @@ def zpk(
             fiducial=None,
             fiducial_rtol=fiducial_rtol,
             fiducial_atol=fiducial_atol,
+            algorithm_choices=algorithm_choices,
+            algorithm_ranking=algorithm_ranking,
         )
     else:
         assert(angular is None)
@@ -681,10 +696,12 @@ def zpk(
             fiducial=None,
             fiducial_rtol=fiducial_rtol,
             fiducial_atol=fiducial_atol,
+            algorithm_choices=algorithm_choices,
+            algorithm_ranking=algorithm_ranking,
         )
 
     if ZPKprev:
-        #TODO check that ZPKprev has the same dt sample rate
+        # TODO check that ZPKprev has the same dt sample rate
         ZPKnew = ZPKprev * ZPKnew
 
     fiducial = util.build_fiducial(
@@ -746,5 +763,4 @@ def zpk(
         )
 
     return ZPKnew
-
 

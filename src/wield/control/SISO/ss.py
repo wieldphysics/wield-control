@@ -42,7 +42,9 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         """
         flags: this is a set of flags that indicate computed property flags for the state space. Examples of such properties are "schur_real_upper", "schur_complex_upper", "hessenburg_upper", "balanced", "stable"
         """
-        super().__init__(ss=ss)
+        super().__init__(
+            ss=ss,
+        )
 
         self.test_fresponse(
             fiducial=fiducial,
@@ -172,6 +174,8 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             w=w, f=f, s=s, z=z,
             hermitian=self.ss.hermitian,
             time_symm=self.ss.time_symm,
+            algorithm_choices=self.algorithm_choices,
+            algorithm_ranking=self.algorithm_ranking,
             dt=self.dt,
             snr=None,
         )
@@ -414,6 +418,8 @@ def statespace(
     fiducial_z=None,
     fiducial_rtol=None,
     fiducial_atol=None,
+    algorithm_choices=None,
+    algorithm_ranking=None,
 ):
     """
     Form a SISO LTI system from statespace matrices.
@@ -482,6 +488,8 @@ def statespace(
             flags=flags,
             hermitian=hermitian,
             time_symm=time_symm,
+            algorithm_choices=algorithm_choices,
+            algorithm_ranking=algorithm_ranking,
         ),
         fiducial=fiducial,
         fiducial_rtol=fiducial_rtol,

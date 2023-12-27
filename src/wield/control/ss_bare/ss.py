@@ -16,6 +16,7 @@ import scipy.linalg
 from ..algorithms.statespace.dense import xfer_algorithms
 from ..algorithms.statespace.dense import zpk_algorithms
 from ..algorithms.statespace.dense import ss_algorithms
+from ..utilities import algorithm_choice
 from . import ssprint
 
 
@@ -33,6 +34,8 @@ class BareStateSpace(object):
         hermitian: bool = True,
         time_symm: bool = False,
         flags={},
+        algorithm_choices=None,
+        algorithm_ranking=None,
         dt=None,
     ):
         # assert(isinstance(time_symm, numbers.Number))
@@ -66,6 +69,10 @@ class BareStateSpace(object):
         self.hermitian = hermitian
         self.time_symm = time_symm
         self.dt = dt
+
+        self.algorithm_choices, self.algorithm_ranking = algorithm_choice.choices_and_rankings(
+            algorithm_choices, algorithm_ranking
+        )
         return
 
     def __build_similar__(self, A, B, C, D, E=None):
@@ -78,6 +85,8 @@ class BareStateSpace(object):
             A=A, B=B, C=C, D=D, E=E,
             hermitian=self.hermitian,
             time_symm=self.time_symm,
+            algorithm_choices=self.algorithm_choices,
+            algorithm_ranking=self.algorithm_ranking,
             dt=self.dt,
         )
 
@@ -121,9 +130,7 @@ class BareStateSpace(object):
     @property
     def as_controlLTI(self):
         import control
-        A, B, C, D, E = self.ABCDe
-        # TODO
-        # assert(E is None)
+        A, B, C, D = self.ABCD
         return control.ss(A, B, C, D)
 
     @property
@@ -147,15 +154,17 @@ class BareStateSpace(object):
             yield self.E
 
     def time_reversal(self):
-        ret = self.__class__(
+        """
+        Return the time reversal of the system
+
+        TODO, adjust flags
+        """
+        ret = self.__build_similar__(
             A=-self.A,
             B=-self.B,
             C=self.C,
             D=self.D,
             E=self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
         return ret
 
@@ -163,31 +172,32 @@ class BareStateSpace(object):
         return self.time_reversal()
 
     def transpose(self):
-        ret = self.__class__(
+        """
+        Return the transpose of the system
+
+        TODO, adjust flags
+        """
+        ret = self.__build_similar__(
             A=self.A,
             B=self.C.T,
             C=self.B.T,
             D=self.D.T,
             E=self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
         return ret
 
     def adjoint(self):
         """
         Return the transpose and conjugate (time-reversal) of the system
+
+        TODO, adjust flags
         """
-        ret = self.__class__(
+        ret = self.__build_similar__(
             A=-self.A,
             B=-self.C.T,
             C=self.B.T,
             D=self.D.T,
             E=self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
         return ret
 
@@ -221,16 +231,13 @@ class BareStateSpace(object):
         """
         row, col = key
 
-        ret = self.__class__(
+        ret = self.__build_similar__(
             A=self.A,
             B=self.B[..., :, col],
             C=self.C[..., row, :],
             # double index fixes annoying way that multiple list indices are grouped by numpy
             D=self.D[..., row, :][..., :, col],
             E=self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
         return ret
 
@@ -241,6 +248,7 @@ class BareStateSpace(object):
             w=None,
             s=None,
             z=None,
+            # TODO, get rid of this key, using algorithm ranking instead
             use_laub=True,
             **kwargs
     ):
@@ -323,15 +331,12 @@ class BareStateSpace(object):
         else:
             raise RuntimeError("Unknown job")
 
-        return self.__class__(
+        return self.__build_similar__(
             Ar,
             Br,
             Cr,
             self.D,
             E=self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
 
     def balanceABC(self, which='A'):
@@ -375,15 +380,12 @@ class BareStateSpace(object):
             A, B, C,
             job='A'
         )
-        return self.__class__(
+        return self.__build_similar__(
             Ar,
             Br,
             Cr,
             self.D,
             E=self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
 
     def balanceA(self, permute=True):
@@ -435,15 +437,12 @@ class BareStateSpace(object):
             Bscale = self.B
             Cscale = self.C
 
-        return self.__class__(
+        return self.__build_similar__(
             A=Ascale,
             B=Bscale,
             C=Cscale,
             D=self.D,
             E=Escale,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
 
     def schurA(self):
@@ -470,15 +469,12 @@ class BareStateSpace(object):
             raise RuntimeError("Schur form not supported with an E matrix")
 
         # todo save Schur form flag
-        return self.__class__(
+        return self.__build_similar__(
             A=A,
             B=B,
             C=C,
             D=self.D,
             E=E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
 
     def balance_and_truncate_unscaled(self, method='sqrt', equil=True, tol1=0, tol2=0):
@@ -546,15 +542,12 @@ class BareStateSpace(object):
         # if the reduced model has fever states than the original model tell the user
         #if nr < n:
             #print('The equalized gain model has ' + str(n-nr) + ' fewer state(s) than the original model')
-        return self.__class__(
+        return self.__build_similar__(
             Ar,
             Br,
             Cr,
             Dr,
             E=self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
 
     def balance_and_truncate(self, rescale_io=True, **kwargs):
@@ -568,29 +561,23 @@ class BareStateSpace(object):
             # print(self.C.shape)
             # print("Cscale", Cscale)
 
-            s = self.__class__(
+            s = self.__build_similar__(
                 A=s.A,
                 B=s.B / Bscale.reshape(1, -1),
                 C=s.C / Cscale.reshape(-1, 1),
                 D=s.D,
                 E=s.E,
-                hermitian=s.hermitian,
-                time_symm=s.time_symm,
-                dt=s.dt,
             )
         
         s = s.balance_and_truncate_unscaled(**kwargs)
 
         if rescale_io:
-            s = self.__class__(
+            s = self.__build_similar__(
                 A=s.A,
                 B=s.B * Bscale.reshape(1, -1),
                 C=s.C * Cscale.reshape(-1, 1),
                 D=s.D,
                 E=s.E,
-                hermitian=s.hermitian,
-                time_symm=s.time_symm,
-                dt=s.dt,
             )
         return s
 
@@ -642,15 +629,12 @@ class BareStateSpace(object):
                 equil=scalechar,
             )
 
-            return self.__class__(
+            return self.__build_similar__(
                 A[:nr, :nr],
                 B[:nr, :self.Ninputs],
                 C[:self.Noutputs, :nr],
                 self.D,
                 None,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
             )
         else:
             return self
@@ -705,15 +689,12 @@ class BareStateSpace(object):
             s = s.minreal(job='observable', scale=False, tol=tol)
             pass
 
-        s = self.__class__(
+        s = self.__build_similar__(
             A=s.A,
             B=s.B * Bscale.reshape(1, -1),
             C=s.C * Cscale.reshape(-1, 1),
             D=s.D,
             E=s.E,
-            hermitian=s.hermitian,
-            time_symm=s.time_symm,
-            dt=s.dt,
         )
         return s
 
@@ -751,15 +732,12 @@ class BareStateSpace(object):
             )
             BZ = BZ[:nr, :self.Nstates]
 
-            return self.__class__(
+            return self.__build_similar__(
                 A[:nr, :nr],
                 BZ @ self.B,
                 self.C @ BZ.T,
                 self.D,
                 None,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
             )
         else:
             return self
@@ -799,15 +777,12 @@ class BareStateSpace(object):
             )
             CZ = CZ[:self.Nstates, :nr]
 
-            return self.__class__(
+            return self.__build_similar__(
                 A[:nr, :nr],
                 CZ.T @ self.B,
                 self.C @ CZ,
                 self.D,
                 None,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
             )
         else:
             return self
@@ -935,10 +910,7 @@ class BareStateSpace(object):
 
     def feedbackD(self, D):
         """
-        Feedback linkage for a single statespace
-
-        connections_rowcol is a list of row, col pairs
-        gain is the connection gain to apply
+        Feedback linkage for a single statespace.
         """
 
         fbD = D
@@ -952,15 +924,57 @@ class BareStateSpace(object):
         C = self.C + self.D @ clD @ self.C
         D = self.D + self.D @ clD @ self.D
 
-        return self.__class__(
-            A,
-            B,
-            C,
-            D,
+        return self.__build_similar__(
+            A, B, C, D,
             self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
+        )
+
+    def feedbackDE(self, D):
+        """
+        Feedback linkage for a single statespace.
+
+        extend the space and uses descriptor methods, thus extends the A and E matrices.
+
+        TODO, rearrange D to minimize rank (or make another function that calls this one).
+        Such a rearrangement can require a rank determination.
+        """
+
+        if self.dt is not None:
+            raise NotImplementedError("feedback not yet implemented in discrete time")
+
+        fbD = D
+        # logical D
+        Dlog = (fbD == 0)
+
+        nzR = np.all(Dlog, axis=0)
+        nzC = np.all(Dlog, axis=1)
+        idxR = np.argwhere(nzR)
+        idxC = np.argwhere(nzC)
+        nExt = min(len(idxR), len(idxC))
+        nSt = self.A.shape[-1]
+
+        E2 = np.block([
+            [self.E, np.zeros((nSt, nExt))],
+            [np.zeros((nExt, nSt)), np.zeros((nExt, nExt))]
+        ])
+
+        if nExt == len(idxC):
+            A2 = np.block([
+                [self.A, self.B[:, nzR] @ fbD[nzR, :][:, nzC]],
+                [self.C[nzR, :], -np.eye(nExt)]
+            ])
+            B2 = np.block([[self.B], [self.D[nzR, :]]])
+        else:
+            A2 = np.block([
+                [self.A, self.B[:, nzC]],
+                [fbD[nzR, :][:, nzC] @ self.C[nzC, :], -np.eye(nExt)]
+            ])
+            B2 = np.block([[self.B], [fbD[nzR, :][:, nzC] @ self.D[nzR, :]]])
+
+        C2 = np.block([[self.C, np.zeros((nSt, nExt))]])
+
+        return self.__build_similar__(
+            A2, B2, C2, self.D, E2,
         )
 
     def __matmul__(self, other):
@@ -973,8 +987,17 @@ class BareStateSpace(object):
 
             hermitian = self.hermitian and other.hermitian
             time_symm = self.time_symm and other.time_symm
-            assert(self.dt == other.dt)
+            assert (self.dt == other.dt)
+
+            algorithm_choices, algorithm_ranking = algorithm_choice.algo_merge_full(
+                self.algorithm_choices,
+                self.algorithm_ranking,
+                other.algorithm_choices,
+                other.algorithm_ranking,
+            )
+
             ABCDE = ss_algorithms.chain([self.ABCDE, other.ABCDE])
+
             return self.__class__(
                 A=ABCDE.A,
                 B=ABCDE.B,
@@ -983,19 +1006,18 @@ class BareStateSpace(object):
                 E=ABCDE.E,
                 hermitian=hermitian,
                 time_symm=time_symm,
+                algorithm_choices=algorithm_choices,
+                algorithm_ranking=algorithm_ranking,
                 dt=self.dt,
             )
         elif isinstance(other, np.ndarray):
             # assume it is a pure D matrix.
-            return self.__class__(
+            return self.__build_similar__(
                 A=self.A,
                 B=self.B @ other,
                 C=self.C,
                 D=self.D @ other,
                 E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
             )
         else:
             return NotImplemented
@@ -1007,15 +1029,12 @@ class BareStateSpace(object):
         if isinstance(other, np.ndarray):
             # note! this probably is never called, as numpy uses __array_ufunc__ instead
             # assume it is a pure D matrix.
-            return self.__class__(
+            return self.__build_similar__(
                 A=self.A,
                 B=self.B,
                 C=other @ self.C,
                 D=other @ self.D,
                 E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
             )
         else:
             return NotImplemented
@@ -1055,7 +1074,11 @@ class BareStateSpace(object):
         return self.D.shape[-1]
 
     def inv_proper(self):
-        assert(self.is_square)
+        """
+        Invert statespace, assuming that the D matrix is full rank
+        """
+        assert (self.is_square)
+        assert (self.E is None)
 
         D = self.D
         Dinv = np.linalg.inv(D)
@@ -1064,7 +1087,7 @@ class BareStateSpace(object):
         C2 = -Dinv @ self.C
         D2 = Dinv
 
-        return self.__class__(
+        return self.__build_similar__(
             A=A2,
             B=B2,
             C=C2,
@@ -1076,33 +1099,30 @@ class BareStateSpace(object):
         )
 
     def inv(self):
+        """
+        Invert statespace, by converting to a descriptor system
+        """
         assert(self.is_square)
 
         ABCDE = ss_algorithms.inverse_DSS(*self.ABCDE)
-        return self.__class__(
+        return self.__build_similar__(
             A=ABCDE.A,
             B=ABCDE.B,
             C=ABCDE.C,
             D=ABCDE.D,
             E=ABCDE.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
 
     def __mul__(self, other):
         """
         """
         if isinstance(other, numbers.Number):
-            return self.__class__(
+            return self.__build_similar__(
                 A=self.A,
                 B=self.B * other,
                 C=self.C,
                 D=self.D * other,
                 E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
             )
         else:
             return NotImplemented
@@ -1111,15 +1131,12 @@ class BareStateSpace(object):
         """
         """
         if isinstance(other, numbers.Number):
-            return self.__class__(
+            return self.__build_similar__(
                 A=self.A,
                 B=self.B,
                 C=other * self.C,
                 D=other * self.D,
                 E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
             )
         else:
             return NotImplemented
@@ -1128,15 +1145,12 @@ class BareStateSpace(object):
         """
         """
         if isinstance(other, numbers.Number):
-            return self.__class__(
+            return self.__build_similar__(
                 A=self.A,
                 B=self.B,
                 C=self.C / other,
                 D=self.D / other,
                 E=self.E,
-                hermitian=self.hermitian,
-                time_symm=self.time_symm,
-                dt=self.dt,
             )
         else:
             return NotImplemented
@@ -1167,6 +1181,13 @@ class BareStateSpace(object):
             hermitian = self.hermitian and other.hermitian
             time_symm = self.time_symm and other.time_symm
 
+            algorithm_choices, algorithm_ranking = algorithm_choice.algo_merge_full(
+                self.algorithm_choices,
+                self.algorithm_ranking,
+                other.algorithm_choices,
+                other.algorithm_ranking,
+            )
+
             A, E = joinAE(self, other)
             assert(self.dt == other.dt)
 
@@ -1181,6 +1202,8 @@ class BareStateSpace(object):
                 E=E,
                 hermitian=hermitian,
                 time_symm=time_symm,
+                algorithm_choices=algorithm_choices,
+                algorithm_ranking=algorithm_ranking,
                 dt=self.dt,
             )
         return NotImplemented
@@ -1210,6 +1233,13 @@ class BareStateSpace(object):
 
             A, E = joinAE(self, other)
 
+            algorithm_choices, algorithm_ranking = algorithm_choice.algo_merge_full(
+                self.algorithm_choices,
+                self.algorithm_ranking,
+                other.algorithm_choices,
+                other.algorithm_ranking,
+            )
+
             return self.__class__(
                 A=A,
                 B=np.block([
@@ -1221,6 +1251,8 @@ class BareStateSpace(object):
                 E=E,
                 hermitian=hermitian,
                 time_symm=time_symm,
+                algorithm_choices=algorithm_choices,
+                algorithm_ranking=algorithm_ranking,
             )
         return NotImplemented
 
@@ -1239,6 +1271,13 @@ class BareStateSpace(object):
 
             A, E = joinAE(self, other)
 
+            algorithm_choices, algorithm_ranking = algorithm_choice.algo_merge_full(
+                self.algorithm_choices,
+                self.algorithm_ranking,
+                other.algorithm_choices,
+                other.algorithm_ranking,
+            )
+
             return self.__class__(
                 A=A,
                 B=np.block([
@@ -1250,6 +1289,8 @@ class BareStateSpace(object):
                 E=E,
                 hermitian=hermitian,
                 time_symm=time_symm,
+                algorithm_choices=algorithm_choices,
+                algorithm_ranking=algorithm_ranking,
                 dt=self.dt,
             )
         return NotImplemented
@@ -1257,15 +1298,12 @@ class BareStateSpace(object):
     def __neg__(self):
         """
         """
-        return self.__class__(
+        return self.__build_similar__(
             A=self.A,
             B=self.B,
             C=-self.C,
             D=-self.D,
             E=self.E,
-            hermitian=self.hermitian,
-            time_symm=self.time_symm,
-            dt=self.dt,
         )
 
     def __pos__(self):
@@ -1275,8 +1313,20 @@ class BareStateSpace(object):
 
 
 class BareStateSpaceUser(object):
-    def __init__(self, *, ss):
+    def __init__(
+        self,
+        *,
+        ss,
+    ):
         self.ss = ss
+
+    @property
+    def algorithm_ranking(self):
+        return self.ss.algorithm_ranking
+
+    @property
+    def algorithm_choices(self):
+        return self.ss.algorithm_choices
 
     @property
     def A(self):

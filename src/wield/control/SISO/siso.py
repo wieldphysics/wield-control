@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: © 2022 California Institute of Technology.
 # SPDX-FileCopyrightText: © 2022 Lee McCuller <mcculler@caltech.edu>
@@ -9,6 +7,7 @@
 """
 import numpy as np
 import warnings
+
 
 class SISO:
     # maximum number of fiducial points to maintain during operations

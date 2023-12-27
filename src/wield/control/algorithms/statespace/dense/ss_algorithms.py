@@ -269,6 +269,9 @@ def controllable_staircase(
 
 
 def chain(SSs):
+    """
+    Construct a sequential product of state spaces. Each state space must be a tuple of ABCD or ABCDE
+    """
     ss_seq = []
     constrN = 0
     statesN = 0
@@ -311,6 +314,7 @@ def chain(SSs):
     B = np.zeros((constrN, inputsN))
     C = np.zeros((outputN, statesN))
 
+    # set up the initial array on the first statespace in the sequence
     ssB = ss_seq[0]
     A[..., ssB.cN, ssB.sN] = ssB.A
     E[..., ssB.cN, ssB.sN] = ssB.E
@@ -342,3 +346,79 @@ def chain(SSs):
 
     return TupleABCDE(A, B, C, D, E)
 
+
+def chainE(SSs):
+    ss_seq = []
+    constrN = 0
+    statesN = 0
+    for idx, ss in enumerate(SSs):
+        ssB = Bunch()
+        if len(ss) == 4:
+            A, B, C, D = ss
+            E = np.eye(A.shape[-1])
+            assert (A.shape[-1] == A.shape[-2])
+        elif len(ss) == 5:
+            A, B, C, D, E = ss
+        ssB.A = A
+        ssB.B = B
+        ssB.C = C
+        ssB.D = D
+        ssB.E = E
+        ssB.sN = slice(statesN, statesN + A.shape[-2])
+        ssB.cN = slice(constrN, constrN + A.shape[-1])
+        ssB.iN = slice(0, B.shape[-1])
+        ssB.oN = slice(0, C.shape[-2])
+
+        if E is not None:
+            assert (E.shape == A.shape)
+
+        ssB.inputsN = B.shape[-1]
+        ssB.outputN = C.shape[-2]
+        # make sure the current output is matched to the previous input
+        if idx != 0:
+            assert (ss_seq[idx-1].outputN == ssB.inputsN)
+
+        ssB.sNE = slice(statesN + A.shape[-2], statesN + A.shape[-2] + ssB.outputN)
+        ssB.cNE = slice(constrN + A.shape[-1], constrN + A.shape[-1] + ssB.outputN)
+
+        constrN += A.shape[-2]
+        statesN += A.shape[-1]
+        if idx < len(SSs) - 1:
+            # add states and constraints for E chain
+            constrN += ssB.outputN
+            statesN += ssB.outputN
+
+        ss_seq.append(ssB)
+    del ss
+
+    A = np.zeros((constrN, statesN))
+    E = np.zeros((constrN, statesN))
+    B = np.zeros((constrN, ssB[0].inputsN))
+    C = np.zeros((ssB[-1].outputN, statesN))
+    D = np.zeros((ssB[-1].outputN, ssB[0].inputsN))
+
+    ssB = ss_seq[0]
+    A[..., ssB.cN, ssB.sN] = ssB.A
+    E[..., ssB.cN, ssB.sN] = ssB.E
+    B[ssB.cN, :] = ssB.B
+    B[ssB.cNE, :] = ssB.D
+    ssBp = ssB
+
+    for idx_ss, ssB in enumerate(ss_seq[1:-1], 1):
+        A[..., ssB.cN, ssB.sN] = ssB.A
+        E[..., ssB.cN, ssB.sN] = ssB.E
+
+        A[..., ssB.cN, ssBp.sNE] = ssB.B
+        A[..., ssB.cNE, ssB.sNE] = -np.eye(ssB.outputN)
+        A[..., ssB.cNE, ssBp.sNE] = ssB.D
+        A[..., ssB.cNE, ssB.sN] = ssB.C
+
+        ssBp = ssB
+
+    ssB = ss_seq[-1]
+    A[..., ssB.cN, ssB.sN] = ssB.A
+    E[..., ssB.cN, ssB.sN] = ssB.E
+    C[:, ssB.sN] = ssB.C
+    C[:, ssBp.sNE] = ssB.D
+
+    return TupleABCDE(A, B, C, D, E)
