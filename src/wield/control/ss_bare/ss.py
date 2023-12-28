@@ -90,6 +90,22 @@ class BareStateSpace(object):
             dt=self.dt,
         )
 
+    def set_algorithm_choices(self, algorithm_choices):
+
+        algorithm_choices = algorithm_choice.algo_merge(algorithm_choices, self.algorithm_choices)
+        algorithm_choices, algorithm_ranking = algorithm_choice.choices_and_rankings(
+            algorithm_choices, None
+        )
+
+        return self.__class__(
+            A=self.A, B=self.B, C=self.C, D=self.D, E=self.E,
+            algorithm_choices=algorithm_choices,
+            algorithm_ranking=algorithm_ranking,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+        )
+
     @classmethod
     def fromD(cls, D):
         return cls(
@@ -262,7 +278,9 @@ class BareStateSpace(object):
             dt=self.dt,
         )
         if use_laub:
-            self_b = self.balanceA()
+            self_b = self
+            self_b = self_b.balanceA()
+            self_b = self_b.balanceABC(which='ABC')
             # self_b = self
             return xfer_algorithms.ss2response_laub(
                 A=self_b.A,
@@ -340,54 +358,125 @@ class BareStateSpace(object):
             E=self.E,
         )
 
-    def balanceABC(self, which='A'):
+    def reduceE(self):
         """
-        Uses the slycot balancer tb01id
+        Utilize slycot tg01fd to reduce the statespace to a simpler form
+        """
+        from slycot.transform import tg01fd
 
-        https://github.com/python-control/Slycot/blob/master/slycot/transform.py#L25
-        """
+        # self = self.balanceABC(which='ABC')
+        # self = self.balanceA()
+
         E = self.E
         if E is not None and np.all(E == np.eye(E.shape[-1])):
             E = None
-        if E is not None:
-            raise NotImplementedError("balancing on descriptor systems not implemented (yet)")
-
-        assert(which in ['A', 'B', 'C', 'ABC', 'AB', 'AC', 'N'])
-
-        if which == 'A':
-            return self.balanceA()
-        elif which == 'AB':
-            job = 'B'
-        elif which == 'AC':
-            job = 'C'
-        elif which == 'ABC':
-            job = 'A'
 
         A = self.A
         B = self.B
         C = self.C
 
         # Order of the A matrix
-        n = self.A.shape[0]
+        l = self.A.shape[0]
+        n = self.A.shape[1]
         # Number of inputs
         m = self.B.shape[1]
         # Number of outputs
         p = self.C.shape[0]
 
-        from slycot import tb01id
-        s_norm, Ar, Br, Cr, scaled = tb01id(
-            n, m, p,
-            0,  # maxred
-            A, B, C,
-            job='A'
+        Ar, Er, Br, Cr, ranke, rnka22, Q, Z = tg01fd(
+            l, n, m, p,
+            A, E, B, C,
+            Q=None, Z=None,
+            compq='N', compz='N',
+            joba='N',
+            tol=1e-24,
         )
+
         return self.__build_similar__(
             Ar,
             Br,
             Cr,
             self.D,
-            E=self.E,
+            E=Er,
         )
+
+    def balanceABC(self, which='A'):
+        """
+        Uses the slycot balancer tb01id or tg01ad
+
+        https://github.com/python-control/Slycot/blob/master/slycot/transform.py#L25
+
+        NOTE: there seems to be an error where it is giving bad output except for which=ABC
+        """
+        E = self.E
+        if E is not None and np.all(E == np.eye(E.shape[-1])):
+            E = None
+
+        A = self.A
+        B = self.B
+        C = self.C
+
+        # Order of the A matrix
+        l = self.A.shape[0]
+        n = self.A.shape[1]
+        # Number of inputs
+        m = self.B.shape[1]
+        # Number of outputs
+        p = self.C.shape[0]
+
+        assert (which in ['A', 'B', 'C', 'ABC', 'AB', 'AC', 'N'])
+
+        warn=True
+        if which == 'A' or which == 'N':
+            job = 'N'
+        elif which == 'AB' or which == 'B':
+            job = 'B'
+        elif which == 'AC' or which == 'C':
+            job = 'C'
+        elif which == 'ABC':
+            job = 'A'
+            warn=False
+        else:
+            job = which
+
+        if warn:
+            import warnings
+            warnings.warn("balanceABC may give wrong results except fro which=ABC. may be a Slycot bug")
+
+        if E is None:
+            from slycot import tb01id
+
+            s_norm, Ar, Br, Cr, scaled = tb01id(
+                n, m, p,
+                8,  # maxred
+                A, B, C,
+                job=job,
+            )
+
+            return self.__build_similar__(
+                Ar,
+                Br,
+                Cr,
+                self.D,
+                E=None,
+            )
+        else:
+            from slycot.transform import tg01ad
+
+            Ar, Er, Br, Cr, lscale, rscale = tg01ad(
+                l, n, m, p,
+                A, E, B, C,
+                thresh=0,
+                job=job,
+            )
+
+            return self.__build_similar__(
+                Ar,
+                Br,
+                Cr,
+                self.D,
+                E=Er,
+            )
 
     def balanceA(self, permute=True):
         """
@@ -403,6 +492,11 @@ class BareStateSpace(object):
         # not sure M is needed, was in the ARE generalized diagonalizer
         # M = np.abs(SS) + np.abs(SSE)
 
+        if self.E is None:
+            E = np.eye(self.A.shape[-1])
+        else:
+            E = self.E
+
         def invert_permutation(p):
             """Return an array s with which np.array_equal(arr[p][s], arr) is True.
             The array_like argument p must be some permutation of 0, 1, ..., len(p)-1.
@@ -414,8 +508,8 @@ class BareStateSpace(object):
             return s
 
         Ascale, (sca, P) = scipy.linalg.matrix_balance(
-            Ascale,
-            separate=1,
+            abs(Ascale) + abs(E * 1e9),
+            separate=True,
             permute=permute,
             overwrite_a=True,
         )
@@ -423,10 +517,13 @@ class BareStateSpace(object):
         # do we need to bother?
         if not np.allclose(sca, np.ones_like(sca)):
             scar = np.reciprocal(sca)
+            elwisescale = sca * scar[:, None]
+
+            Ascale = self.A.copy()[..., Pi, :][..., :, P]
+            Ascale *= elwisescale
 
             if self.E is not None:
-                Escale = self.E.copy()
-                elwisescale = sca * scar[:, None]
+                Escale = self.E.copy()[..., Pi, :][..., :, P]
                 Escale *= elwisescale
             else:
                 Escale = self.E
@@ -477,6 +574,7 @@ class BareStateSpace(object):
             D=self.D,
             E=E,
         )
+
 
     def balance_and_truncate_unscaled(self, method='sqrt', equil=True, tol1=0, tol2=0):
         """
@@ -817,7 +915,7 @@ class BareStateSpace(object):
         p = self.C.shape[0]
 
         if E is None:
-            E = np.eye(self.A.shape[-1])
+            # E = np.eye(self.A.shape[-1])
             pass
         elif E is not None and np.all(E == np.eye(E.shape[-1])):
             pass
@@ -997,7 +1095,9 @@ class BareStateSpace(object):
                 other.algorithm_ranking,
             )
 
+            # TODO, make this chainE-able
             ABCDE = ss_algorithms.chain([self.ABCDE, other.ABCDE])
+            # ABCDE = ss_algorithms.chainE([self.ABCDE, other.ABCDE])
 
             return self.__class__(
                 A=ABCDE.A,
@@ -1321,6 +1421,9 @@ class BareStateSpaceUser(object):
     ):
         self.ss = ss
 
+    def set_algorithm_choices(self, algorithm_choices):
+        return self.__build_similar__(ss=self.ss.set_algorithm_choices(algorithm_choices))
+
     @property
     def algorithm_ranking(self):
         return self.ss.algorithm_ranking
@@ -1425,6 +1528,11 @@ class BareStateSpaceUser(object):
     def balance(self, **kwargs):
         return self.__build_similar__(
             ss=self.ss.balanceA(**kwargs),
+        )
+
+    def reduceE(self, **kwargs):
+        return self.__build_similar__(
+            ss=self.ss.reduceE(**kwargs),
         )
 
     def balanceABC(self, **kwargs):

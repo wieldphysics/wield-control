@@ -75,7 +75,7 @@ def test_long_ZPK_stability_plot():
     This is a test of the numerical stability of a very large ZPK filter that spans 18 orders of magnitude
 
     """
-    F_Hz = np.geomspace(1e-3, 1e3, 1000)
+    F_Hz = np.geomspace(1e-3, 1e5, 1000)
     axB = mplfigB(Nrows=2)
 
     filt = gen_filt()
@@ -90,17 +90,13 @@ def test_long_ZPK_stability_plot():
         algorithm_choices = {'zpk2ss': {k: 1000}}
         filt = filt_orig.set_algorithm_choices(algorithm_choices)
         filtss = filt.asSS
-        print('---------------------')
-        print(k, r, filt.algorithm_choices['zpk2ss'])
-        print(k, r, filt.algorithm_ranking['zpk2ss'][0])
-        print('---------------------')
         # print(filtss.A.shape, filtss.E.shape)
 
         filtss.print_nonzero()
 
         xfer = filtss.fresponse(f=F_Hz)
         label = "zpk2ss: {}".format(k)
-        axB.ax0.loglog(*xfer.fplot_mag, label=label)
+        axB.ax0.loglog(*xfer.fplot_mag, label=label, alpha=0.5)
         axB.ax1.semilogx(*xfer.fplot_deg180, label=label)
 
     # axB.ax0.set_ylim(1e-25, 10)

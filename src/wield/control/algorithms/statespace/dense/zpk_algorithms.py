@@ -271,6 +271,11 @@ def chebcompanion2(c1, c2):
 
 
 def zpk2cDSS(z, p, k, rescale=None, mode="CCF"):
+    """
+    Create a complex descriptor statespace from zpk. The real part cane then be extracted.
+
+    NOT USED.
+    """
     z = np.asarray(z)
     p = np.asarray(p)
     if rescale is None:

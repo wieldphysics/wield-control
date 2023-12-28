@@ -86,128 +86,54 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking
             E = None
 
     if E is None:
-        if not use_blocking:
-            A, Z = scipy.linalg.schur(A, output='complex')
-            B = Z.transpose().conjugate() @ B
-            C = C @ Z
-            blk_tops = None
-        else:
-            # FOR TESTING!
-            # TODO, refactor this into a BDSchur method
-            if False:
-                A, Z = scipy.linalg.schur(A, output='complex')
-                B = Z.transpose().conjugate() @ B
-                C = C @ Z
-                blk_tops = np.zeros(A.shape[-1], dtype=int)
-
-                ilow = 0
-                ihigh = A.shape[-1]
-
-                split_diff = 3
-                levels = []
-                def bdschur_levels(ilow, ihigh, split_diff=split_diff, level=0):
-                    if level > 2:
-                        return
-                    if (ihigh - ilow) > split_diff * 2 + 2:
-                        split_offs = (ihigh-ilow) // 2 + ilow
-                        split_offsl = split_offs - split_diff
-                        split_offsh = split_offs + split_diff
-                        levels.append((-level, ilow, ihigh))
-                        bdschur_levels(ilow, split_offsh, level=level+1)
-                        bdschur_levels(split_offsl, ihigh, level=level+1)
-                bdschur_levels(ilow, ihigh, split_diff=5, level=0)
-                levels.sort()
-                print(levels)
-
-                # Apre = A.copy()
-                def bdschur_reduce(ilow, ihigh, split_diff=split_diff):
-                    print('bdschur_reduce', ilow, ihigh)
-                    if (ihigh - ilow) > split_diff * 2 + 2:
-                        split_offs = (ihigh-ilow) // 2 + ilow
-                        split_offsl = split_offs - split_diff
-                        split_offsh = split_offs + split_diff
-                        # split_offs = 4
-                        A11 = A[ilow:split_offsl, ilow:split_offsl]
-                        A22 = A[split_offsh:ihigh, split_offsh:ihigh]
-                        A12 = A[ilow:split_offsl, split_offsh:ihigh]
-
-                        P = solve_sylvester_preschur(A11, -A22, -A12)
-                        cond = np.max(abs(P))
-                        print("COND: ", '{:.2e}'.format(np.max(abs(A12))), '{:.2e}'.format(cond))
-                        if cond > 1e18:
-                            return
-
-                        # Z = np.eye(ihigh-ilow, dtype=complex)
-                        # Z[:split_offsl-ilow, split_offsh-ilow:] = P
-                        # Zi = np.linalg.inv(Z)
-                        # A[ilow:ihigh, :] = Zi @ A[ilow:ihigh, :]
-                        # A[:, ilow:ihigh] = A[:, ilow:ihigh] @ Z
-
-                        A[ilow:split_offsl, :] -= P @ A[split_offsh:ihigh, :]
-                        A[:, split_offsh:ihigh] += A[:, ilow:split_offsl] @ P
-
-                        A[ilow:split_offsl, split_offsh:ihigh] = 0
-
-                        # ssprint.print_dense_nonzero_M(abs(A) / abs(Apre) < .1)
-
-                        B[ilow:split_offsl, :] -= P @ B[split_offsh:ihigh, :]
-                        C[:, split_offsh:ihigh] += C[:, ilow:split_offsl] @ P
-
-                        # B[ilow:ihigh, :] = Z @ B[ilow:ihigh, :]
-                        # C[:, ilow:ihigh] = C[:, ilow:ihigh] @ Zi
-
-                        # blk_tops[split_offsh:ihigh] = split_offs
-                        # print(blk_tops)
-
-                # bdschur_reduce(ilow, split_offsh, level=level+1)
-                for level, ilow, ihigh in levels:
-                    bdschur_reduce(ilow=ilow, ihigh=ihigh)
-
-                ssprint.print_dense_nonzero_M(A)
-            else:
-                # CURRENTLY CAN'T RUN, testing alternate blocking method
-
-                # this MIGHT not always be as numerically stable as desired
-                A, Z, blk_sizes = bdschur(A, condmax = blocking_condmax)
-                A, Z = scipy.linalg.rsf2csf(A, Z, check_finite=True)
-
-                # this could use solve_triangular
-                B = np.linalg.inv(Z) @ B
-
-                # ssprint.print_dense_nonzero_M(A)
-                C = C @ Z
-                print("BLOCK SIZES: ", blk_sizes)
-                blk_tops = blk_sizes2blk_tops(A.shape[-1], blk_sizes)
+        A, Z = scipy.linalg.schur(A, output='complex')
+        B = Z.transpose().conjugate() @ B
+        C = C @ Z
+        blk_tops = None
 
         diag = (np.diag(A).reshape(1, -1) - sorz.reshape(-1, 1))
 
-        retval = array_solve_triangular(-A, -diag, B, blk_tops=blk_tops)
+        retval = array_solve_triangular(A, diag, B, blk_tops=blk_tops)
 
-        # retval2 = np.linalg.inv(np.eye(A.shape[-1]) * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape)) @ B
-        # print(retval - retval2)
         return C @ retval + D
 
-        return (
-                C @ (
-                    np.linalg.inv(np.eye(A.shape[-1]) * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
-                    @ B
-                )
-            ) + D
+        # return (
+        #         C @ (
+        #             np.linalg.inv(np.eye(A.shape[-1]) * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
+        #             @ B
+        #         )
+        #     ) + D
     else:
-        # TODO, E matrix not supported yet
-        import warnings
-        warnings.warn("Laub method used on descriptor system. Not supported yet (using slow Horner method fallback)")
-        if E is None:
-            E = np.eye(A.shape[-1])
-        return (
-                C @ (
-                    np.linalg.inv(E * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
-                    @ B
-                )
-            ) + D
+        A, E, Q, Z = scipy.linalg.qz(
+            A,
+            E,
+            output='complex',
+            lwork=None,
+            sort=None,
+            overwrite_a=False,
+            overwrite_b=False,
+            check_finite=True
+        )
+
+        B = Q.transpose().conjugate() @ B
+        C = C @ Z
+        blk_tops = None
+
+        diag = (np.diag(A).reshape(1, -1) - np.diag(E).reshape(1, -1) * sorz.reshape(-1, 1))
+
+        retval = array_solve_triangular(A, diag, B, E = E, sorz=sorz, blk_tops=blk_tops)
+
+        return C @ retval + D
+
+        # return (
+        #         C @ (
+        #             np.linalg.inv(E * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
+        #             @ B
+        #         )
+        #     ) + D
 
 
-def array_solve_triangular(A, D, b, blk_tops=None):
+def array_solve_triangular(A, D, b, E=None, sorz=None, blk_tops=None):
     """
     Solve a triangular matrix system.
     A is a (M, M). D is (..., M) are broadcasted diagonals, and b is (M, N)
@@ -234,11 +160,21 @@ def array_solve_triangular(A, D, b, blk_tops=None):
     # Dv = D.reshape(*D.shape, 1)
     # Av = A.reshape(*A.shape, 1)
 
-    for idx in range(M - 1, -1, -1):
-        block_top = blk_tops[idx]
-        bwork[..., idx, :] /= D[..., idx:idx+1]
-        if block_top < idx:
-            bwork[..., block_top:idx, :] -= A[block_top:idx, idx:idx+1] * bwork[..., idx:idx+1, :]
+    if E is None:
+        for idx in range(M - 1, -1, -1):
+            block_top = blk_tops[idx]
+            bwork[..., idx, :] /= -D[..., idx:idx+1]
+            if block_top < idx:
+                bwork[..., block_top:idx, :] += A[block_top:idx, idx:idx+1] * bwork[..., idx:idx+1, :]
+    else:
+        for idx in range(M - 1, -1, -1):
+            block_top = blk_tops[idx]
+            bwork[..., idx, :] /= -D[..., idx:idx+1]
+            if block_top < idx:
+                bwork[..., block_top:idx, :] += (
+                    A[block_top:idx, idx:idx+1]
+                    - E[block_top:idx, idx:idx+1] * sorz.reshape(-1, 1, 1)
+                ) * bwork[..., idx:idx+1, :]
 
     #Atest = A - np.diag(np.diag(A)) + np.diag(D)
 
@@ -558,4 +494,148 @@ def solve_sylvester_preschur(a, b, q):
                           "the %d term" % (-info,))
 
     return y[:, ::-1]
+
+
+def ss2response_laub_bdschur(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking_condmax=1e12):
+    """
+    this is a copy that tests out a bdschur method. TODO, extract this method
+
+
+    Use Laub's method to calculate the frequency response. Very fast but in some cases less numerically stable.
+    Generally OK if the A/E matrix has been balanced first.
+
+    TODO: Use the bdschur method or slycot mb03rd to further reduce the matrix size. Then enhance the back-substituion to do less work.
+    In principle this can reduce the work from N^2 to N at every frequency point. That would be a massive speedup but would need numerical testing.
+
+    """
+    sorz = np.asarray(sorz)
+
+    if A.shape[-2:] == (0, 0):
+        # print("BCAST", A.shape, D.shape)
+        return np.broadcast_to(D, sorz.shape + D.shape[-2:])
+
+    if E is not None:
+        if np.all(E == np.eye(E.shape[-1])):
+            E = None
+
+    if E is None:
+        if not use_blocking:
+            A, Z = scipy.linalg.schur(A, output='complex')
+            B = Z.transpose().conjugate() @ B
+            C = C @ Z
+            blk_tops = None
+        else:
+            # FOR TESTING!
+            # TODO, refactor this into a BDSchur method
+            if False:
+                A, Z = scipy.linalg.schur(A, output='complex')
+                B = Z.transpose().conjugate() @ B
+                C = C @ Z
+                blk_tops = np.zeros(A.shape[-1], dtype=int)
+
+                ilow = 0
+                ihigh = A.shape[-1]
+
+                split_diff = 3
+                levels = []
+                def bdschur_levels(ilow, ihigh, split_diff=split_diff, level=0):
+                    if level > 2:
+                        return
+                    if (ihigh - ilow) > split_diff * 2 + 2:
+                        split_offs = (ihigh-ilow) // 2 + ilow
+                        split_offsl = split_offs - split_diff
+                        split_offsh = split_offs + split_diff
+                        levels.append((-level, ilow, ihigh))
+                        bdschur_levels(ilow, split_offsh, level=level+1)
+                        bdschur_levels(split_offsl, ihigh, level=level+1)
+                bdschur_levels(ilow, ihigh, split_diff=5, level=0)
+                levels.sort()
+                print(levels)
+
+                # Apre = A.copy()
+                def bdschur_reduce(ilow, ihigh, split_diff=split_diff):
+                    print('bdschur_reduce', ilow, ihigh)
+                    if (ihigh - ilow) > split_diff * 2 + 2:
+                        split_offs = (ihigh-ilow) // 2 + ilow
+                        split_offsl = split_offs - split_diff
+                        split_offsh = split_offs + split_diff
+                        # split_offs = 4
+                        A11 = A[ilow:split_offsl, ilow:split_offsl]
+                        A22 = A[split_offsh:ihigh, split_offsh:ihigh]
+                        A12 = A[ilow:split_offsl, split_offsh:ihigh]
+
+                        P = solve_sylvester_preschur(A11, -A22, -A12)
+                        cond = np.max(abs(P))
+                        print("COND: ", '{:.2e}'.format(np.max(abs(A12))), '{:.2e}'.format(cond))
+                        if cond > 1e18:
+                            return
+
+                        # Z = np.eye(ihigh-ilow, dtype=complex)
+                        # Z[:split_offsl-ilow, split_offsh-ilow:] = P
+                        # Zi = np.linalg.inv(Z)
+                        # A[ilow:ihigh, :] = Zi @ A[ilow:ihigh, :]
+                        # A[:, ilow:ihigh] = A[:, ilow:ihigh] @ Z
+
+                        A[ilow:split_offsl, :] -= P @ A[split_offsh:ihigh, :]
+                        A[:, split_offsh:ihigh] += A[:, ilow:split_offsl] @ P
+
+                        A[ilow:split_offsl, split_offsh:ihigh] = 0
+
+                        # ssprint.print_dense_nonzero_M(abs(A) / abs(Apre) < .1)
+
+                        B[ilow:split_offsl, :] -= P @ B[split_offsh:ihigh, :]
+                        C[:, split_offsh:ihigh] += C[:, ilow:split_offsl] @ P
+
+                        # B[ilow:ihigh, :] = Z @ B[ilow:ihigh, :]
+                        # C[:, ilow:ihigh] = C[:, ilow:ihigh] @ Zi
+
+                        # blk_tops[split_offsh:ihigh] = split_offs
+                        # print(blk_tops)
+
+                # bdschur_reduce(ilow, split_offsh, level=level+1)
+                for level, ilow, ihigh in levels:
+                    bdschur_reduce(ilow=ilow, ihigh=ihigh)
+
+                ssprint.print_dense_nonzero_M(A)
+            else:
+                # CURRENTLY CAN'T RUN, testing alternate blocking method
+
+                # this MIGHT not always be as numerically stable as desired
+                A, Z, blk_sizes = bdschur(A, condmax = blocking_condmax)
+                A, Z = scipy.linalg.rsf2csf(A, Z, check_finite=True)
+
+                # this could use solve_triangular
+                B = np.linalg.inv(Z) @ B
+
+                # ssprint.print_dense_nonzero_M(A)
+                C = C @ Z
+                print("BLOCK SIZES: ", blk_sizes)
+                blk_tops = blk_sizes2blk_tops(A.shape[-1], blk_sizes)
+
+        diag = (np.diag(A).reshape(1, -1) - sorz.reshape(-1, 1))
+
+        retval = array_solve_triangular(-A, -diag, B, blk_tops=blk_tops)
+
+        # retval2 = np.linalg.inv(np.eye(A.shape[-1]) * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape)) @ B
+        # print(retval - retval2)
+        return C @ retval + D
+
+        return (
+                C @ (
+                    np.linalg.inv(np.eye(A.shape[-1]) * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
+                    @ B
+                )
+            ) + D
+    else:
+        # TODO, E matrix not supported yet
+        import warnings
+        warnings.warn("Laub method used on descriptor system. Not supported yet (using slow Horner method fallback)")
+        if E is None:
+            E = np.eye(A.shape[-1])
+        return (
+                C @ (
+                    np.linalg.inv(E * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
+                    @ B
+                )
+            ) + D
 
