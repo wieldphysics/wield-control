@@ -94,6 +94,27 @@ class ZPK(siso.SISOCommonBase):
         )
         return
 
+    def set_algorithm_choices(self, algorithm_choices):
+
+        algorithm_choices = algorithm_choice.algo_merge(algorithm_choices, self.algorithm_choices)
+        self.algorithm_choices, self.algorithm_ranking = algorithm_choice.choices_and_rankings(
+            algorithm_choices, None
+        )
+
+        return self.__class__(
+            z=self.zeros,
+            p=self.poles,
+            k=self.k,
+            algorithm_choices=self.algorithm_choices,
+            algorithm_ranking=self.algorithm_ranking,
+            hermitian=self.hermitian,
+            time_symm=self.time_symm,
+            dt=self.dt,
+            fiducial=self.fiducial,
+            fiducial_rtol=self.fiducial_rtol,
+            fiducial_atol=self.fiducial_atol,
+        )
+
     @property
     def z(self):
         """

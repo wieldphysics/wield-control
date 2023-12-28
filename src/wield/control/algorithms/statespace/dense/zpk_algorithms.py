@@ -16,6 +16,7 @@ import collections
 from . import xfer_algorithms
 
 from ...zpk import order_reduce
+from ....TFmath.roots_matching import match_SOS_pairs
 
 from numpy.polynomial.chebyshev import (
     chebfromroots,
@@ -422,6 +423,56 @@ def zpkdict_cascade(
         def check(ABCDE):
             return
 
+    Zr = []
+    Zc = []
+    Pr = []
+    Pc = []
+    zzpp_list = match_SOS_pairs(
+        Zr=zdict['r'],
+        Zc=zdict['c'],
+        Pr=pdict['r'],
+        Pc=pdict['c'],
+    )
+    # apply a specific sort to utilize the smallest roots first, and the real roots last
+    # this appears to give the best numerical stability
+    def sorter(zzpp):
+        (z1, z2, p1, p2) = zzpp
+        lst = []
+        anyreal = False
+        unmatched = False
+        for r in zzpp:
+            if r is not None:
+                lst.append(abs(r))
+                if r.imag == 0:
+                    anyreal = True
+            else:
+                unmatched = True
+        if lst:
+            if unmatched:
+                return -float('infinity'), -float('infinity'), np.average(lst)
+            else:
+                if anyreal:
+                    return -float('infinity'), np.average(lst), 0
+                else:
+                    return np.average(lst), 0, 0
+        return 0
+    zzpp_list.sort(key=sorter)
+    for z1, z2, p1, p2 in zzpp_list:
+        if z1 is not None:
+            if z1.imag != 0:
+                Zc.append(z1)
+            else:
+                Zr.append(z1)
+                if z2 is not None:
+                    Zr.append(z2)
+        if p1 is not None:
+            if p1.imag != 0:
+                Pc.append(p1)
+            else:
+                Pr.append(p1)
+                if p2 is not None:
+                    Pr.append(p2)
+
     def gen_polys(rdict):
         Rc = rdict["c"]
         Rr = rdict["r"]
@@ -442,8 +493,8 @@ def zpkdict_cascade(
             last = None
         return poly, last
 
-    Zpoly, Zlast = gen_polys(zdict)
-    Ppoly, Plast = gen_polys(pdict)
+    Zpoly, Zlast = gen_polys(dict(c=Zc, r=Zr))
+    Ppoly, Plast = gen_polys(dict(c=Pc, r=Pr))
 
     ABCDEs = []
     idx = -1
@@ -635,6 +686,42 @@ def ZPKdict(
         raise RuntimeError("Unrecognized Orientation")
 
     return TupleABCDE(*ABCDE)
+
+
+def ZPKdict(
+    zdict,
+    pdict,
+    k,
+    convention="scipy",
+    orientation="lower",
+):
+    """
+    Create a statespace from dictionaries of poles and zeros separated into real and imaginary parts
+    orientation: Whether the A matrix is "upper" or "lower" triangular real Schur form
+    """
+    ABCDEs = zpkdict_cascade(
+        zdict=zdict, pdict=pdict, k=k, convention=convention
+    )
+
+    ABCDE = ss_algorithms.chain(ABCDEs)
+
+    orientation = orientation.lower()
+    if orientation == 'lower':
+        pass
+    elif orientation == 'upper':
+        A, B, C, D, E = ABCDE
+        ABCDE = (
+            A[..., ::-1, ::-1],
+            B[..., ::-1, :],
+            C[..., :, ::-1],
+            D,
+            E[..., ::-1, ::-1],
+        )
+    else:
+        raise RuntimeError("Unrecognized Orientation")
+
+    return TupleABCDE(*ABCDE)
+
 
 
 def ZPK2ss_cheby_companion(
