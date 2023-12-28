@@ -597,6 +597,14 @@ def zpk_rc(
             convention=convention,
             orientation=orientation,
         )
+    if method == 'chainE_poly':
+        return ZPKdict_chainE(
+            zdict=dict(c=Zc, r=Zr),
+            pdict=dict(c=Pc, r=Pr),
+            k=k,
+            convention=convention,
+            orientation=orientation,
+        )
     elif method == 'companion_cheby':
         return ZPK2ss_cheby_companion(
             Zc, Zr,
@@ -671,7 +679,10 @@ def ZPKdict(
     ABCDE = ss_algorithms.chain(ABCDEs)
 
     orientation = orientation.lower()
-    if orientation == 'lower':
+    if True:
+        # ignore orientation for now
+        pass
+    elif orientation == 'lower':
         pass
     elif orientation == 'upper':
         A, B, C, D, E = ABCDE
@@ -688,7 +699,7 @@ def ZPKdict(
     return TupleABCDE(*ABCDE)
 
 
-def ZPKdict(
+def ZPKdict_chainE(
     zdict,
     pdict,
     k,
@@ -703,10 +714,13 @@ def ZPKdict(
         zdict=zdict, pdict=pdict, k=k, convention=convention
     )
 
-    ABCDE = ss_algorithms.chain(ABCDEs)
+    ABCDE = ss_algorithms.chainE(ABCDEs)
 
     orientation = orientation.lower()
-    if orientation == 'lower':
+    if True:
+        # ignore orientation for now
+        pass
+    elif orientation == 'lower':
         pass
     elif orientation == 'upper':
         A, B, C, D, E = ABCDE
@@ -721,7 +735,6 @@ def ZPKdict(
         raise RuntimeError("Unrecognized Orientation")
 
     return TupleABCDE(*ABCDE)
-
 
 
 def ZPK2ss_cheby_companion(

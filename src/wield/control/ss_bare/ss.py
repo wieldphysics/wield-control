@@ -249,7 +249,7 @@ class BareStateSpace(object):
             s=None,
             z=None,
             # TODO, get rid of this key, using algorithm ranking instead
-            use_laub=True,
+            use_laub=False,
             **kwargs
     ):
         # TODO fix this import

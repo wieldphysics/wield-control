@@ -54,6 +54,22 @@ def gen_filt():
     return filt * filt
 
 
+def gen_filt():
+    filt = SISO.zpk(
+        [1e-2],
+        [100e-2, 10e-2],
+        10,
+        angular=False,
+        fiducial_rtol=1e-5,
+        fiducial_atol=1e-10
+    )
+    filtss = filt.asSS
+    # filt = filt / abs(filtss.Linf_norm()[0]) 
+    return filt * filt * filt
+    return filt
+
+
+
 def test_long_ZPK_stability_plot():
     """
     This is a test of the numerical stability of a very large ZPK filter that spans 18 orders of magnitude
@@ -84,7 +100,7 @@ def test_long_ZPK_stability_plot():
         axB.ax0.loglog(*xfer.fplot_mag, label=label)
         axB.ax1.semilogx(*xfer.fplot_deg180, label=label)
 
-    axB.ax0.set_ylim(1e-25, 10)
+    # axB.ax0.set_ylim(1e-25, 10)
     axB.ax0.legend()
 
     axB.save(tjoin('algorithm_compare_zpk2ss'))

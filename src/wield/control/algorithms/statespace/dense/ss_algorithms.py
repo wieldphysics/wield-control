@@ -391,18 +391,28 @@ def chainE(SSs):
         ss_seq.append(ssB)
     del ss
 
+    if len(SSs) == 1:
+        ssB = ss_seq[0]
+        return ssB.A, ssB.B, ssB.C, ssB.D, ssB.E
+
     A = np.zeros((constrN, statesN))
     E = np.zeros((constrN, statesN))
-    B = np.zeros((constrN, ssB[0].inputsN))
-    C = np.zeros((ssB[-1].outputN, statesN))
-    D = np.zeros((ssB[-1].outputN, ssB[0].inputsN))
+    B = np.zeros((constrN, ss_seq[0].inputsN))
+    C = np.zeros((ss_seq[-1].outputN, statesN))
+    D = np.zeros((ss_seq[-1].outputN, ss_seq[0].inputsN))
 
     ssB = ss_seq[0]
     A[..., ssB.cN, ssB.sN] = ssB.A
     E[..., ssB.cN, ssB.sN] = ssB.E
     B[ssB.cN, :] = ssB.B
     B[ssB.cNE, :] = ssB.D
+
+    A[..., ssB.cNE, ssB.sNE] = -np.eye(ssB.outputN)
+    A[..., ssB.cNE, ssB.sN] = ssB.C
     ssBp = ssB
+
+    # for idx_ss, ssB in enumerate(ss_seq, 0):
+    #     print(ssB.cN, ssB.cNE)
 
     for idx_ss, ssB in enumerate(ss_seq[1:-1], 1):
         A[..., ssB.cN, ssB.sN] = ssB.A
@@ -418,7 +428,11 @@ def chainE(SSs):
     ssB = ss_seq[-1]
     A[..., ssB.cN, ssB.sN] = ssB.A
     E[..., ssB.cN, ssB.sN] = ssB.E
+    A[..., ssB.cN, ssBp.sNE] = ssB.B
     C[:, ssB.sN] = ssB.C
     C[:, ssBp.sNE] = ssB.D
+
+    # C[:, ssB.sNE] = np.eye(ssB.outputN)
+    # C[:, ssB.sN] = ssB.C
 
     return TupleABCDE(A, B, C, D, E)
