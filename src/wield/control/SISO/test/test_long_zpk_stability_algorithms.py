@@ -83,7 +83,6 @@ def test_long_ZPK_stability_plot():
     axB.ax0.loglog(*xfer.fplot_mag, label="ZPK, wield")
     axB.ax1.semilogx(*xfer.fplot_deg180, label="ZPK, wield")
 
-
     filt_orig = filt
     zpk2ss_ranks = algorithm_choice.algorithm_choices_defaults['zpk2ss']
     dprint(zpk2ss_ranks)
@@ -91,6 +90,10 @@ def test_long_ZPK_stability_plot():
         algorithm_choices = {'zpk2ss': {k: 1000}}
         filt = filt_orig.set_algorithm_choices(algorithm_choices)
         filtss = filt.asSS
+        print('---------------------')
+        print(k, r, filt.algorithm_choices['zpk2ss'])
+        print(k, r, filt.algorithm_ranking['zpk2ss'][0])
+        print('---------------------')
         # print(filtss.A.shape, filtss.E.shape)
 
         filtss.print_nonzero()

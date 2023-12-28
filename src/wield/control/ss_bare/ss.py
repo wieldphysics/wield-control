@@ -249,7 +249,7 @@ class BareStateSpace(object):
             s=None,
             z=None,
             # TODO, get rid of this key, using algorithm ranking instead
-            use_laub=False,
+            use_laub=True,
             **kwargs
     ):
         # TODO fix this import
@@ -263,6 +263,7 @@ class BareStateSpace(object):
         )
         if use_laub:
             self_b = self.balanceA()
+            # self_b = self
             return xfer_algorithms.ss2response_laub(
                 A=self_b.A,
                 B=self_b.B,

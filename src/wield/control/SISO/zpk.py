@@ -97,7 +97,7 @@ class ZPK(siso.SISOCommonBase):
     def set_algorithm_choices(self, algorithm_choices):
 
         algorithm_choices = algorithm_choice.algo_merge(algorithm_choices, self.algorithm_choices)
-        self.algorithm_choices, self.algorithm_ranking = algorithm_choice.choices_and_rankings(
+        algorithm_choices, algorithm_ranking = algorithm_choice.choices_and_rankings(
             algorithm_choices, None
         )
 
@@ -105,8 +105,8 @@ class ZPK(siso.SISOCommonBase):
             z=self.zeros,
             p=self.poles,
             k=self.k,
-            algorithm_choices=self.algorithm_choices,
-            algorithm_ranking=self.algorithm_ranking,
+            algorithm_choices=algorithm_choices,
+            algorithm_ranking=algorithm_ranking,
             hermitian=self.hermitian,
             time_symm=self.time_symm,
             dt=self.dt,

@@ -413,7 +413,8 @@ def zpkdict_cascade(
     """
     Create a statespace from a cascade of ZPKs.
     """
-    if convention is not "scipy":
+
+    if convention != "scipy":
         raise RuntimeError("Only scipy convention currently supported")
 
     if True:
@@ -612,7 +613,8 @@ def zpk_rc(
         return ZPK2ss_cheby_companion(
             Zc, Zr,
             Pc, Pr,
-            k
+            k,
+            orientation=orientation,
         )
     else:
         raise RuntimeError("Unrecognized Method {}".format(method))
@@ -682,10 +684,7 @@ def ZPKdict(
     ABCDE = ss_algorithms.chain(ABCDEs)
 
     orientation = orientation.lower()
-    if True:
-        # ignore orientation for now
-        pass
-    elif orientation == 'lower':
+    if orientation == 'lower':
         pass
     elif orientation == 'upper':
         A, B, C, D, E = ABCDE
@@ -720,10 +719,7 @@ def ZPKdict_chainE(
     ABCDE = ss_algorithms.chainE(ABCDEs)
 
     orientation = orientation.lower()
-    if True:
-        # ignore orientation for now
-        pass
-    elif orientation == 'lower':
+    if orientation == 'lower':
         pass
     elif orientation == 'upper':
         A, B, C, D, E = ABCDE
@@ -745,7 +741,8 @@ def ZPK2ss_cheby_companion(
     Zr,
     Pc,
     Pr,
-    k
+    k,
+    orientation='upper',
 ):
     """
     This is a  construction of a ADBC statespace using a
@@ -795,6 +792,21 @@ def ZPK2ss_cheby_companion(
     D = np.asarray([qz]).reshape(1, 1) * k
     E = None
 
+    # its natural orientation is upper
+    orientation = orientation.lower()
+    if orientation == 'upper':
+        pass
+    elif orientation == 'lower':
+        A, B, C, D, E = (
+            A[..., ::-1, ::-1],
+            B[..., ::-1, :],
+            C[..., :, ::-1],
+            D,
+            E,  # TODO, handle E
+            # E[..., ::-1, ::-1],
+        )
+    else:
+        raise RuntimeError("Unrecognized Orientation")
     return A, B, C, D, E
 
 

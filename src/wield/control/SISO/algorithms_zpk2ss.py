@@ -121,3 +121,106 @@ def zpk2ss_chainE_poly(zpk):
 
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_chainE_poly', zpk2ss_chainE_poly, 60)
 
+def zpk2ss_cheby_lower(zpk):
+    assert (zpk.hermitian)
+
+    z = zpk.zeros.drop_mirror_imag()
+    p = zpk.poles.drop_mirror_imag()
+    # Currently only supports hermitian inputs
+
+    if len(z) <= len(p) and len(p) > 0:
+        ABCDE = zpk_algorithms.zpk_rc(
+            Zc=z.c_plane,
+            Zr=z.r_line,
+            Pc=p.c_plane,
+            Pr=p.r_line,
+            k=zpk.k,
+            convention="scipy",
+            orientation="lower",
+            method='companion_cheby',
+            # method='chain_poly',
+        )
+    else:
+        raise ValueError("Cheby ZPK cannot handle more poles than zeros")
+
+    return ss.statespace(
+        ABCDE,
+        hermitian=zpk.hermitian,
+        time_symm=zpk.time_symm,
+        fiducial=zpk.fiducial,
+        fiducial_rtol=zpk.fiducial_rtol,
+        fiducial_atol=zpk.fiducial_atol,
+        algorithm_choices=zpk.algorithm_choices,
+        algorithm_ranking=zpk.algorithm_ranking,
+        # flags={"schur_real_upper", "hessenburg_upper"},
+    )
+algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_cheby_lower', zpk2ss_cheby_lower, -80)
+
+
+def zpk2ss_chain_poly_lower(zpk):
+    assert (zpk.hermitian)
+
+    z = zpk.zeros.drop_mirror_imag()
+    p = zpk.poles.drop_mirror_imag()
+    # Currently only supports hermitian inputs
+
+    ABCDE = zpk_algorithms.zpk_rc(
+        Zc=z.c_plane,
+        Zr=z.r_line,
+        Pc=p.c_plane,
+        Pr=p.r_line,
+        k=zpk.k,
+        convention="scipy",
+        orientation="lower",
+        method='chain_poly',
+    )
+
+    return ss.statespace(
+        ABCDE,
+        hermitian=zpk.hermitian,
+        time_symm=zpk.time_symm,
+        fiducial=zpk.fiducial,
+        fiducial_rtol=zpk.fiducial_rtol,
+        fiducial_atol=zpk.fiducial_atol,
+        algorithm_choices=zpk.algorithm_choices,
+        algorithm_ranking=zpk.algorithm_ranking,
+        # flags={"schur_real_upper", "hessenburg_upper"},
+    )
+
+
+algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_chain_poly_lower', zpk2ss_chain_poly_lower, -100)
+
+
+def zpk2ss_chainE_poly_lower(zpk):
+    assert (zpk.hermitian)
+
+    z = zpk.zeros.drop_mirror_imag()
+    p = zpk.poles.drop_mirror_imag()
+    # Currently only supports hermitian inputs
+
+    ABCDE = zpk_algorithms.zpk_rc(
+        Zc=z.c_plane,
+        Zr=z.r_line,
+        Pc=p.c_plane,
+        Pr=p.r_line,
+        k=zpk.k,
+        convention="scipy",
+        orientation="lower",
+        method='chainE_poly',
+    )
+
+    return ss.statespace(
+        ABCDE,
+        hermitian=zpk.hermitian,
+        time_symm=zpk.time_symm,
+        fiducial=zpk.fiducial,
+        fiducial_rtol=zpk.fiducial_rtol,
+        fiducial_atol=zpk.fiducial_atol,
+        algorithm_choices=zpk.algorithm_choices,
+        algorithm_ranking=zpk.algorithm_ranking,
+        # flags={"schur_real_upper", "hessenburg_upper"},
+    )
+
+
+algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_chainE_poly_lower', zpk2ss_chainE_poly_lower, -60)
+
