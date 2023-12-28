@@ -64,7 +64,7 @@ def nz(M):
         return '.'
 nz = np.vectorize(nz, otypes='U')
 
-def print_dense_nonzero(ssb):
+def print_dense_nonzero(ssb, separator=''):
     """
     print the nonzero sparsity patter of the statespace.
 
@@ -93,7 +93,7 @@ def print_dense_nonzero(ssb):
         if i2 - i1 == 0:
             continue
         s_str_list.append(alpha[kidx] + ": " + str(key))
-        s_str.append(alpha[kidx] + " ")
+        s_str.append(alpha[kidx] + separator)
         if i2 - i1 > 1:
             for _ in range(i2 - i1 - 2):
                 s_str.append("━━")
@@ -101,11 +101,12 @@ def print_dense_nonzero(ssb):
     s_str = "  " + "".join(s_str)
 
     kw = dict(
-        formatter={'str_kind': lambda x: str(x)}
+        formatter={'str_kind': lambda x: str(x)},
+        separator=separator,
     )
     Astr = np.array2string(nz(ssb.A), max_line_width=np.nan, threshold=100 ** 2, **kw)
     if ssb.E is not None:
-        Estr = np.array2string(nz(ssb.E), max_line_width=np.nan, threshold=30 ** 2, **kw)
+        Estr = np.array2string(nz(ssb.E), max_line_width=np.nan, threshold=100 ** 2, **kw)
     else:
         Estr = ''
     Bstr = np.array2string(nz(ssb.B), max_line_width=np.nan, threshold=100 ** 2, **kw)

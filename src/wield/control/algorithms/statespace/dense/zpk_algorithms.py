@@ -408,6 +408,7 @@ def zpkdict_cascade(
     pdict,
     k,
     convention="scipy",
+    bad_sort=False,
 ):
     """
     Create a statespace from a cascade of ZPKs.
@@ -457,6 +458,8 @@ def zpkdict_cascade(
                     return np.average(lst), 0, 0
         return 0
     zzpp_list.sort(key=sorter)
+    if bad_sort:
+        zzpp_list = zzpp_list[::-1]
     for z1, z2, p1, p2 in zzpp_list:
         if z1 is not None:
             if z1.imag != 0:

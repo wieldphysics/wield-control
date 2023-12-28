@@ -54,7 +54,7 @@ def gen_filt():
     return filt * filt
 
 
-def gen_filt():
+def gen_filt2():
     filt = SISO.zpk(
         [1e-2],
         [100e-2, 10e-2],

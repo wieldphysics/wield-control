@@ -411,9 +411,6 @@ def chainE(SSs):
     A[..., ssB.cNE, ssB.sN] = ssB.C
     ssBp = ssB
 
-    # for idx_ss, ssB in enumerate(ss_seq, 0):
-    #     print(ssB.cN, ssB.cNE)
-
     for idx_ss, ssB in enumerate(ss_seq[1:-1], 1):
         A[..., ssB.cN, ssB.sN] = ssB.A
         E[..., ssB.cN, ssB.sN] = ssB.E
@@ -431,8 +428,5 @@ def chainE(SSs):
     A[..., ssB.cN, ssBp.sNE] = ssB.B
     C[:, ssB.sN] = ssB.C
     C[:, ssBp.sNE] = ssB.D
-
-    # C[:, ssB.sNE] = np.eye(ssB.outputN)
-    # C[:, ssB.sN] = ssB.C
 
     return TupleABCDE(A, B, C, D, E)
