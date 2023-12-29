@@ -15,18 +15,17 @@ from wield.control.utilities import algorithm_choice
 def gen_filt():
     F_Fq_lo = 10 * 2 * np.pi
     F_Fq_hi = 120 * 2 * np.pi
-    hp_order = 1 #lo_ord
+    hp_order = 2 #lo_ord
     lp_order = 2
     F_p = []
     F_z = []
     for ord in range(hp_order):
         F_p.append(-F_Fq_lo + 0*1j*F_Fq_lo)
-        F_p.append(-F_Fq_lo - 0*1j*F_Fq_lo)
-        F_z.append(0)
-        F_z.append(0)
+        F_z.append(-1)
 
     for ord in range(lp_order):
         F_p.append(-F_Fq_hi)
+
     F_k = 1
     c_zpk = cheby2(8, 160, 1.25*2*np.pi, btype='high', analog=True, output='zpk')
     F_z.extend(c_zpk[0])

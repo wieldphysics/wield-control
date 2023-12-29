@@ -745,10 +745,10 @@ def zpkdict_cascade_sm(
     def sortkey(v):
         r1, r2 = v
         if r1 is None and r2 is None:
-            return -float('infinity')
+            return -float('infinity'), 0
         if r2 is None:
-            return abs(r1)
-        return (abs(r1) * abs(r2))**0.5
+            return float('infinity'), abs(r1)
+        return (abs(r1) * abs(r2))**0.5, 0
 
     pp = sorted(pp, key=sortkey)
     zz = sorted(zz, key=sortkey)
@@ -772,7 +772,18 @@ def zpkdict_cascade_sm(
     import itertools
     # False uses cheby, True uses standard companion
     if True:
-        for (z1, z2), (p1, p2) in itertools.zip_longest(zz, pp, fillvalue=(None, None)):
+        zzpp = list(itertools.zip_longest(zz, pp, fillvalue=(None, None)))
+
+        # this kinds of interlace swapping can improve stability in some scenarios
+        # zzpp = zzpp[0::2] + zzpp[1::2]
+
+        # this swap tends to be good to put the unbalanced one right in the middle
+        # this tends to improve stability in some scenarios
+        last = len(zzpp) - 1
+        mid = last // 2
+        if last != mid:
+            zzpp[mid], zzpp[last] = zzpp[last], zzpp[mid]
+        for (z1, z2), (p1, p2) in zzpp:
             # print("ROOTS,", z1, z2, p1, p2)
             num = gen_poly(z1, z2)
             den = gen_poly(p1, p2)
