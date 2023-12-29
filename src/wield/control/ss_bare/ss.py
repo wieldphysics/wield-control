@@ -265,7 +265,7 @@ class BareStateSpace(object):
             s=None,
             z=None,
             # TODO, get rid of this key, using algorithm ranking instead
-            use_laub=True,
+            use_laub=False,
             **kwargs
     ):
         # TODO fix this import
@@ -389,7 +389,50 @@ class BareStateSpace(object):
             Q=None, Z=None,
             compq='N', compz='N',
             joba='N',
+            # joba='T',
+            # joba='R',
             tol=1e-24,
+        )
+
+        return self.__build_similar__(
+            Ar,
+            Br,
+            Cr,
+            self.D,
+            E=Er,
+        )
+
+    def reduceE2(self):
+        """
+        Utilize slycot tg01gd to reduce the statespace to a simpler form
+        """
+        from slycot.transform import tg01gd
+
+        # self = self.balanceABC(which='ABC')
+        self = self.balanceA()
+
+        E = self.E
+        if E is not None and np.all(E == np.eye(E.shape[-1])):
+            E = None
+
+        A = self.A
+        B = self.B
+        C = self.C
+        D = self.D
+
+        # Order of the A matrix
+        l = self.A.shape[0]
+        n = self.A.shape[1]
+        # Number of inputs
+        m = self.B.shape[1]
+        # Number of outputs
+        p = self.C.shape[0]
+
+        Ar, Er, Br, Cr, Dr, lr, nr, ranke, infred = tg01gd(
+            # 'D',
+            'S',
+            l, n, m, p,
+            A, E, B, C, D,
         )
 
         return self.__build_similar__(
@@ -1533,6 +1576,11 @@ class BareStateSpaceUser(object):
     def reduceE(self, **kwargs):
         return self.__build_similar__(
             ss=self.ss.reduceE(**kwargs),
+        )
+
+    def reduceE2(self, **kwargs):
+        return self.__build_similar__(
+            ss=self.ss.reduceE2(**kwargs),
         )
 
     def balanceABC(self, **kwargs):

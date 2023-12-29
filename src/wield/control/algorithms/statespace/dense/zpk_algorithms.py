@@ -362,7 +362,7 @@ def poly2ss(
         den,
         rescale_has=None,
         rescale_do=None,
-        mode="CCF"
+        mode="OCF"
 ):
     """
     """
@@ -406,172 +406,6 @@ def zpk_cascade(zr, zc, pr, pc, k, convention="scipy"):
         k=k,
         convention=convention,
     )
-
-
-def zpkdict_cascade(
-    zdict,
-    pdict,
-    k,
-    convention="scipy",
-    bad_sort=False,
-):
-    """
-    Create a statespace from a cascade of ZPKs.
-    """
-
-    if convention != "scipy":
-        raise RuntimeError("Only scipy convention currently supported")
-
-    if True:
-        def check(ABCDE):
-            for m in ABCDE:
-                assert(np.all(np.isfinite(m)))
-    else:
-        def check(ABCDE):
-            return
-
-    Zr = []
-    Zc = []
-    Pr = []
-    Pc = []
-    zzpp_list = match_SOS_pairs(
-        Zr=zdict['r'],
-        Zc=zdict['c'],
-        Pr=pdict['r'],
-        Pc=pdict['c'],
-    )
-    # apply a specific sort to utilize the smallest roots first, and the real roots last
-    # this appears to give the best numerical stability
-    def sorter(zzpp):
-        (z1, z2, p1, p2) = zzpp
-        lst = []
-        anyreal = False
-        unmatched = False
-        for r in zzpp:
-            if r is not None:
-                lst.append(abs(r))
-                if r.imag == 0:
-                    anyreal = True
-            else:
-                unmatched = True
-        if lst:
-            if unmatched:
-                return -float('infinity'), -float('infinity'), np.average(lst)
-            else:
-                if anyreal:
-                    return -float('infinity'), np.average(lst), 0
-                else:
-                    return np.average(lst), 0, 0
-        return 0
-    zzpp_list.sort(key=sorter)
-    if bad_sort:
-        zzpp_list = zzpp_list[::-1]
-    for z1, z2, p1, p2 in zzpp_list:
-        if z1 is not None:
-            if z1.imag != 0:
-                Zc.append(z1)
-            else:
-                Zr.append(z1)
-                if z2 is not None:
-                    Zr.append(z2)
-        if p1 is not None:
-            if p1.imag != 0:
-                Pc.append(p1)
-            else:
-                Pr.append(p1)
-                if p2 is not None:
-                    Pr.append(p2)
-
-    def gen_polys(rdict):
-        Rc = rdict["c"]
-        Rr = rdict["r"]
-
-        poly = []
-        # print("ROOTS,", Rc, Rr)
-        for c in Rc:
-            poly.append((c.real * c.real + c.imag * c.imag, -2 * c.real, 1))
-        idx = 0
-        while idx <= len(Rr)  - 2:
-            r1, r2 = Rr[idx: idx + 2]
-            poly.append((r1 * r2, -(r1 + r2), 1))
-            idx += 2
-        if idx < len(Rr):
-            (r1,) = Rr[idx:]
-            last = (-r1, 1)
-        else:
-            last = None
-        return poly, last
-
-    Zpoly, Zlast = gen_polys(dict(c=Zc, r=Zr))
-    Ppoly, Plast = gen_polys(dict(c=Pc, r=Pr))
-
-    ABCDEs = []
-    idx = -1
-    for idx in range(min(len(Zpoly), len(Ppoly))):
-        zp = Zpoly[idx]
-        pp = Ppoly[idx]
-        rescale = abs(zp[0] * pp[0])**0.5
-        if abs(rescale) < 1e-6:
-            rescale = None
-        ABCDE = poly2ss(zp, pp, rescale_do=rescale)
-        # ABCD = scipy.signal.tf2ss(zp[::-1], pp[::-1])
-        # E = np.eye(2)
-        check(ABCDE)
-        ABCDEs.append(ABCDE)
-    if len(Zpoly) <= len(Ppoly):
-        for idx in range(len(Zpoly), len(Ppoly)):
-            pp = Ppoly[idx]
-            rescale = 1 / pp[-1]
-            if Zlast is not None:
-                zp = Zlast
-                Zlast = None
-            else:
-                zp = [1]
-            ABCDE = poly2ss(zp, pp, rescale_do=rescale)
-            check(ABCDE)
-            ABCDEs.append(ABCDE)
-    else:
-        for idx in range(len(Ppoly), len(Zpoly)):
-            zp = Zpoly[idx]
-            rescale = 1 / zp[-1]
-            if Plast is not None:
-                pp = Plast
-                Plast = None
-            else:
-                pp = [1]
-            ABCDE = poly2ss(pp, zp, rescale_do=rescale)
-            ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
-            check(ABCDE)
-            ABCDEs.append(ABCDE)
-    if Plast is None:
-        if Zlast is not None:
-            ABCDE = poly2ss([1], Zlast)
-            ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
-            check(ABCDE)
-            ABCDEs.append(ABCDE)
-    else:
-        idx += 1
-        if Zlast is None:
-            Zlast = [1]
-        ABCDE = poly2ss(Zlast, Plast)
-        check(ABCDE)
-        ABCDEs.append(ABCDE)
-
-    if ABCDEs:
-        A, B, C, D, E = ABCDEs[0]
-        B *= k
-        D *= k
-        ABCDEs[0] = A, B, C, D, E
-    else:
-        ABCDE = (
-            np.array([[]]).reshape(0, 0),
-            np.array([[]]).reshape(0, 1),
-            np.array([[]]).reshape(1, 0),
-            np.array([[k]]),
-            np.array([[]]).reshape(0, 0),
-        )
-        ABCDEs.append(ABCDE)
-    return ABCDEs
 
 
 def zpk_rc(
@@ -760,8 +594,8 @@ def ZPK2ss_cheby_companion(
         [Zc, Zc.conjugate(), Zr]
     )
 
-    # norm = max(abs(p))**0.5
     norm = 1
+    # norm = np.exp(np.mean(np.log(np.concatenate([1e-5 + abs(p), 1e-5 + abs(z)]))))
     p = p / norm
     z = z / norm
     cp = chebfromroots(p).real
@@ -861,5 +695,418 @@ def chebcompanion_scaled(c, scale = None):
     mat[:, -1] -= (c[:-1]/scale)*(scl/scl[-1])*.5
     return mat
 
+
+def zpkdict_cascade_cheb(
+    zdict,
+    pdict,
+    k,
+    convention="scipy",
+    bad_sort=True,
+):
+    """
+    Create a statespace from a cascade of ZPKs.
+
+    Chebychev version
+    """
+
+    if convention != "scipy":
+        raise RuntimeError("Only scipy convention currently supported")
+
+    if True:
+        def check(ABCDE):
+            for m in ABCDE:
+                assert(np.all(np.isfinite(m)))
+    else:
+        def check(ABCDE):
+            return
+
+    Zr = []
+    Zc = []
+    Pr = []
+    Pc = []
+    zzpp_list = match_SOS_pairs(
+        Zr=zdict['r'],
+        Zc=zdict['c'],
+        Pr=pdict['r'],
+        Pc=pdict['c'],
+    )
+    # apply a specific sort to utilize the smallest roots first, and the real roots last
+    # this appears to give the best numerical stability
+    def sorter(zzpp):
+        (z1, z2, p1, p2) = zzpp
+        lst = []
+        anyreal = False
+        unmatched = False
+        for r in zzpp:
+            if r is not None:
+                lst.append(abs(r))
+                if r.imag == 0:
+                    anyreal = True
+            else:
+                unmatched = True
+        if lst:
+            if unmatched:
+                return -float('infinity'), -float('infinity'), np.average(lst)
+            else:
+                if anyreal:
+                    return -float('infinity'), np.average(lst), 0
+                else:
+                    return np.average(lst), 0, 0
+        return 0
+    zzpp_list.sort(key=sorter)
+    if bad_sort:
+        zzpp_list = zzpp_list[::-1]
+    for z1, z2, p1, p2 in zzpp_list:
+        if z1 is not None:
+            if z1.imag != 0:
+                Zc.append(z1)
+            else:
+                Zr.append(z1)
+                if z2 is not None:
+                    Zr.append(z2)
+        if p1 is not None:
+            if p1.imag != 0:
+                Pc.append(p1)
+            else:
+                Pr.append(p1)
+                if p2 is not None:
+                    Pr.append(p2)
+
+
+    # Using cheby cascade form
+    ABCDEs = []
+    for z1, z2, p1, p2 in zzpp_list:
+        Nrel = 0
+        if z1 is not None and z1.imag != 0:
+            Zc = [z1]
+            Zr = []
+            Nrel += 2
+        else:
+            Zc = []
+            Zr = [z for z in [z1, z2] if z is not None]
+            Nrel += len(Zr)
+        if p1 is not None and p1.imag != 0:
+            Pc = [p1]
+            Pr = []
+            Nrel -= 2
+        else:
+            Pc = []
+            Pr = [p for p in [p1, p2] if p is not None]
+            Nrel -= len(Pr)
+        Zc = np.asarray(Zc)
+        Zr = np.asarray(Zr)
+        Pc = np.asarray(Pc)
+        Pr = np.asarray(Pr)
+
+        if Nrel <= 0:
+            ABCDE = ZPK2ss_cheby_companion(
+                Zc, Zr,
+                Pc, Pr,
+                1,
+                orientation='lower',
+            )
+        else:
+            ABCDE = ZPK2ss_cheby_companion(
+                Pc, Pr,
+                Zc, Zr,
+                1,
+                orientation='lower',
+            )
+            ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
+        ABCDEs.append(ABCDE)
+
+    if ABCDEs:
+        A, B, C, D, E = ABCDEs[0]
+        B = B * k
+        D = D * k
+        ABCDEs[0] = A, B, C, D, E
+    else:
+        ABCDE = (
+            np.array([[]]).reshape(0, 0),
+            np.array([[]]).reshape(0, 1),
+            np.array([[]]).reshape(1, 0),
+            np.array([[k]]),
+            np.array([[]]).reshape(0, 0),
+        )
+        ABCDEs.append(ABCDE)
+    return ABCDEs
+
+
+def zpkdict_cascade(
+    zdict,
+    pdict,
+    k,
+    convention="scipy",
+    bad_sort=False,
+):
+    """
+    Create a statespace from a cascade of ZPKs.
+
+    This one is a bit simpler than the other one, and appears to work as well. And has the most simple sort
+    """
+
+    if convention != "scipy":
+        raise RuntimeError("Only scipy convention currently supported")
+
+    if True:
+        def check(ABCDE):
+            for m in ABCDE:
+                assert(np.all(np.isfinite(m)))
+    else:
+        def check(ABCDE):
+            return
+
+    zz = []
+    pp = []
+    zrs = sorted(zdict['r'], key=lambda v: abs(v))
+    while zrs:
+        z1 = zrs.pop()
+        if zrs:
+            z2 = zrs.pop()
+            zz.append((z1, z2))
+        else:
+            zz.append((z1, None))
+    prs = sorted(pdict['r'], key=lambda v: abs(v))
+    while prs:
+        p1 = prs.pop()
+        if prs:
+            p2 = prs.pop()
+            pp.append((p1, p2))
+        else:
+            pp.append((p1, None))
+    for Zc in zdict['c']:
+        zz.append((Zc, Zc.conjugate()))
+    for Pc in pdict['c']:
+        pp.append((Pc, Pc.conjugate()))
+
+    def sortkey(v):
+        r1, r2 = v
+        if r1 is None and r2 is None:
+            return -float('infinity')
+        if r2 is None:
+            return abs(r1)
+        return (abs(r1) * abs(r2))**0.5
+
+    pp = sorted(pp, key=sortkey)
+    zz = sorted(zz, key=sortkey)
+    # pp = pp[::-1]
+    # zz = zz[::-1]
+
+    def gen_poly(r1, r2):
+        if r1 is None:
+            return (1,)
+        if r1.imag != 0:
+            return (r1.real * r1.real + r1.imag * r1.imag, -2 * r1.real, 1)
+
+        if r2 is not None:
+            return (r1 * r2, -(r1 + r2), 1)
+        else:
+            return (-r1, 1)
+        return
+
+    ABCDEs = []
+    import itertools
+    for (z1, z2), (p1, p2) in itertools.zip_longest(zz, pp, fillvalue=(None, None)):
+        print("ROOTS,", z1, z2, p1, p2)
+        num = gen_poly(z1, z2)
+        den = gen_poly(p1, p2)
+
+        rescale = abs(num[0] * den[0])**0.5
+        if abs(rescale) < 1e-6:
+            rescale = None
+
+        if len(num) <= len(den):
+            ABCDE = poly2ss(num, den, rescale_do=rescale)
+        else:
+            ABCDE = poly2ss(den, num, rescale_do=rescale)
+            ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
+        ABCDEs.append(ABCDE)
+
+    if ABCDEs:
+        A, B, C, D, E = ABCDEs[0]
+        B = B * k
+        D = D * k
+        ABCDEs[0] = A, B, C, D, E
+    else:
+        ABCDE = (
+            np.array([[]]).reshape(0, 0),
+            np.array([[]]).reshape(0, 1),
+            np.array([[]]).reshape(1, 0),
+            np.array([[k]]),
+            np.array([[]]).reshape(0, 0),
+        )
+        ABCDEs.append(ABCDE)
+    return ABCDEs
+
+
+def zpkdict_cascade_orig(
+    zdict,
+    pdict,
+    k,
+    convention="scipy",
+    bad_sort=False,
+):
+    """
+    Create a statespace from a cascade of ZPKs.
+
+    This one seems to work slightly better, but the reason may just be coincedence
+    """
+
+    if convention != "scipy":
+        raise RuntimeError("Only scipy convention currently supported")
+
+    if True:
+        def check(ABCDE):
+            for m in ABCDE:
+                assert(np.all(np.isfinite(m)))
+    else:
+        def check(ABCDE):
+            return
+
+    Zr = []
+    Zc = []
+    Pr = []
+    Pc = []
+    zzpp_list = match_SOS_pairs(
+        Zr=zdict['r'],
+        Zc=zdict['c'],
+        Pr=pdict['r'],
+        Pc=pdict['c'],
+    )
+    # apply a specific sort to utilize the smallest roots first, and the real roots last
+    # this appears to give the best numerical stability
+    def sorter(zzpp):
+        (z1, z2, p1, p2) = zzpp
+        lst = []
+        anyreal = False
+        unmatched = False
+        for r in zzpp:
+            if r is not None:
+                lst.append(abs(r))
+                if r.imag == 0:
+                    anyreal = True
+            else:
+                unmatched = True
+        if lst:
+            if unmatched:
+                return -float('infinity'), -float('infinity'), np.average(lst)
+            else:
+                if anyreal:
+                    return -float('infinity'), np.average(lst), 0
+                else:
+                    return np.average(lst), 0, 0
+        return 0
+    zzpp_list.sort(key=sorter)
+    if bad_sort:
+        zzpp_list = zzpp_list[::-1]
+    for z1, z2, p1, p2 in zzpp_list:
+        if z1 is not None:
+            if z1.imag != 0:
+                Zc.append(z1)
+            else:
+                Zr.append(z1)
+                if z2 is not None:
+                    Zr.append(z2)
+        if p1 is not None:
+            if p1.imag != 0:
+                Pc.append(p1)
+            else:
+                Pr.append(p1)
+                if p2 is not None:
+                    Pr.append(p2)
+
+    def gen_polys(rdict):
+        Rc = rdict["c"]
+        Rr = rdict["r"]
+        # print("ROOTS: ", Rc, Rr)
+
+        poly = []
+        # print("ROOTS,", Rc, Rr)
+        for c in Rc:
+            poly.append((c.real * c.real + c.imag * c.imag, -2 * c.real, 1))
+        idx = 0
+        while idx <= len(Rr)  - 2:
+            r1, r2 = Rr[idx: idx + 2]
+            poly.append((r1 * r2, -(r1 + r2), 1))
+            idx += 2
+        if idx < len(Rr):
+            (r1,) = Rr[idx:]
+            last = (-r1, 1)
+        else:
+            last = None
+        return poly, last
+
+    # print("ZEROS")
+    Zpoly, Zlast = gen_polys(dict(c=Zc, r=Zr))
+    # print("POLES")
+    Ppoly, Plast = gen_polys(dict(c=Pc, r=Pr))
+
+    ABCDEs = []
+    idx = -1
+    for idx in range(min(len(Zpoly), len(Ppoly))):
+        zp = Zpoly[idx]
+        pp = Ppoly[idx]
+        rescale = abs(zp[0] * pp[0])**0.5
+        if abs(rescale) < 1e-6:
+            rescale = None
+        ABCDE = poly2ss(zp, pp, rescale_do=rescale)
+        # ABCD = scipy.signal.tf2ss(zp[::-1], pp[::-1])
+        # E = np.eye(2)
+        check(ABCDE)
+        ABCDEs.append(ABCDE)
+    if len(Zpoly) <= len(Ppoly):
+        for idx in range(len(Zpoly), len(Ppoly)):
+            pp = Ppoly[idx]
+            rescale = 1 / pp[-1]
+            if Zlast is not None:
+                zp = Zlast
+                Zlast = None
+            else:
+                zp = [1]
+            ABCDE = poly2ss(zp, pp, rescale_do=rescale)
+            check(ABCDE)
+            ABCDEs.append(ABCDE)
+    else:
+        for idx in range(len(Ppoly), len(Zpoly)):
+            zp = Zpoly[idx]
+            rescale = 1 / zp[-1]
+            if Plast is not None:
+                pp = Plast
+                Plast = None
+            else:
+                pp = [1]
+            ABCDE = poly2ss(pp, zp, rescale_do=rescale)
+            ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
+            check(ABCDE)
+            ABCDEs.append(ABCDE)
+    if Plast is None:
+        if Zlast is not None:
+            ABCDE = poly2ss([1], Zlast)
+            ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
+            check(ABCDE)
+            ABCDEs.append(ABCDE)
+    else:
+        idx += 1
+        if Zlast is None:
+            Zlast = [1]
+        ABCDE = poly2ss(Zlast, Plast)
+        check(ABCDE)
+        ABCDEs.append(ABCDE)
+
+    if ABCDEs:
+        A, B, C, D, E = ABCDEs[0]
+        B *= k
+        D *= k
+        ABCDEs[0] = A, B, C, D, E
+    else:
+        ABCDE = (
+            np.array([[]]).reshape(0, 0),
+            np.array([[]]).reshape(0, 1),
+            np.array([[]]).reshape(1, 0),
+            np.array([[k]]),
+            np.array([[]]).reshape(0, 0),
+        )
+        ABCDEs.append(ABCDE)
+    return ABCDEs
 
 

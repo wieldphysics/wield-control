@@ -165,7 +165,7 @@ def algo_run(algotype, rankings, args, kwargs, choice=None):
     for func in ranks:
         try:
             ret = func(*args, **kwargs)
-        except ValueError:
+        except AlgorithmError:
             # hmmm. Probably shouldn't accept any kind of exception here
             continue
         break
@@ -176,3 +176,9 @@ def algo_run(algotype, rankings, args, kwargs, choice=None):
             raise RuntimeError("No algorithm can handle the current properties of your StateSpace")
     return ret
 
+
+class AlgorithmError(ValueError):
+    """
+    Error to raise if algorithm is failing
+    """
+    pass

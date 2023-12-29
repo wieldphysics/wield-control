@@ -117,7 +117,8 @@ def zpk2ss_chainE_poly(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
-    return statesp.reduceE()
+    # return statesp
+    return statesp.reduceE2()
 
 
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_chainE_poly', zpk2ss_chainE_poly, 60)
@@ -221,7 +222,8 @@ def zpk2ss_chainE_poly_lower(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
-    return statesp.reduceE()
+    # return statesp
+    return statesp.reduceE2()
 
 
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_chainE_poly_lower', zpk2ss_chainE_poly_lower, -60)
