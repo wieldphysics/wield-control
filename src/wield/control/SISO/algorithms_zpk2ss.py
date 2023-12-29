@@ -40,7 +40,7 @@ def zpk2ss_cheby(zpk):
     else:
         raise ValueError("Cheby ZPK cannot handle more poles than zeros")
 
-    return ss.statespace(
+    statesp = ss.statespace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,
@@ -51,6 +51,10 @@ def zpk2ss_cheby(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
+
+    # statesp = statesp.balance_and_truncate(nr=statesp.ss.Nstates-0)
+    return statesp
+
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_cheby', zpk2ss_cheby, 80)
 
 
@@ -72,7 +76,7 @@ def zpk2ss_chain_poly(zpk):
         method='chain_poly',
     )
 
-    return ss.statespace(
+    statesp = ss.statespace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,
@@ -83,6 +87,8 @@ def zpk2ss_chain_poly(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
+    # statesp = statesp.balance_and_truncate(nr=statesp.ss.Nstates-0)
+    return statesp
 
 
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_chain_poly', zpk2ss_chain_poly, 100)
@@ -117,8 +123,9 @@ def zpk2ss_chainE_poly(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
-    # return statesp
-    return statesp.reduceE2()
+    # statesp = statesp.reduceE()
+    # statesp = statesp.reduceE2()
+    return statesp
 
 
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_chainE_poly', zpk2ss_chainE_poly, 60)
@@ -145,7 +152,7 @@ def zpk2ss_cheby_lower(zpk):
     else:
         raise ValueError("Cheby ZPK cannot handle more poles than zeros")
 
-    return ss.statespace(
+    statesp = ss.statespace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,
@@ -156,6 +163,9 @@ def zpk2ss_cheby_lower(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
+    # statesp = statesp.balance_and_truncate(nr=statesp.ss.Nstates-0)
+    return statesp
+
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_cheby_lower', zpk2ss_cheby_lower, -80)
 
 
@@ -177,7 +187,7 @@ def zpk2ss_chain_poly_lower(zpk):
         method='chain_poly',
     )
 
-    return ss.statespace(
+    statesp = ss.statespace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,
@@ -188,6 +198,8 @@ def zpk2ss_chain_poly_lower(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
+    # statesp = statesp.balance_and_truncate(nr=statesp.ss.Nstates-0)
+    return statesp
 
 
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_chain_poly_lower', zpk2ss_chain_poly_lower, -100)
@@ -223,7 +235,9 @@ def zpk2ss_chainE_poly_lower(zpk):
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
     # return statesp
-    return statesp.reduceE2()
+    # statesp = statesp.reduceE2()
+    # statesp = statesp.balance_and_truncate()
+    return statesp
 
 
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_chainE_poly_lower', zpk2ss_chainE_poly_lower, -60)

@@ -268,7 +268,7 @@ def controllable_staircase(
     return A, B, C, D, E
 
 
-def chain(SSs):
+def chain(SSs, orientation='lower'):
     """
     Construct a sequential product of state spaces. Each state space must be a tuple of ABCD or ABCDE
     """
@@ -285,6 +285,8 @@ def chain(SSs):
             assert(A.shape[-1] == A.shape[-2])
         elif len(ss) == 5:
             A, B, C, D, E = ss
+            if E is None:
+                E = np.eye(A.shape[-1])
         ssB.A = A
         ssB.B = B
         ssB.C = C
@@ -344,10 +346,24 @@ def chain(SSs):
         C[:, ssB.sN] = C_into
         D_rev = D_rev @ ssB.D
 
+    orientation = orientation.lower()
+    if orientation == 'lower':
+        pass
+    elif orientation == 'upper':
+        A, B, C, D, E = (
+            A[..., ::-1, ::-1],
+            B[..., ::-1, :],
+            C[..., :, ::-1],
+            D,
+            E[..., ::-1, ::-1],
+        )
+    else:
+        raise RuntimeError("Unrecognized Orientation")
+
     return TupleABCDE(A, B, C, D, E)
 
 
-def chainE(SSs):
+def chainE(SSs, orientation='lower'):
     ss_seq = []
     constrN = 0
     statesN = 0
@@ -359,6 +375,8 @@ def chainE(SSs):
             assert (A.shape[-1] == A.shape[-2])
         elif len(ss) == 5:
             A, B, C, D, E = ss
+            if E is None:
+                E = np.eye(A.shape[-1])
         ssB.A = A
         ssB.B = B
         ssB.C = C
@@ -428,5 +446,19 @@ def chainE(SSs):
     A[..., ssB.cN, ssBp.sNE] = ssB.B
     C[:, ssB.sN] = ssB.C
     C[:, ssBp.sNE] = ssB.D
+
+    orientation = orientation.lower()
+    if orientation == 'lower':
+        pass
+    elif orientation == 'upper':
+        A, B, C, D, E = (
+            A[..., ::-1, ::-1],
+            B[..., ::-1, :],
+            C[..., :, ::-1],
+            D,
+            E[..., ::-1, ::-1],
+        )
+    else:
+        raise RuntimeError("Unrecognized Orientation")
 
     return TupleABCDE(A, B, C, D, E)

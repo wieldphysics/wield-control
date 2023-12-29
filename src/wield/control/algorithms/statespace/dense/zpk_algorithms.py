@@ -39,6 +39,50 @@ TupleABCDE = collections.namedtuple("ABCDE", ('A', 'B', 'C', 'D', 'E'))
 pi2 = np.pi * 2
 
 
+def split_chain(ABCDEs):
+    idx_spl = len(ABCDEs) // 2
+    if idx_spl < 2:
+        return ss_algorithms.chain(ABCDEs)
+
+    left = split_chain(ABCDEs[:idx_spl])
+    right = split_chain(ABCDEs[idx_spl:])
+
+    val = ss_algorithms.chain([left, right])
+
+    ### testing to see if balancing improves
+    # from wield.control.ss_bare.ss import BareStateSpace
+    # statesp = BareStateSpace(*val,)
+    # statesp = statesp.balance_and_truncate(nr=statesp.Nstates-0)
+    # # statesp = statesp.balanceA()
+    # val = statesp.ABCDE
+
+    A, B, C, D, E = val
+    return val
+
+    if False:
+        # Order of the A matrix
+        n = A.shape[0]
+        # Number of inputs
+        m = B.shape[1]
+        # Number of outputs
+        p = C.shape[0]
+
+        dico = 'C'
+        job = 'B'
+        equil = 'S'
+        tol1 = 0
+        tol2 = 0
+        from slycot import ab09nd
+        nr, Ar, Br, Cr, Dr, ns, hsv = ab09nd(
+            dico, job, equil,
+            n, m, p,
+            A, B, C, D,
+            tol1=tol1, tol2=tol2,
+        )  # ,alpha=None,nr=None,tol1=0,tol2=0,ldwork=None)
+
+        return Ar, Br, Cr, Dr, np.eye(Ar.shape[0])
+
+
 def ss2p(
     A,
     E=None,
@@ -474,53 +518,8 @@ def ZPKdict(
         zdict=zdict, pdict=pdict, k=k, convention=convention
     )
 
-    def split_chain(ABCDEs):
-        idx_spl = len(ABCDEs) // 2
-        if idx_spl < 2:
-            return ss_algorithms.chain(ABCDEs)
-
-        left = split_chain(ABCDEs[:idx_spl])
-        right = split_chain(ABCDEs[idx_spl:])
-
-        A, B, C, D, E = left 
-        left = ABCDE = (
-            A[..., ::-1, ::-1],
-            B[..., ::-1, :],
-            C[..., :, ::-1],
-            D,
-            E[..., ::-1, ::-1],
-        )
-
-        val = ss_algorithms.chain([left, right])
-
-        A, B, C, D, E = val
-        return val
-    
-        if False:
-            # Order of the A matrix
-            n = A.shape[0]
-            # Number of inputs
-            m = B.shape[1]
-            # Number of outputs
-            p = C.shape[0]
-
-            dico = 'C'
-            job = 'B'
-            equil = 'S'
-            tol1 = 0
-            tol2 = 0
-            from slycot import ab09nd
-            nr, Ar, Br, Cr, Dr, ns, hsv = ab09nd(
-                dico, job, equil,
-                n, m, p,
-                A, B, C, D,
-                tol1=tol1, tol2=tol2,
-            )  # ,alpha=None,nr=None,tol1=0,tol2=0,ldwork=None)
-
-            return Ar, Br, Cr, Dr, np.eye(Ar.shape[0])
-
-    # ABCDE = split_chain(ABCDEs)
-    ABCDE = ss_algorithms.chain(ABCDEs)
+    ABCDE = split_chain(ABCDEs)
+    # ABCDE = ss_algorithms.chain(ABCDEs)
 
     orientation = orientation.lower()
     if orientation == 'lower':
@@ -696,143 +695,7 @@ def chebcompanion_scaled(c, scale = None):
     return mat
 
 
-def zpkdict_cascade_cheb(
-    zdict,
-    pdict,
-    k,
-    convention="scipy",
-    bad_sort=True,
-):
-    """
-    Create a statespace from a cascade of ZPKs.
-
-    Chebychev version
-    """
-
-    if convention != "scipy":
-        raise RuntimeError("Only scipy convention currently supported")
-
-    if True:
-        def check(ABCDE):
-            for m in ABCDE:
-                assert(np.all(np.isfinite(m)))
-    else:
-        def check(ABCDE):
-            return
-
-    Zr = []
-    Zc = []
-    Pr = []
-    Pc = []
-    zzpp_list = match_SOS_pairs(
-        Zr=zdict['r'],
-        Zc=zdict['c'],
-        Pr=pdict['r'],
-        Pc=pdict['c'],
-    )
-    # apply a specific sort to utilize the smallest roots first, and the real roots last
-    # this appears to give the best numerical stability
-    def sorter(zzpp):
-        (z1, z2, p1, p2) = zzpp
-        lst = []
-        anyreal = False
-        unmatched = False
-        for r in zzpp:
-            if r is not None:
-                lst.append(abs(r))
-                if r.imag == 0:
-                    anyreal = True
-            else:
-                unmatched = True
-        if lst:
-            if unmatched:
-                return -float('infinity'), -float('infinity'), np.average(lst)
-            else:
-                if anyreal:
-                    return -float('infinity'), np.average(lst), 0
-                else:
-                    return np.average(lst), 0, 0
-        return 0
-    zzpp_list.sort(key=sorter)
-    if bad_sort:
-        zzpp_list = zzpp_list[::-1]
-    for z1, z2, p1, p2 in zzpp_list:
-        if z1 is not None:
-            if z1.imag != 0:
-                Zc.append(z1)
-            else:
-                Zr.append(z1)
-                if z2 is not None:
-                    Zr.append(z2)
-        if p1 is not None:
-            if p1.imag != 0:
-                Pc.append(p1)
-            else:
-                Pr.append(p1)
-                if p2 is not None:
-                    Pr.append(p2)
-
-
-    # Using cheby cascade form
-    ABCDEs = []
-    for z1, z2, p1, p2 in zzpp_list:
-        Nrel = 0
-        if z1 is not None and z1.imag != 0:
-            Zc = [z1]
-            Zr = []
-            Nrel += 2
-        else:
-            Zc = []
-            Zr = [z for z in [z1, z2] if z is not None]
-            Nrel += len(Zr)
-        if p1 is not None and p1.imag != 0:
-            Pc = [p1]
-            Pr = []
-            Nrel -= 2
-        else:
-            Pc = []
-            Pr = [p for p in [p1, p2] if p is not None]
-            Nrel -= len(Pr)
-        Zc = np.asarray(Zc)
-        Zr = np.asarray(Zr)
-        Pc = np.asarray(Pc)
-        Pr = np.asarray(Pr)
-
-        if Nrel <= 0:
-            ABCDE = ZPK2ss_cheby_companion(
-                Zc, Zr,
-                Pc, Pr,
-                1,
-                orientation='lower',
-            )
-        else:
-            ABCDE = ZPK2ss_cheby_companion(
-                Pc, Pr,
-                Zc, Zr,
-                1,
-                orientation='lower',
-            )
-            ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
-        ABCDEs.append(ABCDE)
-
-    if ABCDEs:
-        A, B, C, D, E = ABCDEs[0]
-        B = B * k
-        D = D * k
-        ABCDEs[0] = A, B, C, D, E
-    else:
-        ABCDE = (
-            np.array([[]]).reshape(0, 0),
-            np.array([[]]).reshape(0, 1),
-            np.array([[]]).reshape(1, 0),
-            np.array([[k]]),
-            np.array([[]]).reshape(0, 0),
-        )
-        ABCDEs.append(ABCDE)
-    return ABCDEs
-
-
-def zpkdict_cascade(
+def zpkdict_cascade_sm(
     zdict,
     pdict,
     k,
@@ -889,8 +752,9 @@ def zpkdict_cascade(
 
     pp = sorted(pp, key=sortkey)
     zz = sorted(zz, key=sortkey)
-    # pp = pp[::-1]
-    # zz = zz[::-1]
+    if bad_sort:
+        pp = pp[::-1]
+        zz = zz[::-1]
 
     def gen_poly(r1, r2):
         if r1 is None:
@@ -906,21 +770,64 @@ def zpkdict_cascade(
 
     ABCDEs = []
     import itertools
-    for (z1, z2), (p1, p2) in itertools.zip_longest(zz, pp, fillvalue=(None, None)):
-        print("ROOTS,", z1, z2, p1, p2)
-        num = gen_poly(z1, z2)
-        den = gen_poly(p1, p2)
+    # False uses cheby, True uses standard companion
+    if True:
+        for (z1, z2), (p1, p2) in itertools.zip_longest(zz, pp, fillvalue=(None, None)):
+            # print("ROOTS,", z1, z2, p1, p2)
+            num = gen_poly(z1, z2)
+            den = gen_poly(p1, p2)
 
-        rescale = abs(num[0] * den[0])**0.5
-        if abs(rescale) < 1e-6:
-            rescale = None
+            rescale = abs(num[0] * den[0])**0.5
+            if abs(rescale) < 1e-6:
+                rescale = None
 
-        if len(num) <= len(den):
-            ABCDE = poly2ss(num, den, rescale_do=rescale)
-        else:
-            ABCDE = poly2ss(den, num, rescale_do=rescale)
-            ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
-        ABCDEs.append(ABCDE)
+            if len(num) <= len(den):
+                ABCDE = poly2ss(num, den, rescale_do=rescale)
+            else:
+                ABCDE = poly2ss(den, num, rescale_do=rescale)
+                ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
+            ABCDEs.append(ABCDE)
+    else:
+        # use the cheby companion method
+        for (z1, z2), (p1, p2) in itertools.zip_longest(zz, pp, fillvalue=(None, None)):
+            Nrel = 0
+            if z1 is not None and z1.imag != 0:
+                Zc = [z1]
+                Zr = []
+                Nrel += 2
+            else:
+                Zc = []
+                Zr = [z for z in [z1, z2] if z is not None]
+                Nrel += len(Zr)
+            if p1 is not None and p1.imag != 0:
+                Pc = [p1]
+                Pr = []
+                Nrel -= 2
+            else:
+                Pc = []
+                Pr = [p for p in [p1, p2] if p is not None]
+                Nrel -= len(Pr)
+            Zc = np.asarray(Zc)
+            Zr = np.asarray(Zr)
+            Pc = np.asarray(Pc)
+            Pr = np.asarray(Pr)
+
+            if Nrel <= 0:
+                ABCDE = ZPK2ss_cheby_companion(
+                    Zc, Zr,
+                    Pc, Pr,
+                    1,
+                    orientation='lower',
+                )
+            else:
+                ABCDE = ZPK2ss_cheby_companion(
+                    Pc, Pr,
+                    Zc, Zr,
+                    1,
+                    orientation='lower',
+                )
+                ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
+            ABCDEs.append(ABCDE)
 
     if ABCDEs:
         A, B, C, D, E = ABCDEs[0]
@@ -1109,4 +1016,6 @@ def zpkdict_cascade_orig(
         ABCDEs.append(ABCDE)
     return ABCDEs
 
+
+zpkdict_cascade = zpkdict_cascade_sm
 

@@ -79,7 +79,8 @@ def test_long_ZPK_stability_plot():
     axB = mplfigB(Nrows=2)
 
     filt = gen_filt()
-    xfer = filt.fresponse(f=F_Hz)
+    xfer = (filt).fresponse(f=F_Hz)
+    # xfer = (filt * filt).fresponse(f=F_Hz)
     axB.ax0.loglog(*xfer.fplot_mag, label="ZPK, wield")
     axB.ax1.semilogx(*xfer.fplot_deg180, label="ZPK, wield")
 
@@ -90,6 +91,7 @@ def test_long_ZPK_stability_plot():
         algorithm_choices = {'zpk2ss': {k: 1000}}
         filt = filt_orig.set_algorithm_choices(algorithm_choices)
         filtss = filt.asSS
+        # filtss = filtss * filtss
         # print(filtss.A.shape, filtss.E.shape)
 
         filtss.print_nonzero()
@@ -100,6 +102,9 @@ def test_long_ZPK_stability_plot():
         axB.ax1.semilogx(*xfer.fplot_deg180, label=label)
 
     # axB.ax0.set_ylim(1e-25, 10)
+    axB.ax0.axhline(np.finfo(float).eps, lw=1, ls='--', color='black')
+    axB.ax0.axhline(filtss.ss.Nstates * np.finfo(float).eps, lw=1, ls='--', color='black')
+    axB.ax0.axhline(filtss.ss.Nstates**2 * np.finfo(float).eps, lw=1, ls='--', color='black')
     axB.ax0.legend()
 
     axB.save(tjoin('algorithm_compare_zpk2ss'))

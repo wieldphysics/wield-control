@@ -265,7 +265,7 @@ class BareStateSpace(object):
             s=None,
             z=None,
             # TODO, get rid of this key, using algorithm ranking instead
-            use_laub=False,
+            use_laub=True,
             **kwargs
     ):
         # TODO fix this import
@@ -619,7 +619,91 @@ class BareStateSpace(object):
         )
 
 
-    def balance_and_truncate_unscaled(self, method='sqrt', equil=True, tol1=0, tol2=0):
+    def stochastic_balance_and_truncate(self, method='bfsqrt', equil=True, nr=None, alpha=None, beta=1e-4, tol1=0, tol2=0):
+        """
+            To compute a reduced order model (Ar,Br,Cr,Dr) for an original state-space representation (A,B,C,D) by using either the square-root or the balancing-free square-root Singular Perturbation Approximation (SPA) model reduction method for the alpha-stable part of the system.
+            - From SLYCOT Documentation for ab09nd
+
+        Args:
+            sys (Bunch): Bunch system with mod as attribute
+            method (str, optional): Method to use for balancing. 'sqrt': use the square-root SPA method. 'bfsqrt': use the balancing-free square-root SPA method. Defaults to 'sqrt'.
+            equil (bool, optional): If True, preliminarily equilibrates the triplet (A,B,C). Defaults to True.
+            iod (dict, optional): input/output dictionary. Defaults to None.
+
+        Returns:
+            a similar StateSpace
+        """    
+        # Define if the model is discrete or continuous
+        if self.dt == 0 or self.dt == None: # if the model is discrete it will have a non 0 or None dt
+            dico = 'C'
+        else:
+            dico = 'D'
+
+        E = self.E
+        if E is not None and np.all(E == np.eye(E.shape[-1])):
+            E = None
+        if E is not None:
+            # try to reduce
+            self = self.reduceE2()
+            E = self.E
+            if E is not None:
+                raise NotImplementedError("balancing on descriptor systems not implemented (yet)")
+
+        # Define which method to use
+        if method == 'sqrt':
+            job = 'B'
+        elif method == 'bfsqrt':
+            job = 'F'
+        elif method == 'spsqrt':
+            job = 'S'
+        elif method == 'bfspsqrt':
+            job = 'P'
+
+        # Define if the model is balanced
+        if equil is True:
+            equil = 'S'
+        else:
+            equil = 'N'
+
+        A = self.A
+        B = self.B
+        C = self.C
+        D = self.D
+
+        # Order of the A matrix
+        n = self.A.shape[0]
+        # Number of inputs
+        m = self.B.shape[1]
+        # Number of outputs
+        p = self.C.shape[0]
+
+        assert (self.E is None)
+
+        from slycot import ab09hd
+        nr, Ar, Br, Cr, Dr, ns, hsv = ab09hd(
+            dico, job, equil,
+            n, m, p,
+            A, B, C, D,
+            nr=nr,
+            alpha=alpha, beta=beta,
+            tol1=tol1, tol2=tol2,
+        )
+        # nr: nr is the order of the resulting reduced order model
+        # ns: The dimension of the alpha-unstable subsystem
+
+        # if the reduced model has fever states than the original model tell the user
+        #if nr < n:
+            #print('The equalized gain model has ' + str(n-nr) + ' fewer state(s) than the original model')
+        return self.__build_similar__(
+            Ar,
+            Br,
+            Cr,
+            Dr,
+            E=self.E,
+        )
+
+
+    def balance_and_truncate_unscaled(self, method='sqrt', nr=None, alpha=None, equil=True, tol1=0, tol2=0):
         """
             To compute a reduced order model (Ar,Br,Cr,Dr) for an original state-space representation (A,B,C,D) by using either the square-root or the balancing-free square-root Singular Perturbation Approximation (SPA) model reduction method for the alpha-stable part of the system.
             - From SLYCOT Documentation for ab09nd
@@ -676,6 +760,7 @@ class BareStateSpace(object):
             dico, job, equil,
             n, m, p,
             A, B, C, D,
+            nr=nr, alpha=alpha,
             tol1=tol1, tol2=tol2,
         ) # ,alpha=None,nr=None,tol1=0,tol2=0,ldwork=None)
         # nr: nr is the order of the resulting reduced order model
@@ -1139,7 +1224,7 @@ class BareStateSpace(object):
             )
 
             # TODO, make this chainE-able
-            ABCDE = ss_algorithms.chain([self.ABCDE, other.ABCDE])
+            ABCDE = ss_algorithms.chain([self.ABCDE, other.ABCDE], orientation='upper')
             # ABCDE = ss_algorithms.chainE([self.ABCDE, other.ABCDE])
 
             return self.__class__(
@@ -1562,6 +1647,11 @@ class BareStateSpaceUser(object):
                     tol=tol,
                 ),
             )
+
+    def stochastic_balance_and_truncate(self, **kwargs):
+        return self.__build_similar__(
+            ss=self.ss.stochastic_balance_and_truncate(**kwargs),
+        )
 
     def balance_and_truncate(self, **kwargs):
         return self.__build_similar__(
