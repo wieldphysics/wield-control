@@ -133,6 +133,89 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking
         #     ) + D
 
 
+def ss2response_laub_testing(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking_condmax=1e12):
+    """
+    Use Laub's method to calculate the frequency response. Very fast but in some cases less numerically stable.
+    Generally OK if the A/E matrix has been balanced first.
+
+    TODO: Use the bdschur method or slycot mb03rd to further reduce the matrix size. Then enhance the back-substituion to do less work.
+    In principle this can reduce the work from N^2 to N at every frequency point. That would be a massive speedup but would need numerical testing.
+
+    """
+    sorz = np.asarray(sorz)
+    from ....ss_bare.ss import BareStateSpace
+
+    if A.shape[-2:] == (0, 0):
+        # print("BCAST", A.shape, D.shape)
+        return np.broadcast_to(D, sorz.shape + D.shape[-2:])
+
+    if E is not None:
+        if np.all(E == np.eye(E.shape[-1])):
+            E = None
+
+    if E is None:
+        A_orig = A.copy()
+        A, Z = scipy.linalg.schur(A)
+        B = Z.transpose().conjugate() @ B
+        C = C @ Z
+        A = Z.transpose().conjugate() @ A_orig @ Z
+
+        ss = BareStateSpace(A, B, C, D, E)
+
+        # additional balancing step
+        # ss = ss.balanceA()
+        ss = ss.balanceABC(which='ABC')
+
+        A, B, C, D, E = ss.ABCDE
+
+        A_orig = A.copy()
+        A, Z = scipy.linalg.schur(A, output='complex')
+        B = Z.transpose().conjugate() @ B
+        C = C @ Z
+        # A = Z.transpose().conjugate() @ A_orig @ Z
+
+        blk_tops = None
+
+        diag = (np.diag(A).reshape(1, -1) - sorz.reshape(-1, 1))
+
+        retval = array_solve_triangular(A, diag, B, blk_tops=blk_tops)
+        return C @ retval + D
+
+        return (
+                C @ (
+                    np.linalg.inv(np.eye(A.shape[-1]) * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape)) @  B
+                )
+            ) + D
+    else:
+        # A, E, Q, Z = scipy.linalg.qz(
+        #     A,
+        #     E,
+        #     output='complex',
+        #     lwork=None,
+        #     sort=None,
+        #     overwrite_a=False,
+        #     overwrite_b=False,
+        #     check_finite=True
+        # )
+
+        # B = Q.transpose().conjugate() @ B
+        # C = C @ Z
+        # blk_tops = None
+
+        # diag = (np.diag(A).reshape(1, -1) - np.diag(E).reshape(1, -1) * sorz.reshape(-1, 1))
+
+        # retval = array_solve_triangular(A, diag, B, E = E, sorz=sorz, blk_tops=blk_tops)
+
+        # return C @ retval + D
+
+        return (
+                C @ (
+                    np.linalg.inv(E * sorz.reshape(-1, 1, 1) - A.reshape(1, *A.shape))
+                    @ B
+                )
+            ) + D
+
+
 def array_solve_triangular(A, D, b, E=None, sorz=None, blk_tops=None):
     """
     Solve a triangular matrix system.

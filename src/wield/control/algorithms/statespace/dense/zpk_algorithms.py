@@ -406,7 +406,7 @@ def poly2ss(
         den,
         rescale_has=None,
         rescale_do=None,
-        mode="OCF"
+        mode="CCF"
 ):
     """
     """
@@ -774,15 +774,20 @@ def zpkdict_cascade_sm(
     if True:
         zzpp = list(itertools.zip_longest(zz, pp, fillvalue=(None, None)))
 
-        # this kinds of interlace swapping can improve stability in some scenarios
-        # zzpp = zzpp[0::2] + zzpp[1::2]
+        # folding the listing so that the D-free ones are equally interspersed is best
+        # it makes a reduced upper-triangular block structure.
+        N_unbal = 0
+        for (z1, z2), (p1, p2) in zzpp:
+            Nz = (z1 is not None) + (z2 is not None)
+            Np = (p1 is not None) + (p2 is not None)
+            if Nz != Np:
+                N_unbal += 1
+        zzpp_fold = []
+        for idx in range(N_unbal + 1):
+            zzpp_fold = zzpp_fold + zzpp[idx::N_unbal+1]
+        zzpp = zzpp_fold
+        # done folding
 
-        # this swap tends to be good to put the unbalanced one right in the middle
-        # this tends to improve stability in some scenarios
-        last = len(zzpp) - 1
-        mid = last // 2
-        if last != mid:
-            zzpp[mid], zzpp[last] = zzpp[last], zzpp[mid]
         for (z1, z2), (p1, p2) in zzpp:
             # print("ROOTS,", z1, z2, p1, p2)
             num = gen_poly(z1, z2)
@@ -828,14 +833,14 @@ def zpkdict_cascade_sm(
                     Zc, Zr,
                     Pc, Pr,
                     1,
-                    orientation='lower',
+                    orientation='upper',
                 )
             else:
                 ABCDE = ZPK2ss_cheby_companion(
                     Pc, Pr,
                     Zc, Zr,
                     1,
-                    orientation='lower',
+                    orientation='upper',
                 )
                 ABCDE = ss_algorithms.inverse_DSS(*ABCDE)
             ABCDEs.append(ABCDE)

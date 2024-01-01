@@ -149,7 +149,7 @@ def choices_and_rankings(algorithm_choices, algorithm_ranking):
     return algorithm_choices, algorithm_ranking
 
 
-def algo_run(algotype, rankings, args, kwargs, choice=None):
+def algo_run(algotype, rankings, args=(), kwargs={}, choice=None):
     """
     Runs the algorithm functions in order. Exceptions cause a later algorithm to be run
 

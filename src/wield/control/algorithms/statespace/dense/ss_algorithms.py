@@ -272,6 +272,7 @@ def chain(SSs, orientation='lower'):
     """
     Construct a sequential product of state spaces. Each state space must be a tuple of ABCD or ABCDE
     """
+    orientation = orientation.lower()
     ss_seq = []
     constrN = 0
     statesN = 0
@@ -287,6 +288,15 @@ def chain(SSs, orientation='lower'):
             A, B, C, D, E = ss
             if E is None:
                 E = np.eye(A.shape[-1])
+
+        if orientation == 'upper':
+            A, B, C, D, E = (
+                A[..., ::-1, ::-1],
+                B[..., ::-1, :],
+                C[..., :, ::-1],
+                D,
+                E[..., ::-1, ::-1],
+            )
         ssB.A = A
         ssB.B = B
         ssB.C = C
@@ -346,7 +356,6 @@ def chain(SSs, orientation='lower'):
         C[:, ssB.sN] = C_into
         D_rev = D_rev @ ssB.D
 
-    orientation = orientation.lower()
     if orientation == 'lower':
         pass
     elif orientation == 'upper':
@@ -364,6 +373,7 @@ def chain(SSs, orientation='lower'):
 
 
 def chainE(SSs, orientation='lower'):
+    orientation = orientation.lower()
     ss_seq = []
     constrN = 0
     statesN = 0
@@ -377,6 +387,14 @@ def chainE(SSs, orientation='lower'):
             A, B, C, D, E = ss
             if E is None:
                 E = np.eye(A.shape[-1])
+        if orientation == 'upper':
+            A, B, C, D, E = (
+                A[..., ::-1, ::-1],
+                B[..., ::-1, :],
+                C[..., :, ::-1],
+                D,
+                E[..., ::-1, ::-1],
+            )
         ssB.A = A
         ssB.B = B
         ssB.C = C
@@ -447,7 +465,6 @@ def chainE(SSs, orientation='lower'):
     C[:, ssB.sN] = ssB.C
     C[:, ssBp.sNE] = ssB.D
 
-    orientation = orientation.lower()
     if orientation == 'lower':
         pass
     elif orientation == 'upper':

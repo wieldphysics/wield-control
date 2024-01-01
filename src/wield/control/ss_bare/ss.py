@@ -13,11 +13,11 @@ import numpy as np
 
 import scipy.linalg
 
-from ..algorithms.statespace.dense import xfer_algorithms
 from ..algorithms.statespace.dense import zpk_algorithms
 from ..algorithms.statespace.dense import ss_algorithms
 from ..utilities import algorithm_choice
 from . import ssprint
+from . import algorithms_xfers  #  noqa, needed for the fresponse functions
 
 
 class BareStateSpace(object):
@@ -277,30 +277,13 @@ class BareStateSpace(object):
             z=z,
             dt=self.dt,
         )
-        if use_laub:
-            self_b = self
-            self_b = self_b.balanceA()
-            self_b = self_b.balanceABC(which='ABC')
-            # self_b = self
-            return xfer_algorithms.ss2response_laub(
-                A=self_b.A,
-                B=self_b.B,
-                C=self_b.C,
-                D=self_b.D,
-                E=self_b.E,
+        return algorithm_choice.algo_run(
+            'ss2fresponse', self.algorithm_ranking,
+            kwargs=dict(
+                ss=self,
                 sorz=domain,
-                **kwargs
             )
-        else:
-            return xfer_algorithms.ss2response_mimo(
-                A=self.A,
-                B=self.B,
-                C=self.C,
-                D=self.D,
-                E=self.E,
-                sorz=domain,
-                **kwargs
-            )
+        )
 
     def balanceBC_svd(self, which):
         """
