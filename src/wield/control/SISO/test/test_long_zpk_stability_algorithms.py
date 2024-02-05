@@ -74,7 +74,7 @@ def test_long_ZPK_stability_plot():
     This is a test of the numerical stability of a very large ZPK filter that spans 18 orders of magnitude
 
     """
-    F_Hz = np.geomspace(1e-3, 1e5, 1000)
+    F_Hz = np.geomspace(3e-3, 1e7, 2000)
     axB = mplfigB(Nrows=2)
 
     filt = gen_filt()
@@ -86,7 +86,9 @@ def test_long_ZPK_stability_plot():
     filt_orig = filt
     zpk2ss_ranks = algorithm_choice.algorithm_choices_defaults['zpk2ss']
     dprint(zpk2ss_ranks)
-    for k, r in zpk2ss_ranks.items():
+    zpk2ss_names = list(zpk2ss_ranks.keys())
+    # zpk2ss_names = ['zpk2ss_chain_poly']
+    for k in zpk2ss_names:
         algorithm_choices = {'zpk2ss': {k: 1000}}
         filt = filt_orig.set_algorithm_choices(algorithm_choices)
         filtss = filt.asSS
@@ -104,7 +106,7 @@ def test_long_ZPK_stability_plot():
     axB.ax0.axhline(np.finfo(float).eps, lw=1, ls='--', color='black')
     axB.ax0.axhline(filtss.ss.Nstates * np.finfo(float).eps, lw=1, ls='--', color='black')
     axB.ax0.axhline(filtss.ss.Nstates**2 * np.finfo(float).eps, lw=1, ls='--', color='black')
-    axB.ax0.legend()
+    axB.ax0.legend(fontsize=8)
 
     axB.save(tjoin('algorithm_compare_zpk2ss'))
     return

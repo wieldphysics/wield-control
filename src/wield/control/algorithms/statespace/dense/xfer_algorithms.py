@@ -104,6 +104,8 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking
         #         )
         #     ) + D
     else:
+        # A_orig = A.copy()
+        # E_orig = E.copy()
         A, E, Q, Z = scipy.linalg.qz(
             A,
             E,
@@ -114,7 +116,10 @@ def ss2response_laub(A, B, C, D, E=None, sorz=None, use_blocking=False, blocking
             overwrite_b=False,
             check_finite=True
         )
+        # A = Q.transpose().conjugate() @ A_orig @ Z
+        # E = Q.transpose().conjugate() @ E_orig @ Z
 
+        # B = Q.transpose().conjugate() @ B
         B = Q.transpose().conjugate() @ B
         C = C @ Z
         blk_tops = None

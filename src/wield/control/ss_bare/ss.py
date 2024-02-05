@@ -450,9 +450,12 @@ class BareStateSpace(object):
         # Number of outputs
         p = self.C.shape[0]
 
+        if n == 0:
+            return self
+
         assert (which in ['A', 'B', 'C', 'ABC', 'AB', 'AC', 'N'])
 
-        warn=True
+        warn = True
         if which == 'A' or which == 'N':
             job = 'N'
         elif which == 'AB' or which == 'B':
@@ -523,37 +526,26 @@ class BareStateSpace(object):
         else:
             E = self.E
 
-        def invert_permutation(p):
-            """Return an array s with which np.array_equal(arr[p][s], arr) is True.
-            The array_like argument p must be some permutation of 0, 1, ..., len(p)-1.
-
-            from https://stackoverflow.com/a/25535723
-            """
-            s = np.empty_like(p)
-            s[p] = np.arange(p.size)
-            return s
-
         Ascale, (sca, P) = scipy.linalg.matrix_balance(
             abs(Ascale) + abs(E * 1e9),
             separate=True,
             permute=permute,
             overwrite_a=True,
         )
-        Pi = invert_permutation(P)
         # do we need to bother?
         if not np.allclose(sca, np.ones_like(sca)):
             scar = np.reciprocal(sca)
             elwisescale = sca * scar[:, None]
 
-            Ascale = self.A.copy()[..., Pi, :][..., :, P]
+            Ascale = self.A.copy()[..., P, :][..., :, P]
             Ascale *= elwisescale
 
             if self.E is not None:
-                Escale = self.E.copy()[..., Pi, :][..., :, P]
+                Escale = self.E.copy()[..., P, :][..., :, P]
                 Escale *= elwisescale
             else:
                 Escale = self.E
-            Bscale = scar.reshape(-1, 1) * self.B[..., Pi, :].copy()
+            Bscale = scar.reshape(-1, 1) * self.B[..., P, :].copy()
             Cscale = sca.reshape(1, -1) * self.C[..., :, P].copy()
         else:
             Ascale = self.A
@@ -593,6 +585,28 @@ class BareStateSpace(object):
             raise RuntimeError("Schur form not supported with an E matrix")
 
         # todo save Schur form flag
+        return self.__build_similar__(
+            A=A,
+            B=B,
+            C=C,
+            D=self.D,
+            E=E,
+        )
+
+    def permute_UT(self):
+        from ..algorithms.statespace.dense import ss_algorithms_permute
+
+        E = self.E
+        A = self.A
+        B = self.B
+        C = self.C
+        D = self.D
+
+        if E is not None:
+            if np.all(E == np.eye(E.shape[-1])):
+                E = None
+
+        A, B, C, D, E = ss_algorithms_permute.permute_UT(A,B,C,D,E)
         return self.__build_similar__(
             A=A,
             B=B,
@@ -1634,6 +1648,11 @@ class BareStateSpaceUser(object):
     def stochastic_balance_and_truncate(self, **kwargs):
         return self.__build_similar__(
             ss=self.ss.stochastic_balance_and_truncate(**kwargs),
+        )
+
+    def permute_UT(self, **kwargs):
+        return self.__build_similar__(
+            ss=self.ss.permute_UT(**kwargs),
         )
 
     def balance_and_truncate(self, **kwargs):

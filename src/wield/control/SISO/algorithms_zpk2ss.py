@@ -51,6 +51,8 @@ def zpk2ss_cheby(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
+    # statesp = statesp.balanceABC(which='ABC')
+    # statesp = statesp.permute_UT()
 
     # statesp = statesp.balance_and_truncate(nr=statesp.ss.Nstates-0)
     return statesp
@@ -87,7 +89,9 @@ def zpk2ss_chain_poly(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
+    # statesp = statesp.balanceABC(which='ABC')
     # statesp = statesp.balance_and_truncate(nr=statesp.ss.Nstates-0)
+    # statesp = statesp.permute_UT()
     return statesp
 
 
@@ -123,6 +127,8 @@ def zpk2ss_chainE_poly(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
+    # statesp = statesp.balanceABC(which='ABC')
+    # statesp = statesp.permute_UT()
     # statesp = statesp.reduceE()
     # statesp = statesp.reduceE2()
     return statesp
@@ -164,6 +170,8 @@ def zpk2ss_cheby_lower(zpk):
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
     # statesp = statesp.balance_and_truncate(nr=statesp.ss.Nstates-0)
+    # statesp = statesp.balanceABC(which='ABC')
+    # statesp = statesp.permute_UT()
     return statesp
 
 algorithm_choice.algorithm_register('zpk2ss', 'zpk2ss_cheby_lower', zpk2ss_cheby_lower, -80)
@@ -199,6 +207,8 @@ def zpk2ss_chain_poly_lower(zpk):
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
     # statesp = statesp.balance_and_truncate(nr=statesp.ss.Nstates-0)
+    statesp = statesp.balanceABC(which='ABC')
+    statesp = statesp.permute_UT()
     return statesp
 
 
@@ -234,8 +244,11 @@ def zpk2ss_chainE_poly_lower(zpk):
         algorithm_ranking=zpk.algorithm_ranking,
         # flags={"schur_real_upper", "hessenburg_upper"},
     )
+    # statesp = statesp.permute_UT()
     # return statesp
-    # statesp = statesp.reduceE2()
+    statesp = statesp.balanceABC(which='ABC')
+    statesp = statesp.reduceE()
+    statesp = statesp.reduceE2()
     # statesp = statesp.balance_and_truncate()
     return statesp
 
