@@ -23,7 +23,7 @@ from wield.utilities.np import logspaced
 from wield.utilities.mpl import mplfigB
 
 from wield.control import MIMO
-from .HSTS import HSTS_build
+from HSTS import HSTS_build
 
 
 c_m_s = 299792458

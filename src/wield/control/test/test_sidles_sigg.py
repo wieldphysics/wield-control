@@ -78,8 +78,8 @@ def test_hard_soft_modes(capture):
 
     # Make SISOStateSpace objects using the modified state space matricies
     free_siso = SISO.SISOStateSpace(Afree_siso, B_siso, C_siso, D_siso)
-    hard_siso = SISO.SISOStateSpacestatespace(Ahard, B_siso, C_siso, D_siso)
-    soft_siso = SISO.SISOStateSpacestatespace(Asoft, B_siso, C_siso, D_siso)
+    hard_siso = SISO.SISOStateSpace(Ahard, B_siso, C_siso, D_siso)
+    soft_siso = SISO.SISOStateSpace(Asoft, B_siso, C_siso, D_siso)
 
     # Find the hard and soft mode poles
     # To find the poles, SISOStateSpace objects can be converted into ZPK
