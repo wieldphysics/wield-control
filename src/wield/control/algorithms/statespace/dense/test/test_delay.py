@@ -12,13 +12,8 @@ import numpy as np
 import scipy
 import scipy.signal
 
-from wield.pytest.fixtures import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tjoin,
-    dprint,
-    plot,
-    fjoin,
-    test_trigger,
-    tpath_preclear,
 )
 
 
@@ -39,7 +34,7 @@ def print_ssd(ssd):
     print("D", ssd.D)
 
 
-def test_delay(test_trigger):
+def test_delay():
     length_m = 3995
     delta_t = length_m / c_m_s
     delta_t = 1
@@ -66,7 +61,7 @@ def test_delay(test_trigger):
     axB.save(tjoin("test"))
 
 
-def test_big_delay(test_trigger):
+def test_big_delay():
     length_m = 3995
     delta_t = length_m / c_m_s
     delta_t = 1

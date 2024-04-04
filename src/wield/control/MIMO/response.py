@@ -14,6 +14,8 @@ import numpy as np
 from . import mimo
 from . import util
 
+from ..utilities import algorithm_choice
+
 
 class MIMOFResponse(mimo.MIMO):
     """
@@ -67,6 +69,10 @@ class MIMOFResponse(mimo.MIMO):
 
         self.inputs = inputs
         self.outputs = outputs
+
+        self.algorithm_choices, self.algorithm_ranking = algorithm_choice.choices_and_rankings(
+            algorithm_choices, algorithm_ranking
+        )
         return
 
     @property

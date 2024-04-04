@@ -20,11 +20,9 @@ from wield.control.SFLU import SFLU
 from quantum_lib import mats_planewave as ilib
 
 
-from wield.pytest.fixtures import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tjoin,
     dprint,
-    plot,
-    fjoin,
 )
 
 

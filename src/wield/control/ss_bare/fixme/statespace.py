@@ -18,7 +18,7 @@ from . import ss_algorithms
 from . import reduce_algorithms
 from . import shuffle_algorithms
 
-from wield.pytest.fixtures import (
+from wield.pytest import (
     tjoin,
     dprint,
 )

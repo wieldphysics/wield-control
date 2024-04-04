@@ -17,11 +17,9 @@ from wield.utilities.strings import padding_remove
 from wield.control.SFLU import SFLU
 from wield.control.SFLU.functions import neg
 
-from wield.pytest.fixtures import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tjoin,
     dprint,
-    plot,
-    fjoin,
 )
 
 

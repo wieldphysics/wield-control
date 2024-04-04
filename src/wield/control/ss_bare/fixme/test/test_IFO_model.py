@@ -20,7 +20,7 @@ from wield.control.statespace import dense, StateSpaceDense
 import IFO_model
 import IFO_model_noM
 
-from wield.pytest.fixtures import (
+from wield.pytest import (
     tjoin,
     dprint,
 )

@@ -11,13 +11,8 @@
 import numpy as np
 import pytest
 
-from wield.pytest.fixtures import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tjoin,
-    dprint,
-    plot,
-    fjoin,
-    test_trigger,
-    tpath_preclear,
 )
 
 

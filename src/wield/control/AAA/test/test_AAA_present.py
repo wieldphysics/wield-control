@@ -16,7 +16,7 @@ from wield.control.AAA import tfAAA
 from wield.utilities.mpl import mplfigB, generate_stacked_plot_ax, asavefig, logspaced
 
 
-from wield.pytest.fixtures import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tjoin,
     plot,
     dprint,

@@ -313,7 +313,7 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
         c = self.inputs[col]
         if isinstance(c, tuple):
             raise RuntimeError("Col name is a span and cannot be used to create a SISO system")
-        return SISO.SISOStateSpace(
+        return SISO.SISOStateSpace.__init_internal__(
             self.ss[r:r+1, c:c+1],
         )
 
@@ -356,7 +356,7 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
                 raise RuntimeError("Both the row and col must either be given as a single element (SISO), or as a collection (MIMO)")
             r, = rlst
             c, = clst
-            return SISO.SISOStateSpace(
+            return SISO.SISOStateSpace.__init_internal__(
                 self.ss[r:r+1, c:c+1],
             )
         else:
@@ -813,13 +813,13 @@ def ssjoinsum(*args):
     ss = SSs[0]
     algorithm_choices = ss.algorithm_choices
     algorithm_ranking = ss.algorithm_ranking
-    for ss in enumerate(SSs[1:]):
+    for ss in SSs[1:]:
         algorithm_choices, algorithm_ranking = algorithm_choice.algo_merge_full(
             algorithm_choices, algorithm_ranking,
             ss.algorithm_choices, ss.algorithm_ranking,
         )
 
-    return MIMOStateSpace(
+    return MIMOStateSpace.__init_internal__(
         ss=BareStateSpace(
             A, B, C, D, E,
             hermitian=np.all([ss.hermitian for ss in SSs]),

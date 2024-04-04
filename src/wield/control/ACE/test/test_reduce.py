@@ -13,7 +13,7 @@ import scipy.signal
 
 from wield.control.ACE import ACE
 
-from wield.pytest.fixtures import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tjoin,
     dprint,
     plot,

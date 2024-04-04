@@ -13,26 +13,20 @@ import scipy
 import scipy.signal
 
 import pytest
-from wield.pytest.fixtures import (  # noqa: F401
+
+from wield.pytest import (  # noqa: F401
     tjoin,
-    dprint,
-    plot,
-    fjoin,
-    test_trigger,
-    tpath_preclear,
 )
 
 
 from wield.utilities.np import logspaced
 from wield.utilities.mpl import mplfigB
 
-from wield.control import SISO
-
-c_m_s = 299792458
-
+from wield.control import MIMO
 from .HSTS import HSTS_build
 
-from wield.control import MIMO
+
+c_m_s = 299792458
 
 
 def test_HSTS_WS():

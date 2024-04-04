@@ -18,7 +18,7 @@ from wield.control.ACE import ACE
 from wield.control.ACE import ace_electrical
 from wield.control.algorithms.statespace.dense.xfer_algorithms import ss2xfer
 
-from wield.pytest.fixtures import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tjoin,
     dprint,
     plot,

@@ -268,7 +268,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         """
         Computes the time reversal of the filter
         """
-        return self.__class__(
+        return self.__class__.__init_internal__(
             self.ss.time_reversal(),
             fiducial=self.fiducial.conjugate(),
             fiducial_rtol=self.fiducial_rtol,
@@ -295,7 +295,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         )
 
     def inv(self):
-        return self.__class__(
+        return self.__class__.__init_internal__(
             self.ss.inv(),
             fiducial=1/self.fiducial,
             fiducial_rtol=self.fiducial_rtol,
@@ -315,14 +315,14 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
             fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
 
-            return self.__class__(
+            return self.__class__.__init_internal__(
                 ss=self.ss @ other.ss,
                 fiducial=(self.fiducial[slc] * fid_other_self).concatenate(fid_self_other * other.fiducial[slc]),
                 fiducial_rtol=self.fiducial_rtol,
                 fiducial_atol=self.fiducial_atol,
             )
         elif isinstance(other, numbers.Number):
-            return self.__class__(
+            return self.__class__.__init_internal__(
                 ss=self.ss * other,
                 fiducial=self.fiducial * other,
                 fiducial_rtol=self.fiducial_rtol,
@@ -335,7 +335,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         """
         """
         if isinstance(other, numbers.Number):
-            return self.__class__(
+            return self.__class__.__init_internal__(
                 ss=other * self.ss,
                 fiducial=other * self.fiducial,
                 fiducial_rtol=self.fiducial_rtol,
@@ -348,7 +348,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         """
         """
         if isinstance(other, numbers.Number):
-            return self.__class__(
+            return self.__class__.__init_internal__(
                 self.ss / other,
                 fiducial=self.fiducial / other,
                 fiducial_rtol=self.fiducial_rtol,
@@ -361,7 +361,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         """
         """
         if isinstance(other, numbers.Number):
-            return self.__class__(
+            return self.__class__.__init_internal__(
                 ss=other * self.ss.inv(),
                 fiducial=other / self.fiducial,
                 fiducial_rtol=self.fiducial_rtol,
@@ -389,7 +389,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         knownSS = False
         if isinstance(other, numbers.Number):
             # convert to statespace form
-            other = statespace(other)
+            other = self.__class__(other)
             knownSS = True
 
         if knownSS or isinstance(other, SISOStateSpace):
@@ -400,7 +400,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
             fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
 
-            return self.__class__(
+            return self.__class__.__init_internal__(
                 self.ss + other.ss,
                 fiducial=(self.fiducial[slc] + fid_other_self).concatenate(fid_self_other + other.fiducial[slc]),
             )
@@ -418,7 +418,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         """
         if isinstance(other, numbers.Number):
             # convert to statespace form
-            other = statespace(other)
+            other = self.__class__(other)
             # use commutativity of addition
             return self + other
 
@@ -430,7 +430,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         knownSS = False
         if isinstance(other, numbers.Number):
             # convert to statespace form
-            other = statespace(other)
+            other = self.__class__(other)
             knownSS = True
 
         if knownSS or isinstance(other, SISOStateSpace):
@@ -441,12 +441,9 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             fid_other_self = other.fresponse(**self.fiducial.domain_kw(slc))
             fid_self_other = self.fresponse(**other.fiducial.domain_kw(slc))
 
-            return self.__class__(
+            return self.__class__.__init_internal__(
                 ss=self.ss - other.ss,
                 fiducial=(self.fiducial[slc] - fid_other_self).concatenate(fid_self_other - other.fiducial[slc]),
-            )
-            return self.__class__(
-                ss=self.ss - other.ss,
             )
         elif isinstance(other, siso.SISO):
             other = other.asSS
@@ -463,11 +460,11 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         knownSS = False
         if isinstance(other, numbers.Number):
             # convert to statespace form
-            other = statespace(other)
+            other = self.__class__(other)
             knownSS = True
 
         if knownSS or isinstance(other, SISOStateSpace):
-            return self.__class__(
+            return self.__class__.__init_internal__(
                 ss=other.ss - self.ss,
             )
         elif isinstance(other, siso.SISO):
@@ -492,7 +489,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         # now select only the passthrough outputput
 
         ss = ss[1:, :]
-        return self.__class__(
+        return self.__class__.__init_internal__(
             ss[1:, :],
             fiducial=1 / (1 - self.fiducial),
             fiducial_rtol=self.fiducial_rtol,
@@ -505,7 +502,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         If self=G, this returns the filter for 1/(1-G).
         """
         ss = self.ss.feedbackD([[1]])
-        return self.__class__(
+        return self.__class__.__init_internal__(
             ss,
             fiducial=self.fiducial / (1 - self.fiducial),
             fiducial_rtol=self.fiducial_rtol,

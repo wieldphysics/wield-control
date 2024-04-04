@@ -13,13 +13,10 @@ import scipy
 import scipy.signal
 import pytest
 
-from wield.pytest.fixtures import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tjoin,
-    dprint,
+    tpath,
     plot,
-    fjoin,
-    test_trigger,
-    tpath_preclear,
 )
 
 

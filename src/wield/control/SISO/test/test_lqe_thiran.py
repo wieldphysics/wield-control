@@ -18,7 +18,7 @@ from wield.utilities.mpl import mplfigB
 from wield.control.SISO import design
 from wield.control import SISO
 
-from wield.pytest.fixtures import (  # noqa: F401
+from wield.pytest import (  # noqa: F401
     tjoin,
     dprint,
     plot,
