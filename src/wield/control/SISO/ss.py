@@ -24,15 +24,118 @@ from . import response
 
 
 class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
+
+    # TODO these should also use the algorithm_choices mechanism
     fiducial_rtol = 1
     fiducial_atol = 1
 
+    # Used to hack a conversion between SISO and MIMO forms
+    # TODO should use an AlgorithmChoices mechanism instead
     _t_MIMO = MIMO.MIMOStateSpace
 
     """
     class to represent SISO Transfer functions using dense state space matrix representations.
     """
+
     def __init__(
+        self,
+        *args,
+        A=None,
+        B=None,
+        C=None,
+        D=None,
+        E=None,
+        hermitian=True,
+        time_symm=False,
+        dt=None,
+        flags={},
+        fiducial=None,
+        fiducial_w=None,
+        fiducial_f=None,
+        fiducial_s=None,
+        fiducial_z=None,
+        fiducial_rtol=None,
+        fiducial_atol=None,
+        algorithm_choices=None,
+        algorithm_ranking=None,
+    ):
+        """
+        Form a SISO LTI system from statespace matrices.
+
+        There are lots of ways to create LTI systems. From the arguments
+        """
+        def all_none():
+            return (
+                (A is None)
+                & (B is None)
+                & (C is None)
+                & (D is None)
+                & (E is None)
+            )
+        if len(args) == 0:
+            pass
+            # must include the A=,B=,... arguments
+        elif len(args) == 1:
+            arg = args[0]
+            if isinstance(arg, siso.SISO):
+                arg = arg.asSS
+            if isinstance(arg, SISOStateSpace):
+                # TODO, check that some of the other arguments don't override it
+                if all_none:
+                    return arg
+                A = A if A is not None else arg.A
+                B = B if B is not None else arg.B
+                C = C if C is not None else arg.C
+                D = D if D is not None else arg.D
+                E = E if E is not None else arg.E
+            elif isinstance(arg, (tuple, list)):
+                A, B, C, D, E = arg
+            elif isinstance(arg, numbers.Number):
+                A = np.asarray([[]]).reshape(0, 0)
+                B = np.asarray([[]]).reshape(0, 1)
+                C = np.asarray([[]]).reshape(1, 0)
+                D = np.asarray([[arg]])
+                E = None
+                arg = np.asarray(arg)
+                if arg.imag == 0:
+                    hermitian = True
+                    if arg.real > 0:
+                        time_symm = True
+            else:
+                # TODO convert scipy LTI and python-control objects too
+                raise TypeError("Unrecognized conversion type for SISO.ss")
+        elif len(args) == 4:
+            A, B, C, D = args
+            E = None
+        elif len(args) == 5:
+            A, B, C, D, E = args
+        else:
+            raise RuntimeError("Unrecognized argument format")
+
+        fiducial = util.build_fiducial(
+            fiducial=fiducial,
+            fiducial_w=fiducial_w,
+            fiducial_f=fiducial_f,
+            fiducial_s=fiducial_s,
+            fiducial_z=fiducial_z,
+            dt=dt,
+        )
+        return self.__init_internal__(
+            ss=BareStateSpace(
+                A, B, C, D, E,
+                dt=dt,
+                flags=flags,
+                hermitian=hermitian,
+                time_symm=time_symm,
+                algorithm_choices=algorithm_choices,
+                algorithm_ranking=algorithm_ranking,
+            ),
+            fiducial=fiducial,
+            fiducial_rtol=fiducial_rtol,
+            fiducial_atol=fiducial_atol,
+        )
+
+    def __init_internal__(
         self,
         ss,
         fiducial=None,
@@ -40,9 +143,11 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         fiducial_atol=None,
     ):
         """
-        flags: this is a set of flags that indicate computed property flags for the state space. Examples of such properties are "schur_real_upper", "schur_complex_upper", "hessenburg_upper", "balanced", "stable"
+        This is the technical constructor.
+
+        This should be called on an object that was just recently created with __new__
         """
-        super().__init__(
+        super().__init_technical__(
             ss=ss,
         )
 
@@ -52,7 +157,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             atol=fiducial_atol,
             update=True,
         )
-        return
+        return self
 
     def __build_similar__(
         self,
@@ -61,7 +166,8 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         """
         Build a similar system to self, using ss as the underlying Bare statespace
         """
-        return self.__class__(
+        inst = self.__class__.__new__(self.__class__)
+        return inst.__init_internal__(
             ss=ss,
             fiducial = self.fiducial,
             fiducial_rtol = self.fiducial_atol,
@@ -400,99 +506,4 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
 
 
 
-def statespace(
-    *args,
-    A=None,
-    B=None,
-    C=None,
-    D=None,
-    E=None,
-    hermitian=True,
-    time_symm=False,
-    dt=None,
-    flags={},
-    fiducial=None,
-    fiducial_w=None,
-    fiducial_f=None,
-    fiducial_s=None,
-    fiducial_z=None,
-    fiducial_rtol=None,
-    fiducial_atol=None,
-    algorithm_choices=None,
-    algorithm_ranking=None,
-):
-    """
-    Form a SISO LTI system from statespace matrices.
-
-    """
-    def all_none():
-        return (
-            (A is None)
-            & (B is None)
-            & (C is None)
-            & (D is None)
-            & (E is None)
-        )
-    if len(args) == 0:
-        pass
-        # must include the A=,B=,... arguments
-    elif len(args) == 1:
-        arg = args[0]
-        if isinstance(arg, siso.SISO):
-            arg = arg.asSS
-        if isinstance(arg, SISOStateSpace):
-            # TODO, check that some of the other arguments don't override it
-            if all_none:
-                return arg
-            A = A if A is not None else arg.A
-            B = B if B is not None else arg.B
-            C = C if C is not None else arg.C
-            D = D if D is not None else arg.D
-            E = E if E is not None else arg.E
-        elif isinstance(arg, (tuple, list)):
-            A, B, C, D, E = arg
-        elif isinstance(arg, numbers.Number):
-            A = np.asarray([[]]).reshape(0, 0)
-            B = np.asarray([[]]).reshape(0, 1)
-            C = np.asarray([[]]).reshape(1, 0)
-            D = np.asarray([[arg]])
-            E = None
-            arg = np.asarray(arg)
-            if arg.imag == 0:
-                hermitian = True
-                if arg.real > 0:
-                    time_symm = True
-        else:
-            # TODO convert scipy LTI and python-control objects too
-            raise TypeError("Unrecognized conversion type for SISO.ss")
-    elif len(args) == 4:
-        A, B, C, D = args
-        E = None
-    elif len(args) == 5:
-        A, B, C, D, E = args
-    else:
-        raise RuntimeError("Unrecognized argument format")
-
-    fiducial = util.build_fiducial(
-        fiducial=fiducial,
-        fiducial_w=fiducial_w,
-        fiducial_f=fiducial_f,
-        fiducial_s=fiducial_s,
-        fiducial_z=fiducial_z,
-        dt=dt,
-    )
-    return SISOStateSpace(
-        ss=BareStateSpace(
-            A, B, C, D, E,
-            dt=dt,
-            flags=flags,
-            hermitian=hermitian,
-            time_symm=time_symm,
-            algorithm_choices=algorithm_choices,
-            algorithm_ranking=algorithm_ranking,
-        ),
-        fiducial=fiducial,
-        fiducial_rtol=fiducial_rtol,
-        fiducial_atol=fiducial_atol,
-    )
 

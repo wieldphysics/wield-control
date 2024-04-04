@@ -33,7 +33,106 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
 
     inputs and outputs can contain overlapping indices
     """
+
     def __init__(
+        self,
+        *args,
+        inputs=None,
+        outputs=None,
+        inout=None,
+        hermitian=True,
+        time_symm=False,
+        dt=None,
+        fiducial_rtol=None,
+        fiducial_atol=None,
+        algorithm_choices=None,
+        algorithm_ranking=None,
+    ):
+        """
+        Form a MIMO LTI system from statespace matrices.
+
+        There are lots of ways to create LTI systems. From the arguments
+        """
+        if len(args) == 1:
+            arg = args[0]
+            if isinstance(arg, MIMOStateSpace):
+                return arg
+            elif isinstance(arg, (tuple, list)):
+                if len(arg) == 4:
+                    A, B, C, D = arg
+                    E = None
+                elif len(arg) == 5:
+                    A, B, C, D, E = arg
+                else:
+                    raise RuntimeError("Unrecognized argument format")
+        elif len(args) == 4:
+            A, B, C, D = args
+            E = None
+        elif len(args) == 5:
+            A, B, C, D, E = args
+        else:
+            raise RuntimeError("Unrecognized argument format")
+
+        if inputs is not None:
+            if isinstance(inputs, (list, tuple)):
+                # convert to a dictionary
+                inputs = {k: i for i, k in enumerate(inputs)}
+        else:
+            inputs = {}
+
+        if outputs is not None:
+            if isinstance(outputs, (list, tuple)):
+                # convert to a dictionary
+                outputs = {k: i for i, k in enumerate(outputs)}
+        else:
+            outputs = {}
+
+        if inout is not None:
+            for k, idx in inout.items():
+                if k.endswith('.in'):
+                    is_output = False
+                    k = k[:-3]
+                elif k.endswith('.i'):
+                    is_output = False
+                    k = k[:-2]
+                elif k.endswith('.out'):
+                    is_output = True
+                    k = k[:-4]
+                elif k.endswith('.o'):
+                    is_output = True
+                    k = k[:-2]
+                elif '.out' in k:
+                    is_output = True
+                    k = k.replace('.out', '')
+                elif '.in' in k:
+                    is_output = False
+                    k = k.replace('.in', '')
+                else:
+                    raise RuntimeError("inout dict has key {} which does not end with .in, .i, .out, or .o".format(k))
+
+                if is_output:
+                    assert (k not in outputs)
+                    outputs[k] = idx
+                else:
+                    assert (k not in inputs)
+                    inputs[k] = idx
+
+        return self.__init_internal__(
+            ss=BareStateSpace(
+                A, B, C, D, E,
+                hermitian=hermitian,
+                time_symm=time_symm,
+                algorithm_choices=algorithm_choices,
+                algorithm_ranking=algorithm_ranking,
+                dt=dt,
+            ),
+            inputs=inputs,
+            outputs=outputs,
+            fiducial_rtol=fiducial_rtol,
+            fiducial_atol=fiducial_atol,
+        )
+
+    def __init_internal__(
         self,
         ss,
         inputs=None,
@@ -43,6 +142,11 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
         fiducial_rtol=None,
         fiducial_atol=None,
     ):
+        """
+        This is the technical internal constructor.
+
+        This should be called on an object that was just recently created with __new__
+        """
         # TODO, secondaries should perhaps only be done using a secondary call, not here
         inputs, in_secondaries = util.io_normalize(inputs, ss.Ninputs)
         outputs, out_secondaries = util.io_normalize(outputs, ss.Noutputs)
@@ -94,7 +198,7 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
 
         self.inputs = inputs
         self.outputs = outputs
-        super().__init__(ss=ss2)
+        super().__init_internal__(ss=ss2)
 
         # TODO
         # self.test_fresponse(
@@ -595,103 +699,6 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
         )
 
 
-def statespace(
-    *args,
-    inputs=None,
-    outputs=None,
-    inout=None,
-    hermitian=True,
-    time_symm=False,
-    dt=None,
-    fiducial_rtol=None,
-    fiducial_atol=None,
-    algorithm_choices=None,
-    algorithm_ranking=None,
-):
-    """
-    Form a MIMO LTI system from statespace matrices.
-
-    """
-    if len(args) == 1:
-        arg = args[0]
-        if isinstance(arg, MIMOStateSpace):
-            return arg
-        elif isinstance(arg, (tuple, list)):
-            if len(arg) == 4:
-                A, B, C, D = arg
-                E = None
-            elif len(arg) == 5:
-                A, B, C, D, E = arg
-            else:
-                raise RuntimeError("Unrecognized argument format")
-    elif len(args) == 4:
-        A, B, C, D = args
-        E = None
-    elif len(args) == 5:
-        A, B, C, D, E = args
-    else:
-        raise RuntimeError("Unrecognized argument format")
-
-    if inputs is not None:
-        if isinstance(inputs, (list, tuple)):
-            # convert to a dictionary
-            inputs = {k: i for i, k in enumerate(inputs)}
-    else:
-        inputs = {}
-
-    if outputs is not None:
-        if isinstance(outputs, (list, tuple)):
-            # convert to a dictionary
-            outputs = {k: i for i, k in enumerate(outputs)}
-    else:
-        outputs = {}
-
-    if inout is not None:
-        for k, idx in inout.items():
-            if k.endswith('.in'):
-                is_output = False
-                k = k[:-3]
-            elif k.endswith('.i'):
-                is_output = False
-                k = k[:-2]
-            elif k.endswith('.out'):
-                is_output = True
-                k = k[:-4]
-            elif k.endswith('.o'):
-                is_output = True
-                k = k[:-2]
-            elif '.out' in k:
-                is_output = True
-                k = k.replace('.out', '')
-            elif '.in' in k:
-                is_output = False
-                k = k.replace('.in', '')
-            else:
-                raise RuntimeError("inout dict has key {} which does not end with .in, .i, .out, or .o".format(k))
-
-            if is_output:
-                assert(k not in outputs)
-                outputs[k] = idx
-            else:
-                assert(k not in inputs)
-                inputs[k] = idx
-
-    return MIMOStateSpace(
-        ss=BareStateSpace(
-            A, B, C, D, E,
-            hermitian=hermitian,
-            time_symm=time_symm,
-            algorithm_choices=algorithm_choices,
-            algorithm_ranking=algorithm_ranking,
-            dt=dt,
-        ),
-        inputs=inputs,
-        outputs=outputs,
-        fiducial_rtol=fiducial_rtol,
-        fiducial_atol=fiducial_atol,
-    )
-
-
 def ssjoinsum(*args):
     """
     Join a list of MIMO state spaces into a single larger space. Common inputs
@@ -710,7 +717,7 @@ def ssjoinsum(*args):
                 prev = outer_d.get(name, None)
                 if prev is not None:
                     pst, psp = prev
-                    assert(psp - pst == sp - st)
+                    assert (psp - pst == sp - st)
                 else:
                     outer_d[name] = (st + outerN, sp + outerN)
                     outerNagg += sp - st

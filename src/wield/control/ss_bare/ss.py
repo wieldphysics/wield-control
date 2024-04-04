@@ -1539,7 +1539,9 @@ class BareStateSpace(object):
 
 
 class BareStateSpaceUser(object):
-    def __init__(
+    # NOTE, no init function, they should call __init_technical__
+
+    def __init_technical__(
         self,
         *,
         ss,
