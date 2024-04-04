@@ -235,7 +235,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         z, p = self._zp
         # the gain is not specified here,
         # as it is established from the fiducial data
-        self._ZPK = zpk.zpk(
+        self._ZPK = zpk(
             z, p,
             hermitian=self.ss.hermitian,
             time_symm=self.ss.time_symm,
