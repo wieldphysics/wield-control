@@ -42,7 +42,7 @@ def test_damp_quad(quad_type):
     """
     # load quad state space
     ss_data = load(fjoin(quad_type + '.h5'))
-    udamp_plant = MIMO.statespace(
+    udamp_plant = MIMO.MIMOStateSpace(
         ss_data.A, ss_data.B, ss_data.C, ss_data.D,
         inputs=dict(ss_data.inputs), outputs=dict(ss_data.outputs),
     )

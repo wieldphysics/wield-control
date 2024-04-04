@@ -12,6 +12,7 @@ import numbers
 import numpy as np
 import warnings
 
+from wield.control.utilities import constructormethod
 # from ..algorithms.statespace.dense import xfer_algorithms
 from ..algorithms.statespace.dense import zpk_algorithms
 from ..ss_bare.ss import BareStateSpaceUser, BareStateSpace
@@ -82,7 +83,13 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             if isinstance(arg, SISOStateSpace):
                 # TODO, check that some of the other arguments don't override it
                 if all_none:
-                    return arg
+                    self.__init_internal__(
+                        ss=arg.ss,
+                        fiducial = arg.fiducial,
+                        fiducial_rtol = arg.fiducial_atol,
+                        fiducial_atol = arg.fiducial_rtol,
+                    )
+                    return
                 A = A if A is not None else arg.A
                 B = B if B is not None else arg.B
                 C = C if C is not None else arg.C
@@ -120,7 +127,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             fiducial_z=fiducial_z,
             dt=dt,
         )
-        return self.__init_internal__(
+        self.__init_internal__(
             ss=BareStateSpace(
                 A, B, C, D, E,
                 dt=dt,
@@ -134,7 +141,9 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             fiducial_rtol=fiducial_rtol,
             fiducial_atol=fiducial_atol,
         )
+        return
 
+    @constructormethod
     def __init_internal__(
         self,
         ss,
@@ -147,7 +156,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
 
         This should be called on an object that was just recently created with __new__
         """
-        super().__init_technical__(
+        super().__init_internal__(
             ss=ss,
         )
 
@@ -157,7 +166,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
             atol=fiducial_atol,
             update=True,
         )
-        return self
+        return
 
     def __build_similar__(
         self,
@@ -166,8 +175,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         """
         Build a similar system to self, using ss as the underlying Bare statespace
         """
-        inst = self.__class__.__new__(self.__class__)
-        return inst.__init_internal__(
+        return self.__class__.__init_internal__(
             ss=ss,
             fiducial = self.fiducial,
             fiducial_rtol = self.fiducial_atol,
@@ -250,7 +258,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         row: name of the single output
         col: name of the single input
         """
-        return self._t_MIMO(
+        return self._t_MIMO.__init_internal__(
             ss=self.ss,
             inputs={col: 0},
             outputs={row: 0},
@@ -399,7 +407,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         elif isinstance(other, siso.SISO):
             other = other.asSS
             warnings.warn(
-                "Implicit conversion to statespace for math. Use filt.asSS or SISO.statespace(filt) to make explicit and suppress this warning"
+                "Implicit conversion to statespace for math. Use filt.asSS or SISO.SISOStateSpace(filt) to make explicit and suppress this warning"
             )
             # now recurse on this method
             return self + other
@@ -443,7 +451,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         elif isinstance(other, siso.SISO):
             other = other.asSS
             warnings.warn(
-                "Implicit conversion to statespace for math. Use filt.asSS or SISO.statespace(filt) to make explicit and suppress this warning"
+                "Implicit conversion to statespace for math. Use filt.asSS or SISO.SISOStateSpace(filt) to make explicit and suppress this warning"
             )
             # now recurse on this method
             return self - other
@@ -465,7 +473,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
         elif isinstance(other, siso.SISO):
             other = other.asSS
             warnings.warn(
-                "Implicit conversion to statespace for math. Use filt.asSS or SISO.statespace(filt) to make explicit and suppress this warning"
+                "Implicit conversion to statespace for math. Use filt.asSS or SISO.SISOStateSpace(filt) to make explicit and suppress this warning"
             )
             # now recurse on this method
             return self - other

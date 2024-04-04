@@ -50,7 +50,7 @@ def test_ZPK_c2d_various(zpk):
     print(sfilt)
     sfiltss = sfilt.asSS
     A, B, C, D, dt = cont2discrete((sfiltss.A, sfiltss.B, sfiltss.C, sfiltss.D), 1/fs, method='tustin')
-    zfiltss = SISO.statespace(A, B, C, D, dt=dt)
+    zfiltss = SISO.SISOStateSpace(A, B, C, D, dt=dt)
 
     print('------')
     print(zfilt)

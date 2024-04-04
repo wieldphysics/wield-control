@@ -184,7 +184,7 @@ def test_long_cheby():
     # B = np.zeros(len(cp) - 1)
     # B[0] = 1 / np.sqrt(.5)*(n-1)
     D = np.asarray([qz]).reshape(1, 1) * filt.k
-    filt3 = SISO.statespace(
+    filt3 = SISO.SISOStateSpace(
         A=A * norm,
         B=B.reshape(-1, 1) / norm**(nd - 1),
         C=C.reshape(1, -1),

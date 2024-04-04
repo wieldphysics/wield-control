@@ -14,6 +14,7 @@ import numpy as np
 from copy import deepcopy
 
 from wield.bunch import Bunch
+from wield.control.utilities import constructormethod
 
 from ..ss_bare.ss import BareStateSpace, BareStateSpaceUser
 from ..utilities import algorithm_choice
@@ -56,7 +57,17 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
         if len(args) == 1:
             arg = args[0]
             if isinstance(arg, MIMOStateSpace):
-                return arg
+                # TODO, override algorithm_choices and algorithm_ranking if specified
+                assert (algorithm_choices is None)
+                assert (algorithm_ranking is None)
+                self.__build_internal__(
+                    ss=arg.ss,
+                    inputs=arg.inputs,
+                    outputs=arg.outputs,
+                    output_dissections=arg.output_dissections,
+                    input_dissections=arg.input_dissections,
+                )
+                return
             elif isinstance(arg, (tuple, list)):
                 if len(arg) == 4:
                     A, B, C, D = arg
@@ -117,7 +128,7 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
                     assert (k not in inputs)
                     inputs[k] = idx
 
-        return self.__init_internal__(
+        self.__init_internal__(
             ss=BareStateSpace(
                 A, B, C, D, E,
                 hermitian=hermitian,
@@ -132,6 +143,7 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
             fiducial_atol=fiducial_atol,
         )
 
+    @constructormethod
     def __init_internal__(
         self,
         ss,
@@ -139,6 +151,7 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
         outputs=None,
         warn=True,
         fiducial=None,
+        # incorporate these tolerances into algorithm_choices
         fiducial_rtol=None,
         fiducial_atol=None,
     ):
@@ -212,14 +225,14 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
         self.output_dissections = output_dissections
         return
 
-    @classmethod
+    @constructormethod
     def __build__(
-            cls,
-            ss=None,
-            inputs=None,
-            outputs=None,
-            input_dissections=None,
-            output_dissections=None
+        self,
+        ss=None,
+        inputs=None,
+        outputs=None,
+        input_dissections=None,
+        output_dissections=None
     ):
         """
         The raw constructor. Performs minimal computations and few consistency checks
@@ -233,8 +246,7 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
 
         This constructor assumes that the dissections are complete
         """
-        self = cls.__new__(cls)
-        super(MIMOStateSpace, self).__init__(ss=ss)
+        super(MIMOStateSpace, self).__init_internal__(ss=ss)
 
         self.inputs = inputs
         self.outputs = outputs
@@ -254,7 +266,7 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
 
         self.input_dissections = input_dissections
         self.output_dissections = output_dissections
-        return self
+        return
 
     def __build_similar__(
         self,

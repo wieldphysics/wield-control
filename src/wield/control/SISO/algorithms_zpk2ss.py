@@ -40,7 +40,7 @@ def zpk2ss_cheby(zpk):
     else:
         raise ValueError("Cheby ZPK cannot handle more poles than zeros")
 
-    statesp = ss.statespace(
+    statesp = ss.SISOStateSpace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,
@@ -78,7 +78,7 @@ def zpk2ss_chain_poly(zpk):
         method='chain_poly',
     )
 
-    statesp = ss.statespace(
+    statesp = ss.SISOStateSpace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,
@@ -116,7 +116,7 @@ def zpk2ss_chainE_poly(zpk):
         method='chainE_poly',
     )
 
-    statesp = ss.statespace(
+    statesp = ss.SISOStateSpace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,
@@ -158,7 +158,7 @@ def zpk2ss_cheby_lower(zpk):
     else:
         raise ValueError("Cheby ZPK cannot handle more poles than zeros")
 
-    statesp = ss.statespace(
+    statesp = ss.SISOStateSpace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,
@@ -195,7 +195,7 @@ def zpk2ss_chain_poly_lower(zpk):
         method='chain_poly',
     )
 
-    statesp = ss.statespace(
+    statesp = ss.SISOStateSpace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,
@@ -233,7 +233,7 @@ def zpk2ss_chainE_poly_lower(zpk):
         method='chainE_poly',
     )
 
-    statesp = ss.statespace(
+    statesp = ss.SISOStateSpace(
         ABCDE,
         hermitian=zpk.hermitian,
         time_symm=zpk.time_symm,

@@ -45,7 +45,7 @@ def test_Thiran_lqe(test_trigger, tpath_preclear, plot):
     A2 = ss.A - L @ ss.C
     dprint(ss.A)
     dprint(A2)
-    ss2 = SISO.statespace(A=A2, B=ss.B, C=ss.C, D=ss.D)
+    ss2 = SISO.SISOStateSpace(A=A2, B=ss.B, C=ss.C, D=ss.D)
     
     axB = mplfigB(Nrows=2)
 

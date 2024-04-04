@@ -38,7 +38,7 @@ from wield.control import MIMO
 def test_HSTS_WS():
     ABCD, iod = HSTS_build.getHSTSModel()
 
-    ws_hsts = MIMO.statespace(
+    ws_hsts = MIMO.MIMOStateSpace(
         ABCD,
         inout=iod,
     )
