@@ -86,6 +86,8 @@ def algo_merge(choicesA, choicesB):
         rankA = choicesA.get(atype, {})
         rankB = choicesB.get(atype, {})
         rset = set(rankA.keys()) | set(rankB.keys())
+        # this is the lowest rank
+        rL = None
         for rname in rset:
             rA = rankA.get(rname, None)
             rB = rankB.get(rname, None)
@@ -98,13 +100,18 @@ def algo_merge(choicesA, choicesB):
                 if rB is None:
                     rN = rA
                 elif rA == rB:
-                    warnings.warn("Algorithm ranking merge has ambiguous ranking")
                     rN = rA
                 elif rA > rB:
                     rN = rA
                 else:
                     rN = rB
             rankN[rname] = rN
+            if rL is None:
+                rL = rN
+            elif rL > rN:
+                rL = rN
+            elif rL == rN:
+                warnings.warn("Algorithm ranking merge has ambiguous ranking")
     return choicesN
 
 

@@ -129,6 +129,10 @@ class ZPK(siso.SISOCommonBase):
         """
         return self.poles.all()
 
+    @property
+    def _zp(self):
+        return (self.z, self.p)
+
     def __str__(self):
         zstr = str(self.zeros)
         pstr = str(self.poles)
@@ -245,7 +249,6 @@ class ZPK(siso.SISOCommonBase):
             w=None,
             s=None,
             z=None,
-            with_lnG=False
     ):
         domain = util.build_sorz(
             f=f,
@@ -271,13 +274,9 @@ class ZPK(siso.SISOCommonBase):
                 snr=None,
             )
 
-        h, lnG = self.poles.fresponse_lnG(domain, 1)
-        h, lnG = self.zeros.fresponse_lnG(domain, self.k/h, -lnG)
-
-        if with_lnG:
-            return h, lnG
-        else:
-            tf = h * np.exp(lnG)
+        h, l2G = self.poles.fresponse_l2G(domain, 1)
+        h, l2G = self.zeros.fresponse_l2G(domain, self.k/h, -l2G)
+        tf = h * np.ldexp(1, l2G, dtype=np.float64)
 
         return response.SISOFResponse(
             tf=tf,
@@ -739,7 +738,7 @@ def zpk(
             rtol=fiducial_rtol,
             update=True,
         )
-        norm_rel = fiducial.tf / ZPKnew.fiducial.tf
+        norm_rel = fiducial.tf_sm / ZPKnew.fiducial.tf_sm
         norm_med = np.nanmedian(abs(norm_rel)) * np.sign(np.nanmedian(norm_rel.real))
 
         if np.isfinite(norm_med):
@@ -749,8 +748,8 @@ def zpk(
             
             try:
                 np.testing.assert_allclose(
-                    fiducial.tf,
-                    ZPKnew.fiducial.tf,
+                    fiducial.tf_sm,
+                    ZPKnew.fiducial.tf_sm,
                     rtol=ZPKnew.fiducial_rtol,
                     atol=ZPKnew.fiducial_atol,
                 )
@@ -769,14 +768,14 @@ def zpk(
 
             self_response = ZPKnew.fresponse(w=w)
 
-            norm_rel = fiducial_tst.tf / self_response.tf
+            norm_rel = fiducial_tst.tf_sm / self_response.tf_sm
             norm_med = np.nanmedian(abs(norm_rel)) * np.sign(np.nanmedian(norm_rel.real))
             
             assert (np.isfinite(norm_med))
             ZPKnew = ZPKnew * norm_med
             # TODO, this might fail on unstable poles. Should consider adjusting the
             # fiducial set to handle those
-            assert (np.all(np.isfinite(ZPKnew.fiducial)))
+            assert (np.all(np.isfinite(fiducial_tst.tf_sm)))
     else:
         ZPKnew.test_fresponse(
             fiducial=fiducial,

@@ -211,6 +211,8 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
     def _zp(self):
         """
         Create a raw z, p tuple from the direct calculation
+
+        TODO, get rid of this or make it more official
         """
         if self._zp_tup is None:
             z, p = zpk_algorithms.ss2zp(

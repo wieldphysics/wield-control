@@ -357,6 +357,48 @@ class ZDomainRootSet(object):
         arr = np.array(list(self.str_iter(divide_by=divided_by, real_format_func=real_format_func)))
         return np.array2string(arr, formatter={'numpystr': str}, separator=', ')
 
+    def fresponse_l2G(self, X, h=1, l2G=0):
+        """
+        returns the value as if it were generated from a polynomial with last
+        coefficient 1 given a coefficient representation and the X_scale.
+        """
+        X = np.asarray(X)
+        h = np.array(h, copy=True, dtype=np.complex128)
+        X, h = np.broadcast_arrays(X, h)
+
+        # note that this modifies in-place
+        def VfR(roots, h, l2G):
+            if len(roots) == 0:
+                return h, l2G
+            roots = np.asarray(roots)
+            mlen = len(roots)
+            group_len = 5
+            for idx in range((mlen - 1) // group_len + 1):
+                r = roots[idx * group_len: (idx + 1) * group_len]
+                h = h * np.polynomial.polynomial.polyvalfromroots(X, r)
+                habssq = abs_sq(h)
+                habssq2, l2G_part = np.frexp(habssq)
+                l2G_part = l2G_part//2
+                h /= np.ldexp(1, l2G_part, dtype=np.float64)
+                l2G += l2G_part
+            return h, l2G
+
+        h, l2G = VfR(self.cplx_plane, h, l2G)
+        h, l2G = VfR(self.real_line, h, l2G)
+        h, l2G = VfR(self.disc_line, h, l2G)
+        h, l2G = VfR(self.p_one_point, h, l2G)
+        h, l2G = VfR(self.n_one_point, h, l2G)
+        if self.mirror_real:
+            h, l2G = VfR(self.cplx_plane.conjugate(), h, l2G)
+            h, l2G = VfR(self.disc_line.conjugate(), h, l2G)
+        if self.mirror_disc:
+            # self.mirror_real not true, self.mirror_disc true
+            h, l2G = VfR(1/self.cplx_plane, h, l2G)
+            h, l2G = VfR(1/self.real_line, h, l2G)
+            if self.mirror_real:
+                h, l2G = VfR(1/self.cplx_plane.conjugate(), h, l2G)
+        return h, l2G
+
     def fresponse_lnG(self, X, h=1, lnG=0):
         """
         returns the value as if it were generated from a polynomial with last
