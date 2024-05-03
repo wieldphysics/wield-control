@@ -94,6 +94,25 @@ def tf_bary_interp(
     return xfer
 
 
+def eigAE(A, E):
+    Ascale = A.copy()
+    Escale = E.copy()
+
+    # TODO, should allow permutations in this!
+
+    # xGEBAL does not remove the diagonals before scaling.
+    # not sure M is needed, was in the ARE generalized diagonalizer
+    # M = np.abs(SS) + np.abs(SSE)
+    _, (sca, _) = scipy.linalg.matrix_balance(Ascale, separate=1, permute=0)
+    # do we need to bother?
+    if not np.allclose(sca, np.ones_like(sca)):
+        elwisescale = sca * np.reciprocal(sca)[:, None]
+        Ascale *= elwisescale
+        Escale *= elwisescale
+
+    return scipy.linalg.eigvals(Ascale, Escale)
+
+
 def tf_bary_zpk(
     zvals,
     fvals,
@@ -151,9 +170,11 @@ def tf_bary_zpk(
         Ez[offs + 2 + 2 * idx, offs + 2 + 2 * idx] = z.real
         Ez[offs + 1 + 2 * idx, offs + 2 + 2 * idx] = z.imag
         Ez[offs + 2 + 2 * idx, offs + 1 + 2 * idx] = -z.imag
-    poles = scipy.linalg.eig(Ep, B, left=False, right=False)
+    poles = eigAE(Ep, B)
+    # scipy.linalg.eig(Ep, B, left=False, right=False)
     poles = poles[np.isfinite(poles)]
-    zeros = scipy.linalg.eig(Ez, B, left=False, right=False)
+    # zeros = scipy.linalg.eig(Ez, B, left=False, right=False)
+    zeros = eigAE(Ez, B)
     zeros = zeros[np.isfinite(zeros)]
 
     zeros, poles = order_reduce_zp(zeros, poles, Q_rank_cutoff=minreal_cutoff)
