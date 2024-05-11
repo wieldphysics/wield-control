@@ -76,6 +76,15 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
                     A, B, C, D, E = arg
                 else:
                     raise RuntimeError("Unrecognized argument format")
+            else:
+                A = arg.A
+                B = arg.B
+                C = arg.C
+                D = arg.D
+                try:
+                    E = arg.E
+                except AttributeError:
+                    E = None
         elif len(args) == 4:
             A, B, C, D = args
             E = None
