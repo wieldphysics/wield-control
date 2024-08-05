@@ -185,7 +185,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
     def _fiducial_w_set(self, rtol):
         # create a list of poiints at each resonance and zero, as well as 1 BW away
         rt_rtol = rtol**0.5
-        if self.A.shape[-1] < self.N_MAX_FID:
+        if self._A.shape[-1] < self.N_MAX_FID:
             z, p = self._zp
 
             zr = z[abs(z.imag) < 1e-10]

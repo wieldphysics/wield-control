@@ -1556,6 +1556,27 @@ class BareStateSpaceUser(object):
     def algorithm_choices(self):
         return self.ss.algorithm_choices
 
+    # underscored are the "unsafe" versions
+    @property
+    def _A(self):
+        return self.ss.A
+
+    @property
+    def _B(self):
+        return self.ss.B
+
+    @property
+    def _C(self):
+        return self.ss.C
+
+    @property
+    def _D(self):
+        return self.ss.D
+
+    @property
+    def _E(self):
+        return self.ss.E
+
     @property
     def A(self):
         if self.ss.E is not None:
