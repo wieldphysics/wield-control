@@ -220,7 +220,7 @@ class SISOStateSpace(BareStateSpaceUser, siso.SISOCommonBase):
                 B=self.ss.B,
                 C=self.ss.C,
                 D=self.ss.D,
-                E=self.ss.E,
+                E=self.ss.e,
                 idx_in=0,
                 idx_out=0,
                 fmt="scipy",

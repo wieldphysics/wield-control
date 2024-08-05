@@ -49,14 +49,20 @@ class BareStateSpace(object):
             E = np.asarray(E)
             assert (E.shape == A.shape)
             if np.all(E == np.eye(E.shape[-1])):
-                E = None
+                Eeye = True
+            else:
+                Eeye = False
+        else:
+            Eeye = True
+            E = np.eye(A.shape[-1])
+
 
         if hermitian:
             assert (np.all(A.imag == 0))
             assert (np.all(B.imag == 0))
             assert (np.all(C.imag == 0))
             assert (np.all(D.imag == 0))
-            if E is not None:
+            if not Eeye:
                 assert (np.all(E.imag == 0))
 
         self.flags = flags
@@ -66,6 +72,8 @@ class BareStateSpace(object):
         self.C = C
         self.D = D
         self.E = E
+        self.Eeye = Eeye
+
         self.hermitian = hermitian
         self.time_symm = time_symm
         self.dt = dt
@@ -98,7 +106,7 @@ class BareStateSpace(object):
         )
 
         return self.__class__(
-            A=self.A, B=self.B, C=self.C, D=self.D, E=self.E,
+            A=self.A, B=self.B, C=self.C, D=self.D, E=self.e,
             algorithm_choices=algorithm_choices,
             algorithm_ranking=algorithm_ranking,
             hermitian=self.hermitian,
@@ -121,15 +129,18 @@ class BareStateSpace(object):
 
     @property
     def ABCDE(self):
-        if self.E is None:
-            E = np.eye(self.A.shape[-1])
+        return self.A, self.B, self.C, self.D, self.E
+
+    @property
+    def e(self):
+        if self.Eeye:
+            return None
         else:
-            E = self.E
-        return self.A, self.B, self.C, self.D, E
+            return self.E
 
     @property
     def ABCDe(self):
-        return self.A, self.B, self.C, self.D, self.E
+        return self.A, self.B, self.C, self.D, self.e
 
     @property
     def Ninputs(self):
@@ -151,11 +162,10 @@ class BareStateSpace(object):
 
     @property
     def ABCD(self):
-        if self.E is not None:
+        if not self.Eeye:
             raise RuntimeError("Cannot Drop E")
         else:
             assert (np.all(np.eye(self.E.shape[-1]) == self.E))
-            self.E = None
         return self.A, self.B, self.C, self.D
 
     def __iter__(self):
@@ -166,8 +176,8 @@ class BareStateSpace(object):
         yield self.B
         yield self.C
         yield self.D
-        if self.E is not None:
-            yield self.E
+        if self.e is not None:
+            yield self.e
 
     def time_reversal(self):
         """
@@ -180,7 +190,7 @@ class BareStateSpace(object):
             B=-self.B,
             C=self.C,
             D=self.D,
-            E=self.E,
+            E=self.e,
         )
         return ret
 
@@ -198,7 +208,7 @@ class BareStateSpace(object):
             B=self.C.T,
             C=self.B.T,
             D=self.D.T,
-            E=self.E,
+            E=self.e,
         )
         return ret
 
@@ -213,7 +223,7 @@ class BareStateSpace(object):
             B=-self.C.T,
             C=self.B.T,
             D=self.D.T,
-            E=self.E,
+            E=self.e,
         )
         return ret
 
@@ -233,7 +243,7 @@ class BareStateSpace(object):
         if self._p_vals is None:
             p = zpk_algorithms.ss2p(
                 A=self.A,
-                E=self.E,
+                E=self.e,
                 fmt="scipy",
             )
             self._p_vals = p
@@ -253,7 +263,7 @@ class BareStateSpace(object):
             C=self.C[..., row, :],
             # double index fixes annoying way that multiple list indices are grouped by numpy
             D=self.D[..., row, :][..., :, col],
-            E=self.E,
+            E=self.e,
         )
         return ret
 
@@ -291,7 +301,7 @@ class BareStateSpace(object):
 
         It is not a very good technique as far as it has been tested
         """
-        E = self.E
+        E = self.e
         if E is not None and np.all(E == np.eye(E.shape[-1])):
             E = None
         if E is not None:
@@ -338,7 +348,7 @@ class BareStateSpace(object):
             Br,
             Cr,
             self.D,
-            E=self.E,
+            E=self.e,
         )
 
     def reduceE(self):
@@ -350,7 +360,7 @@ class BareStateSpace(object):
         # self = self.balanceABC(which='ABC')
         # self = self.balanceA()
 
-        E = self.E
+        E = self.e
         if E is not None and np.all(E == np.eye(E.shape[-1])):
             E = None
 
@@ -394,7 +404,7 @@ class BareStateSpace(object):
         # self = self.balanceABC(which='ABC')
         self = self.balanceA()
 
-        E = self.E
+        E = self.e
         if E is not None and np.all(E == np.eye(E.shape[-1])):
             E = None
 
@@ -434,10 +444,7 @@ class BareStateSpace(object):
 
         NOTE: there seems to be an error where it is giving bad output except for which=ABC
         """
-        E = self.E
-        if E is not None and np.all(E == np.eye(E.shape[-1])):
-            E = None
-
+        e = self.e
         A = self.A
         B = self.B
         C = self.C
@@ -472,7 +479,7 @@ class BareStateSpace(object):
             import warnings
             warnings.warn("balanceABC may give wrong results except fro which=ABC. may be a Slycot bug")
 
-        if E is None:
+        if e is None:
             from slycot import tb01id
 
             s_norm, Ar, Br, Cr, scaled = tb01id(
@@ -521,10 +528,7 @@ class BareStateSpace(object):
         # not sure M is needed, was in the ARE generalized diagonalizer
         # M = np.abs(SS) + np.abs(SSE)
 
-        if self.E is None:
-            E = np.eye(self.A.shape[-1])
-        else:
-            E = self.E
+        E = self.E
 
         Ascale, (sca, P) = scipy.linalg.matrix_balance(
             abs(Ascale) + abs(E * 1e9),
@@ -540,16 +544,16 @@ class BareStateSpace(object):
             Ascale = self.A.copy()[..., P, :][..., :, P]
             Ascale *= elwisescale
 
-            if self.E is not None:
+            if self.e is not None:
                 Escale = self.E.copy()[..., P, :][..., :, P]
                 Escale *= elwisescale
             else:
-                Escale = self.E
+                Escale = self.e
             Bscale = scar.reshape(-1, 1) * self.B[..., P, :].copy()
             Cscale = sca.reshape(1, -1) * self.C[..., :, P].copy()
         else:
             Ascale = self.A
-            Escale = self.E
+            Escale = self.e
             Bscale = self.B
             Cscale = self.C
 
@@ -568,16 +572,12 @@ class BareStateSpace(object):
         if self.A.shape[-2:] == (0, 0):
             return self
 
-        E = self.E
+        E = self.e
         A = self.A
         B = self.B
         C = self.C
 
-        if E is not None:
-            if np.all(E == np.eye(E.shape[-1])):
-                E = None
-
-        if E is None:
+        if e is None:
             A, Z = scipy.linalg.schur(A)
             B = Z.transpose().conjugate() @ B
             C = C @ Z
@@ -596,7 +596,7 @@ class BareStateSpace(object):
     def permute_UT(self):
         from ..algorithms.statespace.dense import ss_algorithms_permute
 
-        E = self.E
+        E = self.e
         A = self.A
         B = self.B
         C = self.C
@@ -636,13 +636,13 @@ class BareStateSpace(object):
         else:
             dico = 'D'
 
-        E = self.E
+        E = self.e
         if E is not None and np.all(E == np.eye(E.shape[-1])):
             E = None
         if E is not None:
             # try to reduce
             self = self.reduceE2()
-            E = self.E
+            E = self.e
             if E is not None:
                 raise NotImplementedError("balancing on descriptor systems not implemented (yet)")
 
@@ -674,7 +674,7 @@ class BareStateSpace(object):
         # Number of outputs
         p = self.C.shape[0]
 
-        assert (self.E is None)
+        assert (self.e is None)
 
         from slycot import ab09hd
         nr, Ar, Br, Cr, Dr, ns, hsv = ab09hd(
@@ -696,7 +696,7 @@ class BareStateSpace(object):
             Br,
             Cr,
             Dr,
-            E=self.E,
+            E=self.e,
         )
 
 
@@ -720,7 +720,7 @@ class BareStateSpace(object):
         else:
             dico = 'D'
 
-        E = self.E
+        E = self.e
         if E is not None and np.all(E == np.eye(E.shape[-1])):
             E = None
         if E is not None:
@@ -750,7 +750,7 @@ class BareStateSpace(object):
         # Number of outputs
         p = self.C.shape[0]
 
-        assert (self.E is None)
+        assert (self.e is None)
 
         from slycot import ab09nd
         nr, Ar, Br, Cr, Dr, ns, hsv = ab09nd(
@@ -771,7 +771,7 @@ class BareStateSpace(object):
             Br,
             Cr,
             Dr,
-            E=self.E,
+            E=self.e,
         )
 
     def balance_and_truncate(self, rescale_io=True, **kwargs):
@@ -825,7 +825,7 @@ class BareStateSpace(object):
         else:
             scalechar = 'N'
         if self.Nstates:
-            E = self.E
+            E = self.e
             if E is not None and np.all(E == np.eye(E.shape[-1])):
                 E = None
             if E is not None:
@@ -931,7 +931,7 @@ class BareStateSpace(object):
         """
 
         if self.Nstates:
-            if self.E is not None:
+            if self.e is not None:
                 raise NotImplementedError("Minreal on descriptor systems not implemented (yet)")
 
             from slycot import tb01pd
@@ -976,7 +976,7 @@ class BareStateSpace(object):
         TODO: Untested
         """
         if self.Nstates:
-            if self.E is not None:
+            if self.e is not None:
                 raise NotImplementedError("Minreal on descriptor systems not implemented (yet)")
 
             from slycot import tb01pd
@@ -1030,7 +1030,7 @@ class BareStateSpace(object):
         B = self.B
         C = self.C
         D = self.D
-        E = self.E
+        e = self.e
 
         # Order of the A matrix
         n = self.A.shape[0]
@@ -1039,10 +1039,8 @@ class BareStateSpace(object):
         # Number of outputs
         p = self.C.shape[0]
 
-        if E is None:
+        if e is None:
             # E = np.eye(self.A.shape[-1])
-            pass
-        elif E is not None and np.all(E == np.eye(E.shape[-1])):
             pass
         else:
             raise RuntimeError("Does not work on descriptor systems")
@@ -1093,7 +1091,7 @@ class BareStateSpace(object):
         B = self.B
         C = self.C
         D = self.D
-        E = self.E
+        e = self.e
 
         # Order of the A matrix
         n = self.A.shape[0]
@@ -1102,12 +1100,11 @@ class BareStateSpace(object):
         # Number of outputs
         p = self.C.shape[0]
 
-        if E is None:
+        if e is None:
             E = np.eye(self.A.shape[-1])
             jobe = 'I'
-        elif E is not None and np.all(E == np.eye(E.shape[-1])):
-            jobe = 'I'
         else:
+            E = e
             jobe = 'G'
 
         if scale:
@@ -1150,7 +1147,7 @@ class BareStateSpace(object):
 
         return self.__build_similar__(
             A, B, C, D,
-            self.E,
+            self.e,
         )
 
     def feedbackDE(self, D):
@@ -1243,7 +1240,7 @@ class BareStateSpace(object):
                 B=self.B @ other,
                 C=self.C,
                 D=self.D @ other,
-                E=self.E,
+                E=self.e,
             )
         else:
             return NotImplemented
@@ -1260,7 +1257,7 @@ class BareStateSpace(object):
                 B=self.B,
                 C=other @ self.C,
                 D=other @ self.D,
-                E=self.E,
+                E=self.e,
             )
         else:
             return NotImplemented
@@ -1283,7 +1280,7 @@ class BareStateSpace(object):
                 B=self.B,
                 C=other @ self.C,
                 D=other @ self.D,
-                E=self.E,
+                E=self.e,
                 hermitian=self.hermitian,
                 time_symm=self.time_symm,
                 dt=self.dt,
@@ -1304,7 +1301,7 @@ class BareStateSpace(object):
         Invert statespace, assuming that the D matrix is full rank
         """
         assert (self.is_square)
-        assert (self.E is None)
+        assert (self.e is None)
 
         D = self.D
         Dinv = np.linalg.inv(D)
@@ -1348,7 +1345,7 @@ class BareStateSpace(object):
                 B=self.B * other,
                 C=self.C,
                 D=self.D * other,
-                E=self.E,
+                E=self.e,
             )
         else:
             return NotImplemented
@@ -1362,7 +1359,7 @@ class BareStateSpace(object):
                 B=self.B,
                 C=other * self.C,
                 D=other * self.D,
-                E=self.E,
+                E=self.e,
             )
         else:
             return NotImplemented
@@ -1376,7 +1373,7 @@ class BareStateSpace(object):
                 B=self.B,
                 C=self.C / other,
                 D=self.D / other,
-                E=self.E,
+                E=self.e,
             )
         else:
             return NotImplemented
@@ -1529,7 +1526,7 @@ class BareStateSpace(object):
             B=self.B,
             C=-self.C,
             D=-self.D,
-            E=self.E,
+            E=self.e,
         )
 
     def __pos__(self):
@@ -1561,6 +1558,8 @@ class BareStateSpaceUser(object):
 
     @property
     def A(self):
+        if self.ss.E is not None:
+            raise RuntimeError("StateSpace is a descriptor system (has E matrix). Must request A and E at the same time with ss.AE or ss.Ae")
         return self.ss.A
 
     @property
@@ -1578,6 +1577,18 @@ class BareStateSpaceUser(object):
     @property
     def E(self):
         return self.ss.E
+
+    @property
+    def e(self):
+        return self.ss.e
+
+    @property
+    def AE(self):
+        return self.ss.A, self.ss.E
+
+    @property
+    def Ae(self):
+        return self.ss.A, self.ss.e
 
     @property
     def ABCDE(self):
@@ -1705,21 +1716,12 @@ def joinAE(s, o):
     blU = np.zeros((s.A.shape[-2], o.A.shape[-1]))
     blL = np.zeros((o.A.shape[-2], s.A.shape[-1]))
 
-    if s.E is None and o.E is None:
+    if s.e is None and o.e is None:
         E = None
     else:
-        if s.E is None:
-            sE = np.eye(s.A.shape[-2])
-            oE = o.E
-        elif o.E is None:
-            sE = s.E
-            oE = np.eye(o.A.shape[-2])
-        else:
-            sE = s.E
-            oE = o.E
         E = np.block([
-            [sE,  blU],
-            [blL, oE]
+            [s.E, blU],
+            [blL, o.E]
         ])
 
     A = np.block([
