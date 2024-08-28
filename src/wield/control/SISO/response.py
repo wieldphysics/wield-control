@@ -370,7 +370,7 @@ class SISOFResponse(siso.SISO):
 
     @property
     def deg(self):
-        return np.angle(self.tf, deg=False)
+        return np.angle(self.tf, deg=True)
 
     @property
     def rad(self):
@@ -382,7 +382,7 @@ class SISOFResponse(siso.SISO):
 
     @property
     def tf_deg(self):
-        return np.angle(self.tf, deg=False)
+        return np.angle(self.tf, deg=True)
 
     @property
     def tf_rad(self):

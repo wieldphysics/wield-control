@@ -380,7 +380,9 @@ class MIMOStateSpace(BareStateSpaceUser, mimo.MIMO):
             )
             
     def __repr__(self):
-        return f"MIMOStateSpace with \n inputs {list(self.inputs.keys())}, \n outputs {list(self.outputs.keys())}, \n and {self.A.shape[0]} dimensional states"
+        inputs = list(self.inputs.keys())
+        outputs = list(self.outputs.keys())
+        return f"MIMOStateSpace with \n {len(inputs)} inputs: {inputs}, \n {len(outputs)} outputs: {outputs}, \n and {self.A.shape[0]} dimensional states"
 
     def dissect(
             self,
