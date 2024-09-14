@@ -680,7 +680,7 @@ def domain_sort(X, *Y):
                 output.append(None)
             else:
                 y = np.asarray(y)
-                if np.shape(y) == 1:
+                if np.shape(y) == ():
                     output.append(y)
                 else:
                     output.append(y[sort_idxs])
