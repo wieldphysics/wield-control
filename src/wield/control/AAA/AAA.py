@@ -330,7 +330,7 @@ def tfAAA(
     w_res = np.asarray(w_res)
 
     F_Hz, xfer, w, w_res = domain_sort(F_Hz, xfer, w, w_res)
-
+ 
     sF_Hz = 1j * F_Hz
 
     fit_list = []
@@ -680,7 +680,7 @@ def domain_sort(X, *Y):
                 output.append(None)
             else:
                 y = np.asarray(y)
-                if len(y) == 1:
+                if np.shape(y) == ():
                     output.append(y)
                 else:
                     output.append(y[sort_idxs])
